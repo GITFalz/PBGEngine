@@ -122,7 +122,9 @@ namespace PBG.MathLibrary
         public static double Sqrt(double value) => Math.Sqrt(value);
 
         public static float Lerp(float a, float b, float t) => a + t * (b - a);
+        public static Vector2 Lerp(Vector2 a, Vector2 b, float t) => a + (b - a) * t;
         public static Vector3 Lerp(Vector3 a, Vector3 b, float t) => a + (b - a) * t;
+        public static Vector4 Lerp(Vector4 a, Vector4 b, float t) => a + (b - a) * t;
 
 
         public static int Sign(float value) => value > 0 ? 1 : value < 0 ? -1 : 0;
@@ -196,11 +198,13 @@ namespace PBG.MathLibrary
             return diff < -180f ? diff + 360f : diff;
         }
 
-        public static System.Numerics.Matrix4x4 Num(Matrix4 matrix) => new System.Numerics.Matrix4x4(
-                matrix.M11, matrix.M12, matrix.M13, matrix.M14,
-                matrix.M21, matrix.M22, matrix.M23, matrix.M24,
-                matrix.M31, matrix.M32, matrix.M33, matrix.M34,
-                matrix.M41, matrix.M42, matrix.M43, matrix.M44);
+        public static System.Numerics.Matrix4x4 Num(Matrix4 m) =>
+            new System.Numerics.Matrix4x4(
+                m.M11, m.M21, m.M31, m.M41,
+                m.M12, m.M22, m.M32, m.M42,
+                m.M13, m.M23, m.M33, m.M43,
+                m.M14, m.M24, m.M34, m.M44
+            );
         public static System.Numerics.Matrix4x4 num(this Matrix4 matrix) => Num(matrix);
 
         public static Vec4 Num(Vector4 vector) => new Vec4(vector.X, vector.Y, vector.Z, vector.W);
@@ -265,6 +269,8 @@ namespace PBG.MathLibrary
         public static Vector3 Xyz(Vector4 vector) => (vector.X, vector.Y, vector.Z);
         public static Vec3 Xyz(Vec4 vector) => new Vec3(vector.X, vector.Y, vector.Z);
         
+        public static float RadiansToDegrees(float radians) => radians * (180f / MathF.PI);
+        public static float DegreesToRadians(float degrees) => degrees * (MathF.PI / 180f);
         public static Vector3 RadiansToDegrees(Vector3 radians) => new Vector3(
                 RadToDeg(radians.X),
                 RadToDeg(radians.Y),
@@ -410,7 +416,6 @@ namespace PBG.MathLibrary
 
         public static Vector3 Vec3(Vector2 v, float z) => (v.X, v.Y, z);
 
-        /*
         public static void GetSmallestBoundingBox(IEnumerable<Vertex> vertices, out Vector3 min, out Vector3 max)
         {
             if (!vertices.Any())
@@ -459,8 +464,8 @@ namespace PBG.MathLibrary
 
             for (int i = 1; i < copy.Count; i++)
             {
-                minC = Vector3.ComponentMin(minC, copy[i]);
-                maxC = Vector3.ComponentMax(maxC, copy[i]);
+                minC = Min(minC, copy[i]);
+                maxC = Max(maxC, copy[i]);
             }
 
             Vector3 size = maxC - minC;
@@ -484,8 +489,8 @@ namespace PBG.MathLibrary
 
                 for (int j = 1; j < copy.Count; j++)
                 {
-                    minC = Vector3.ComponentMin(minC, copy[j]);
-                    maxC = Vector3.ComponentMax(maxC, copy[j]);
+                    minC = Min(minC, copy[j]);
+                    maxC = Max(maxC, copy[j]);
                 }
 
                 Vector3 sizeC = maxC - minC;
@@ -608,6 +613,5 @@ namespace PBG.MathLibrary
             Vector3 pos = (aq * bary.X + bq * bary.Y + cq * bary.Z) / qInterp;
             return pos;
         }
-        */
     }
 }

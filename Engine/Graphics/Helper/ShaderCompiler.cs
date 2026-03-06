@@ -4,6 +4,8 @@ using Silk.NET.SPIRV.Cross;
 using ShadercCompiler = Silk.NET.Shaderc.Compiler;
 using CrossCompiler = Silk.NET.SPIRV.Cross.Compiler;
 using Silk.NET.SPIRV;
+using System.Runtime.InteropServices;
+using PBG;
 
 public unsafe class ShaderCompiler
 {
@@ -23,6 +25,9 @@ public unsafe class ShaderCompiler
     public Dictionary<uint, SampledImageLayout> SampledImageBindings = [];
     public List<SampledImageAttribute> SampledImageAttributes = [];
 
+    public Dictionary<uint, SampledImageLayout> StorageImageBindings = [];
+    public List<SampledImageAttribute> StorageImageAttributes = [];
+
     public ShaderCompiler()
     {
         _shaderc = Shaderc.GetApi();
@@ -33,6 +38,8 @@ public unsafe class ShaderCompiler
         Context* context;
         _cross.ContextCreate(&context);
         _context = context;
+
+        _shaderc.CompileOptionsSetIncludeCallbacks(_options, PfnIncludeResolveFn.From(ResolveInclude), PfnIncludeResultReleaseFn.From(ReleaseInclude), null);
     }
 
     public struct ShaderData
@@ -48,7 +55,7 @@ public unsafe class ShaderCompiler
             throw new FileNotFoundException("Shader at path '" + path + "' not found");
 
         var sourceCode = File.ReadAllText(path);
-
+        
         var result = _shaderc.CompileIntoSpv(_compiler, sourceCode, (nuint)sourceCode.Length, kind, Path.GetFileName(path), "main", _options);
 
         if (_shaderc.ResultGetCompilationStatus(result) != CompilationStatus.Success)
@@ -61,53 +68,6 @@ public unsafe class ShaderCompiler
         _shaderc.ResultRelease(result);
 
         return array;
-    }
-
-    public ShaderData CompileToGlslAndReflect(string path, ShaderKind kind, out string glsl)
-    {
-        var spirV = Compile(path, kind);
-        
-        ParsedIr* ir;
-        fixed (byte* pSpirV = spirV)
-        {
-            var result = _cross.ContextParseSpirv(_context, (uint*)pSpirV, (nuint)(spirV.Length / 4), &ir);
-        }
-        
-        CrossCompiler* compiler;
-        var compilerResult = _cross.ContextCreateCompiler(_context, Backend.None, ir, CaptureMode.Copy, &compiler);
-        
-        Resources* resources;
-        var resourcesResult = _cross.CompilerCreateShaderResources(compiler, &resources);
-        
-        var vertexAttributes = GetVertexAttributes(compiler, resources);
-        
-        switch (kind)
-        {
-            case ShaderKind.VertexShader:
-                ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.VertexBit);
-                ReflectStorageBufferBindings(compiler, resources, ShaderStageFlags.VertexBit);
-                break;
-            case ShaderKind.FragmentShader:
-                ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.FragmentBit);
-                ReflectStorageBufferBindings(compiler, resources, ShaderStageFlags.FragmentBit);
-                ReflectSampledImageBindings(compiler, resources, ShaderStageFlags.FragmentBit);
-                break;
-        }
-        
-        CrossCompiler* glslCompiler;
-        var glslResult = _cross.ContextCreateCompiler(_context, Backend.Glsl, ir, CaptureMode.TakeOwnership, &glslCompiler);
-        
-        byte* source;
-        var compileResult = _cross.CompilerCompile(glslCompiler, &source);
-        
-        glsl = new string((sbyte*)source);
-                
-        return new ShaderData
-        {
-            SpirV = spirV,
-            Kind = kind,
-            VertexAttributes = kind == ShaderKind.VertexShader ? vertexAttributes : []
-        };
     }
 
     public ShaderData CompileAndReflect(string path, ShaderKind kind)
@@ -135,7 +95,14 @@ public unsafe class ShaderCompiler
             case ShaderKind.FragmentShader:
                 ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.FragmentBit);
                 ReflectStorageBufferBindings(compiler, resources, ShaderStageFlags.FragmentBit);
-                ReflectSampledImageBindings(compiler, resources, ShaderStageFlags.FragmentBit);
+                ReflectSampledImageBindings(SampledImageBindings, SampledImageAttributes, ResourceType.SampledImage, DescriptorType.CombinedImageSampler, compiler, resources, ShaderStageFlags.FragmentBit);
+                ReflectSampledImageBindings(StorageImageBindings, StorageImageAttributes, ResourceType.StorageImage, DescriptorType.StorageImage, compiler, resources, ShaderStageFlags.FragmentBit);
+                break;
+            case ShaderKind.ComputeShader:
+                ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.ComputeBit);
+                ReflectStorageBufferBindings(compiler, resources, ShaderStageFlags.ComputeBit);
+                ReflectSampledImageBindings(SampledImageBindings, SampledImageAttributes, ResourceType.SampledImage, DescriptorType.CombinedImageSampler, compiler, resources, ShaderStageFlags.ComputeBit);
+                ReflectSampledImageBindings(StorageImageBindings, StorageImageAttributes, ResourceType.StorageImage, DescriptorType.StorageImage, compiler, resources, ShaderStageFlags.ComputeBit);
                 break;
         }
 
@@ -166,7 +133,7 @@ public unsafe class ShaderCompiler
 
             attributes[i].Name = name;
             attributes[i].Location = (int)location;
-            attributes[i].Format = SpvTypeToFormat(typeHandle, out var s);
+            attributes[i].Format = SPBGTypeToFormat(typeHandle, out var s);
             attributes[i].Offset = size;
 
             size += s * 4;
@@ -175,7 +142,7 @@ public unsafe class ShaderCompiler
         return attributes;
     }
 
-    private Format SpvTypeToFormat(CrossType* type, out uint size)
+    private Format SPBGTypeToFormat(CrossType* type, out uint size)
     {
         Basetype basetype = _cross.TypeGetBasetype(type);
         size = _cross.TypeGetVectorSize(type);
@@ -321,11 +288,57 @@ public unsafe class ShaderCompiler
         }
     }
 
-    private void ReflectSampledImageBindings(CrossCompiler* compiler, Resources* resources, ShaderStageFlags stage)
+    private void ReflectSampledImageBindings(Dictionary<uint, SampledImageLayout> map, List<SampledImageAttribute> attributes, ResourceType ressourceType, DescriptorType descriptorType, CrossCompiler* compiler, Resources* resources, ShaderStageFlags stage)
     {
         ReflectedResource* samplers;
         nuint samplersCount;
-        _cross.ResourcesGetResourceListForType(resources, ResourceType.SampledImage, &samplers, &samplersCount);
+        _cross.ResourcesGetResourceListForType(resources, ressourceType, &samplers, &samplersCount);
+
+        for (int i = 0; i < (int)samplersCount; i++)
+        {
+            
+            var binding = _cross.CompilerGetDecoration(compiler, samplers[i].Id, Decoration.Binding);
+            var name    = PtrExt.ToStr(_cross.CompilerGetName(compiler, samplers[i].Id)) ?? throw new InvalidCastException($"[Error] : Unable to get name for storage at binding {binding}");
+
+            if (map.TryGetValue(binding, out var existing))
+            {
+                existing.LayoutBinding.StageFlags |= stage;
+                map[binding] = existing;
+            }
+            else
+            {
+                var layout = new SampledImageLayout()
+                {
+                    Name = name,
+                    LayoutBinding = new DescriptorSetLayoutBinding()
+                    {
+                        Binding = binding,
+                        DescriptorType = descriptorType,
+                        DescriptorCount = 1,
+                        StageFlags = stage,
+                        PImmutableSamplers = null
+                    }
+                };
+
+                var typeId = samplers[i].BaseTypeId;
+                CrossType* structType = _cross.CompilerGetTypeHandle(compiler, typeId);
+
+                attributes.Add(new()
+                {
+                    Name    = name,
+                    Binding = binding
+                });
+
+                map[binding] = layout;
+            }
+        }
+    }
+
+    private void ReflectStorageImageBindings(CrossCompiler* compiler, Resources* resources, ShaderStageFlags stage)
+    {
+        ReflectedResource* samplers;
+        nuint samplersCount;
+        _cross.ResourcesGetResourceListForType(resources, ResourceType.StorageImage, &samplers, &samplersCount);
 
         for (int i = 0; i < (int)samplersCount; i++)
         {
@@ -346,7 +359,7 @@ public unsafe class ShaderCompiler
                     LayoutBinding = new DescriptorSetLayoutBinding()
                     {
                         Binding = binding,
-                        DescriptorType = DescriptorType.CombinedImageSampler,
+                        DescriptorType = DescriptorType.StorageImage,
                         DescriptorCount = 1,
                         StageFlags = stage,
                         PImmutableSamplers = null
@@ -365,6 +378,52 @@ public unsafe class ShaderCompiler
                 SampledImageBindings[binding] = layout;
             }
         }
+    }
+
+    private static IncludeResult* ResolveInclude(void* userData, byte* requestedSource, int type, byte* requestingSource, nuint includeDepth)
+    {
+        string requested  = Marshal.PtrToStringAnsi((nint)requestedSource)!;
+        string requesting = Marshal.PtrToStringAnsi((nint)requestingSource)!;
+
+        // resolve relative to the requesting shader's directory
+        string dir     = Path.GetDirectoryName(requesting) ?? "";
+        string fullPath = Path.Combine(dir, requested);
+
+        // fallback to a global includes folder if not found relative
+        if (!File.Exists(fullPath))
+            fullPath = Path.Combine(Game.ShaderPath, requested);
+
+        var result = (IncludeResult*)Marshal.AllocHGlobal(sizeof(IncludeResult));
+
+        if (File.Exists(fullPath))
+        {
+            string content = File.ReadAllText(fullPath);
+            result->SourceName        = (byte*)Marshal.StringToHGlobalAnsi(fullPath);
+            result->SourceNameLength  = (nuint)fullPath.Length;
+            result->Content           = (byte*)Marshal.StringToHGlobalAnsi(content);
+            result->ContentLength     = (nuint)content.Length;
+            result->UserData          = null;
+        }
+        else
+        {
+            // return error if not found
+            string error = $"Include file not found: {fullPath}";
+            result->SourceName        = (byte*)Marshal.StringToHGlobalAnsi("");
+            result->SourceNameLength  = 0;
+            result->Content           = (byte*)Marshal.StringToHGlobalAnsi(error);
+            result->ContentLength     = (nuint)error.Length;
+            result->UserData          = null;
+        }
+
+        return result;
+    }
+
+    private static void ReleaseInclude(void* userData, IncludeResult* result)
+    {
+        if (result == null) return;
+        Marshal.FreeHGlobal((nint)result->SourceName);
+        Marshal.FreeHGlobal((nint)result->Content);
+        Marshal.FreeHGlobal((nint)result);
     }
 
     internal void Dispose()

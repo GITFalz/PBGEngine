@@ -1,0 +1,8 @@
+# .NET build outputs
+**/obj
+**/bin
+*.dll
+*.exe
+*.pdb
+*.lib
+*.winmd

@@ -22,6 +22,22 @@ public struct Vector2
         X = v; Y = v;
     }
 
+    public readonly Vector2 Normalized()
+    {
+        Vector2 v = this;
+        v.Normalize();
+        return v;
+    }
+
+    public void Normalize()
+    {
+        float scale = 1.0f / Length;
+        X *= scale;
+        Y *= scale;
+    }
+
+    public static Vector2 Normalize(Vector2 v) => v.Normalized();
+
     public static float Dot(Vector2 left, Vector2 right)
     {
         return (left.X * right.X) + (left.Y * right.Y);
@@ -30,6 +46,11 @@ public struct Vector2
     public static void Dot(Vector2 left, Vector2 right, out float result)
     {
         result = (left.X * right.X) + (left.Y * right.Y);
+    }
+
+    public static float Distance(Vector2 a, Vector2 b)
+    {
+        return (b - a).Length;
     }
 
     public static float DistanceSquared(Vector2 a, Vector2 b)
@@ -50,6 +71,7 @@ public struct Vector2
 
     public static Vector2 operator *(Vector2 a, Vector2 b) => new(a.X * b.X, a.Y * b.Y);
     public static Vector2 operator *(Vector2 a, float b) => new(a.X * b, a.Y * b);
+    public static Vector2 operator *(float a, Vector2 b) => new(a * b.X, a * b.Y);
 
     public static Vector2 operator /(Vector2 a, Vector2 b) => new(a.X / b.X, a.Y / b.Y);
     public static Vector2 operator /(Vector2 a, float b) => new(a.X / b, a.Y / b);

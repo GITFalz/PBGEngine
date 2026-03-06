@@ -481,7 +481,6 @@ namespace PBG.UI
         public override bool IsMouseOver()
         {
             Vector2 pos = Input.GetMousePosition();
-            pos.Y = Game.Height - pos.Y;
             return MouseOver(pos);
         }
 

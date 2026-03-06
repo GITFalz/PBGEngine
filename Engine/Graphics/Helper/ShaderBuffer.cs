@@ -16,14 +16,14 @@ public unsafe class ShaderBuffer
         _context = context;
     }
 
-    public void AllocateDescriptorLayout(DescriptorSetLayout descriptorSetLayout, out DescriptorSet[] descriptorSets)
+    public void AllocateDescriptorLayout(DescriptorSetLayout descriptorSetLayout, out DescriptorSet[] descriptorSets, out DescriptorPool descriptorPool)
     {
         var layouts = new DescriptorSetLayout[GraphicsContext.MAX_FRAMES_IN_FLIGHT];
         Array.Fill(layouts, descriptorSetLayout);
 
         descriptorSets = new DescriptorSet[GraphicsContext.MAX_FRAMES_IN_FLIGHT];
 
-        var descriptorPool = GetDescriptorPool();
+        descriptorPool = GetDescriptorPool();
 
         DescriptorSetAllocateInfo allocInfo = new()
         {
@@ -77,12 +77,14 @@ public unsafe class ShaderBuffer
             new() { Type = DescriptorType.UniformBuffer,        DescriptorCount = GraphicsContext.MAX_FRAMES_IN_FLIGHT * 50 },
             new() { Type = DescriptorType.StorageBuffer,        DescriptorCount = GraphicsContext.MAX_FRAMES_IN_FLIGHT * 50 },
             new() { Type = DescriptorType.CombinedImageSampler, DescriptorCount = GraphicsContext.MAX_FRAMES_IN_FLIGHT * 50 },
+            new() { Type = DescriptorType.StorageImage,         DescriptorCount = GraphicsContext.MAX_FRAMES_IN_FLIGHT * 50 },
         };
 
         DescriptorPoolCreateInfo poolInfo = new()
         {
             SType = StructureType.DescriptorPoolCreateInfo,
-            PoolSizeCount = 3,
+            Flags = DescriptorPoolCreateFlags.FreeDescriptorSetBit,
+            PoolSizeCount = 4,
             PPoolSizes = poolSizes,
             MaxSets = GraphicsContext.MAX_FRAMES_IN_FLIGHT * 50
         };

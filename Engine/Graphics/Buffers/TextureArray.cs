@@ -14,15 +14,15 @@ public unsafe class TextureArray : BufferBase
 
     public uint LayerCount { get; private set; }
 
-    public TextureArray(string filePath, int width, int height)
+    public TextureArray(TextureInfo info)
     {
         StbImage.stbi_set_flip_vertically_on_load(1);
 
-        var pixelData = TextureData.SplitTextureAtlasCellSize(Path.Combine(Game.TexturePath, filePath), width, height, true);
+        var pixelData = TextureData.SplitTextureAtlasCellSize(Path.Combine(Game.TexturePath, info.FilePath), info.Width, info.Height, true);
 
         LayerCount = (uint)pixelData.Count;
 
-        ulong layerSize = (ulong)(width * height * 4);
+        ulong layerSize = (ulong)(info.Width * info.Height * 4);
         ulong totalSize = layerSize * LayerCount;
 
         GFX.CreateBuffer(totalSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
@@ -33,14 +33,14 @@ public unsafe class TextureArray : BufferBase
         {
             ulong offset = layerSize * (ulong)i;
             void* dst = (byte*)data + offset;
-            HelperFunctions.MemCpy(pixelData[i], dst, layerSize, layerSize);
+            HelperFunctions.MemCpyTo(pixelData[i], dst, layerSize, layerSize);
         }
         GFX.UnmapMemory(stagingBufferMemory);
 
-        GFX.CreateImageArray((uint)width, (uint)height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
     
         GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
-        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)width, (uint)height, LayerCount);
+        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)info.Width, (uint)info.Height, LayerCount);
 
         GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
 
@@ -48,16 +48,16 @@ public unsafe class TextureArray : BufferBase
         GFX.FreeMemory(stagingBufferMemory);
 
         CreateTextureImageView();
-        CreateTextureSampler();
+        CreateTextureSampler(info);
     }
 
-    public TextureArray(List<byte[]> pixelData, int width, int height)
+    public TextureArray(List<byte[]> pixelData, TextureInfo info)
     {
         StbImage.stbi_set_flip_vertically_on_load(1);
 
         LayerCount = (uint)pixelData.Count;
 
-        ulong layerSize = (ulong)(width * height * 4);
+        ulong layerSize = (ulong)(info.Width * info.Height * 4);
         ulong totalSize = layerSize * LayerCount;
 
         GFX.CreateBuffer(totalSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
@@ -68,14 +68,14 @@ public unsafe class TextureArray : BufferBase
         {
             ulong offset = layerSize * (ulong)i;
             void* dst = (byte*)data + offset;
-            HelperFunctions.MemCpy(pixelData[i], dst, layerSize, layerSize);
+            HelperFunctions.MemCpyTo(pixelData[i], dst, layerSize, layerSize);
         }
         GFX.UnmapMemory(stagingBufferMemory);
 
-        GFX.CreateImageArray((uint)width, (uint)height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
     
         GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
-        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)width, (uint)height, LayerCount);
+        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)info.Width, (uint)info.Height, LayerCount);
 
         GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
 
@@ -83,7 +83,7 @@ public unsafe class TextureArray : BufferBase
         GFX.FreeMemory(stagingBufferMemory);
 
         CreateTextureImageView();
-        CreateTextureSampler();
+        CreateTextureSampler(info);
     }
 
     public void CreateTextureImageView() 
@@ -91,17 +91,17 @@ public unsafe class TextureArray : BufferBase
         textureImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit, LayerCount);
     }
 
-    public void CreateTextureSampler()
+    public void CreateTextureSampler(TextureInfo info)
     {
         SamplerCreateInfo samplerInfo = new()
         {
             SType = StructureType.SamplerCreateInfo,
-            MagFilter = Filter.Linear,
-            MinFilter = Filter.Linear,
+            MagFilter = info.Filter,
+            MinFilter = info.Filter,
 
-            AddressModeU = SamplerAddressMode.Repeat,
-            AddressModeV = SamplerAddressMode.Repeat,
-            AddressModeW = SamplerAddressMode.Repeat,
+            AddressModeU = info.SamplerMode,
+            AddressModeV = info.SamplerMode,
+            AddressModeW = info.SamplerMode,
 
             AnisotropyEnable = true,
         };
@@ -111,7 +111,7 @@ public unsafe class TextureArray : BufferBase
 
         samplerInfo.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
 
-        samplerInfo.BorderColor = BorderColor.IntOpaqueBlack;
+        samplerInfo.BorderColor = BorderColor.FloatTransparentBlack;
         samplerInfo.UnnormalizedCoordinates = false;
 
         samplerInfo.CompareEnable = false;
@@ -125,6 +125,25 @@ public unsafe class TextureArray : BufferBase
         if (GFX.CreateSampler(&samplerInfo, null, out textureSampler) != Result.Success) {
             throw new InvalidOperationException("failed to create texture sampler!");
         }
+    }
+
+    public ImageMemoryBarrier GetMemoryBarrier()
+    {
+        return new ImageMemoryBarrier
+        {
+            SType         = StructureType.ImageMemoryBarrier,
+            SrcAccessMask = AccessFlags.ShaderWriteBit,
+            DstAccessMask = AccessFlags.ShaderReadBit,
+            OldLayout     = ImageLayout.General,
+            NewLayout     = ImageLayout.General,
+            Image         = textureImage,
+            SubresourceRange = new ImageSubresourceRange
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                LevelCount = 1,
+                LayerCount = 1,
+            }
+        };
     }
 
     protected override void Destroy()

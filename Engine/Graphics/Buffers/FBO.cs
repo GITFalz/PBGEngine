@@ -1,9 +1,14 @@
+using System.Diagnostics;
+using PBG.Data;
 using Silk.NET.Vulkan;
 
 namespace PBG.Graphics;
 
 public unsafe class FBO : BufferBase
 {
+    public enum RenderPassState { None, Main, FBO }
+    public static RenderPassState currentRenderPassState = RenderPassState.None;
+
     public Framebuffer framebuffer;
     public Image colorImage;
     public DeviceMemory colorMemory;
@@ -110,12 +115,14 @@ public unsafe class FBO : BufferBase
 
     public void Bind()
     {
+        currentRenderPassState = RenderPassState.FBO;
         GFX.Vk.CmdEndRenderPass(GFX.CommandBuffer);
-
+        
+        
         var barrier = new ImageMemoryBarrier
         {
             SType            = StructureType.ImageMemoryBarrier,
-            OldLayout        = currentLayout,
+            OldLayout        = ImageLayout.Undefined,
             NewLayout        = ImageLayout.ColorAttachmentOptimal,
             SrcAccessMask    = currentLayout == ImageLayout.Undefined ? AccessFlags.None : AccessFlags.ShaderReadBit,
             DstAccessMask    = AccessFlags.ColorAttachmentWriteBit,
@@ -136,8 +143,6 @@ public unsafe class FBO : BufferBase
             0, null, 0, null,
             1, &barrier);
 
-        
-
         var ctx = GraphicsContext.graphicsContext;
         var renderPassInfo = new RenderPassBeginInfo
         {
@@ -152,7 +157,7 @@ public unsafe class FBO : BufferBase
             renderPassInfo.RenderPass  = ctx.framebufferRenderPass;
 
             ClearValue[] clearValues = new ClearValue[2];
-            clearValues[0].Color        = new(0.0f, 0.0f, 0.0f, 1.0f);
+            clearValues[0].Color        = new(0.0f, 0.0f, 0.0f, 0.0f);
             clearValues[1].DepthStencil = new(1.0f, 0);
             renderPassInfo.ClearValueCount = (uint)clearValues.Length;
 
@@ -170,7 +175,33 @@ public unsafe class FBO : BufferBase
 
     public void Unbind()
     {
+
+        currentRenderPassState = RenderPassState.Main;
         GFX.Vk.CmdEndRenderPass(GFX.CommandBuffer);
+
+        var barrier = new ImageMemoryBarrier
+        {
+            SType = StructureType.ImageMemoryBarrier,
+            OldLayout = ImageLayout.Undefined,
+            NewLayout = ImageLayout.ShaderReadOnlyOptimal,
+            SrcAccessMask = AccessFlags.ColorAttachmentWriteBit,
+            DstAccessMask = AccessFlags.None,  // Or AccessFlags.None if no immediate read
+            Image = colorImage,
+            SubresourceRange = new ImageSubresourceRange
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                BaseMipLevel = 0,
+                LevelCount = 1,
+                BaseArrayLayer = 0,
+                LayerCount = 1,
+            }
+        };
+        GFX.Vk.CmdPipelineBarrier(GFX.CommandBuffer,
+            PipelineStageFlags.ColorAttachmentOutputBit,
+            PipelineStageFlags.FragmentShaderBit,  // Or PipelineStageFlags.TopOfPipeBit if no immediate read
+            DependencyFlags.None,
+            0, null, 0, null,
+            1, &barrier);
 
         var ctx = GraphicsContext.graphicsContext;
         var renderPassInfo = new RenderPassBeginInfo
@@ -184,6 +215,25 @@ public unsafe class FBO : BufferBase
         };
 
         GFX.Vk.CmdBeginRenderPass(GFX.CommandBuffer, &renderPassInfo, SubpassContents.Inline);
+
+        var viewport = new Viewport
+        {
+            X = 0.0f,
+            Y = 0.0f,
+            Width = ctx.swapChainExtent.Width,
+            Height = ctx.swapChainExtent.Height,
+            MinDepth = 0.0f,
+            MaxDepth = 1.0f
+        };
+        GFX.Vk.CmdSetViewport(GFX.CommandBuffer, 0, 1, &viewport);
+
+        var scissor = new Rect2D
+        {
+            Offset = new Offset2D(0, 0),
+            Extent = ctx.swapChainExtent
+        };
+        GFX.Vk.CmdSetScissor(GFX.CommandBuffer, 0, 1, &scissor);
+
         currentLayout = ImageLayout.ShaderReadOnlyOptimal;
     }
 }

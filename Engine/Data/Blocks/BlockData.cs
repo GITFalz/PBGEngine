@@ -4,6 +4,7 @@ using PBG.Data;
 using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using Silk.NET.Vulkan;
 using StbImageResizeSharp;
 using StbImageSharp;
 
@@ -156,7 +157,7 @@ namespace PBG.Voxel
                 fullTextureData.Add(texture);
             }
 
-            BlockTextureArray = new(fullTextureData, maxWidth, maxHeight);
+            BlockTextureArray = new(fullTextureData, new("", maxWidth, maxHeight) { SamplerMode = SamplerAddressMode.ClampToEdge, Filter = Filter.Nearest });
         }
 
         public static void LoadModels()

@@ -9,12 +9,8 @@ namespace PBG.UI
 {
     public class UIController : ScriptingNode
     {
-        private static Shader _uiPlaneShader;
+        private static Shader? _uiPlaneShader;
         private static Descriptor _uiPlaneDescriptor;
-
-        private static int _uiPlaneModelLocation = -1;
-        private static int _uiPlaneProjectionLocation = -1;
-        private static int _uiPlaneSizeLocation = -1;
 
         public static List<UIController> Controllers = [];
         public static Matrix4 OrthographicProjection = Matrix4.CreateOrthographicOffCenter(0, 1, 1, 0, -1, 1);
@@ -337,24 +333,17 @@ namespace PBG.UI
         public void SetPosition(Vector3 position)
         {
             Position = position;
-            ModelMatrix = Matrix4.CreateScale(new Vector3(Scale, Scale, 1f)) * Matrix4.CreateTranslation(Position);
+            ModelMatrix = Matrix4.CreateTranslation(Position) * Matrix4.CreateScale(new Vector3(Scale, Scale, 1f));
             UpdateBoundaries = true;
         }
 
         public void SetScale(float scale, Vector3 windowOffset)
         {
             Vector3 mousePosition = Input.GetMousePosition3() - windowOffset;
-
-            Vector3 offset = mousePosition - Position;
-            Vector3 position = offset / Scale;
-
-            Vector3 mPosition = position * scale;
-            Vector3 mOffset = mPosition - mousePosition;
-            Vector3 newPosition = mOffset * -1;
-            Position = newPosition;
-
+            float scaleDelta = scale / Scale;
+            Position = mousePosition + (Position - mousePosition) * scaleDelta;
             Scale = scale;
-            ModelMatrix = Matrix4.CreateScale(new Vector3(Scale, Scale, 1f)) * Matrix4.CreateTranslation(Position);
+            ModelMatrix = Matrix4.CreateTranslation(Position) * Matrix4.CreateScale(new Vector3(Scale, Scale, 1f));
             UpdateBoundaries = true;
         }
 
@@ -375,6 +364,8 @@ namespace PBG.UI
                 element.FirstPass();
                 element.SecondPass();
             }
+
+            _uiPlaneDescriptor.BindFramebuffer(_fbo, 0);
 
             UIMesh.Resize();
             TextMesh.Resize();
@@ -581,27 +572,18 @@ namespace PBG.UI
 
         void Render()
         {
-            //int[] viewport = new int[4];
-            //GL.GetInteger(GetPName.Viewport, viewport);
             var viewport = GFX.GetViewport();
 
             int width = Alignment.Width;
             int height = Alignment.Height;
 
-            //GL.Viewport(Alignment.Left, Alignment.Top, width, height);
-
             _fbo.Bind();
 
-            //GL.Viewport(Alignment.Left, Alignment.Bottom, width, height);
             GFX.Viewport(Alignment.Left, Alignment.Top, width, height);
 
             Matrix4 model = ModelMatrix * Matrix4.CreateTranslation((0, 0, CumulativeDepth));
-            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -2, 2);
-            
-            if (GameTime.FpsUpdated)
-            {
-                Console.WriteLine(width + " " + height);
-            }
+            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, width, 0, height, -2, 2);
+            //projection.M22 *= -1;
 
             if (UIMesh.ElementCount > 0)
             {
@@ -631,6 +613,19 @@ namespace PBG.UI
             GFX.Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
         }
 
+        
+
+        public static void GlobalRender()
+        {
+            if (_uiPlaneShader == null)
+                return;
+
+            _uiPlaneShader.Bind();
+            _uiPlaneDescriptor.Bind();
+
+            GFX.Draw(3, 1, 0, 0);
+        }
+
         public static void BindFramebuffer()
         {
             _fbo.Bind();
@@ -639,33 +634,6 @@ namespace PBG.UI
         public static void UnbindFramebuffer()
         {
             _fbo.Unbind();
-        }
-
-        public static void GlobalRender()
-        {
-            //GL.Clear(ClearBufferMask.DepthBufferBit);
-            
-            _uiPlaneShader.Bind();
-            _uiPlaneDescriptor.Bind();
-
-            Matrix4 model = Matrix4.Identity;
-            Matrix4 projection = OrthographicProjection;
-
-            /*
-            GL.UniformMatrix4(_uiPlaneModelLocation, false, ref model);
-            GL.UniformMatrix4(_uiPlaneProjectionLocation, false, ref projection);
-            GL.Uniform2(_uiPlaneSizeLocation, new Vector2(Game.Width, Game.Height));
-
-            _fbo.BindTexture(TextureUnit.Texture0);
-            _uiPlaneShaderVAO.Bind();
-
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
-
-            _uiPlaneShaderVAO.Unbind();
-            _fbo.UnbindTexture(TextureUnit.Texture0);
-            */
-            
-            GFX.Draw(3, 1, 0, 0);
         }
 
         void Dispose()

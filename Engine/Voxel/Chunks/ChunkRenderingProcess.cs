@@ -64,7 +64,7 @@ namespace PBG.Voxel
             } 
 
             try
-            {
+            {   
                 if (VertexData.Count == 0)
                 {
                     Chunk.Allocation.Size = 0;
@@ -86,7 +86,22 @@ namespace PBG.Voxel
                     Console.WriteLine("Couldn't find a available data pool");
                 }
 
-                //Chunk.GenerateChunkMesh(VertexData);
+                /*
+                if (VertexData.Count == 0)
+                {
+                    Chunk.HasBlocks = false;
+                    Chunk.Renderer.VisibleChunks.Remove(Chunk);
+                }
+                else
+                {
+                    Chunk.GenerateChunkMesh(VertexData);
+
+                    if (!Chunk.HasBlocks)
+                        Chunk.Renderer.VisibleChunks.Add(Chunk);
+
+                    Chunk.HasBlocks = VertexData.Count > 0; 
+                }
+                */
 
                 /*
                 Chunk.GenerateChunkMesh(_handler);

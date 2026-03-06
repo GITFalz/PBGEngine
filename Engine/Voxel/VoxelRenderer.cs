@@ -7,6 +7,8 @@ using PBG.Rendering;
 using PBG.Data;
 using PBG.MathLibrary;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+using Silk.NET.Vulkan;
 
 namespace PBG.Voxel
 {
@@ -17,7 +19,9 @@ namespace PBG.Voxel
 
     public struct ChunkInfo 
     {
-        public System.Numerics.Vector3 Center;
+        public static readonly uint ByteSize = (uint)Marshal.SizeOf<ChunkInfo>();
+
+        public Vector3 Center;
         public float Radius;
         public uint DataOffset;
         public uint VertexCount;
@@ -27,14 +31,37 @@ namespace PBG.Voxel
 
     public class VoxelRenderer : ScriptingNode
     {
+        private static bool _started = false;
+
+        public static Shader TestPrePassShader = null!;
+
+        public static int PrePassView = -1;
+        public static int PrePassProjection = -1;
+
+
+        public static Shader TestShader = null!;
+
+        public static int View = -1;
+        public static int Projection = -1;
+
+        public static int LightDirectionLocation = -1;
+        public static int DoAmbientOcclusion = -1;
+        public static int CameraPosition = -1;
+
+
+        public static ComputeShader IndirectCompute;
+
+        public static int uPlanesLocation = -1;
+        public static int uMaxSlotsLocation = -1;
+
+
         /*
         public readonly static ShaderProgram WorldShader = new ShaderProgram("world/world.vert", "world/world.frag");
         public readonly static ShaderProgram BaseShader = new ShaderProgram("world/world_base.vert", "world/world_base.frag");
         public readonly static ShaderProgram BlankShader = new ShaderProgram("world/world_blank.vert", "world/world_blank.frag");
         public readonly static ShaderProgram TestShader = new ShaderProgram("world/indirect-word.vert", "world/indirect-world.frag");
 
-        public static ComputeShader ChunkRenderer = new ComputeShader("computeShaders/world/renderLoop.comp");
-        public static int MaxSlotsLocation = ChunkRenderer.GetLocation("uMaxSlots");
+        
 
         public static readonly int View = TestShader.GetLocation("uView");
         public static readonly int Projection = TestShader.GetLocation("uProjection");
@@ -103,11 +130,11 @@ namespace PBG.Voxel
 
         private bool _enableTerrainGeneration = true;
 
-        public int RenderDistance = 20;
+        public int RenderDistance = 16;
         public int MaxVerticalChunks = 8;
 
-        public int MaxChunkGenerationPerFrame = 10;
-        public int MaxChunkBuildingPerFrame = 10;
+        public int MaxChunkGenerationPerFrame = 7;
+        public int MaxChunkBuildingPerFrame = 7;
 
         public VoxelRendererGenerator ChunkGenerator = new BaseVoxelRendererGenerator();
 
@@ -147,6 +174,43 @@ namespace PBG.Voxel
 
         public VoxelRenderer()
         {
+            if (!_started)
+            {
+                TestPrePassShader = new(new()
+                {
+                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert"
+                });
+                TestPrePassShader.Compile();
+
+                PrePassView = TestPrePassShader.GetLocation("ubo.view");
+                PrePassProjection = TestPrePassShader.GetLocation("ubo.proj");
+
+                TestShader = new(new()
+                {
+                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert", 
+                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.frag",
+                });
+                TestShader.Compile();
+
+                View = TestShader.GetLocation("ubo.view");
+                Projection = TestShader.GetLocation("ubo.proj");
+
+                LightDirectionLocation = TestShader.GetLocation("data.lightDirection");
+                DoAmbientOcclusion = TestShader.GetLocation("data.uDoAmbientOcclusion");
+                CameraPosition = TestShader.GetLocation("data.uCameraPosition");
+
+                IndirectCompute = new(new()
+                {
+                    ComputeShaderPath = Game.ShaderPath / "computeShaders/world_vulkan/renderLoop.comp"
+                });
+                IndirectCompute.Compile();
+
+                uPlanesLocation = IndirectCompute.GetLocation("ubo.planes");
+                uMaxSlotsLocation = IndirectCompute.GetLocation("ubo.uMaxSlots");
+
+                _started = true;
+            }
+
             _chunkOffsetAction = GenerateDistanceBasedChunkOffsets;
             _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
             _viewport = (0, 0, 0, 0);
@@ -567,6 +631,7 @@ namespace PBG.Voxel
 
         void LateUpdate()
         {
+            /*
             if (!Run) return;
 
             while (_closeLightTimer >= 0.1f)
@@ -581,6 +646,7 @@ namespace PBG.Voxel
 
             _closeLightTimer += GameTime.DeltaTime;
             _middleLightTimer += GameTime.DeltaTime;
+            */
 
             //Info.SetChunkTotalCount(VoxelChunkInstances.Count);
         }
@@ -591,9 +657,9 @@ namespace PBG.Voxel
 
         void Render()
         {
-            /*
             if (!Run) return;
 
+            /*
             if (RealtimeShadows)
             {
                 if (_closeLightTimer >= 0.1f)
@@ -606,11 +672,7 @@ namespace PBG.Voxel
                     RenderShadowMap(_middleFBO, 320, 320, 400, 256, 2000, ref _middleLightSpaceMatrix);
                 }
             }
-
-            GL.Viewport(_viewport.left, _viewport.bottom, _width, _height);
-            */
-
-            
+            */  
 
             /*
             GL.UniformMatrix4(WorldShaderLocation.View, false, ref view);
@@ -630,81 +692,46 @@ namespace PBG.Voxel
             GL.Uniform1(WorldShaderLocation.DoRealtimeShadows, RealtimeShadows ? 1 : 0);
             */
 
+            GFX.Viewport(_viewport.left, _viewport.bottom, _width, _height);
+            
             if (Input.MouseDelta != Vector2.Zero || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
             {
+                bool update = false;
                 _chunkCount = 0;
                 for (int i = 0; i < VisibleChunks.Count; i++)
                 {
                     var chunk = VisibleChunks[i];
-                    Vector3 toChunk = Vector3.Normalize(chunk.Center - Camera.Position);
-                    float dot = Vector3.Dot(Camera.front, toChunk);
-                    if (chunk.ForceDisabled || dot < -0.2f || !Scene.DefaultCamera.FrustumIntersectsSphere(chunk.CenterNum, 28))
+                    if (chunk.ForceDisabled || !Camera.FrustumIntersectsSphere(chunk.Center, 28))
                     {
+                        update = update || chunk.Visible == true;
                         chunk.Visible = false;
                         continue;
                     }
 
+                    update = update || chunk.Visible == false;
                     chunk.Visible = true;
                     chunk.Allocation.DataPool.UpdateDrawCommand(chunk, chunk.Allocation);
-
                     _chunkCount++;
                 }
 
-                ChunkDataPool.UpdateDrawCommands();
+                if (update)
+                {
+                    ChunkDataPool.UpdateDrawCommands(this);
+                }
+                    
+                Info.SetChunkRenderCount(_chunkCount);
             }
 
             _oldVisibleChunkCount = VisibleChunks.Count;
             _oldCameraPosition = Camera.Position;
 
-            /*
             RenderedChunks = _chunkCount;
-            Info.SetChunkRenderCount(_chunkCount);
-
-            Matrix4 view = Scene.DefaultCamera.ViewMatrix;
-            Matrix4 projection = _camera.ProjectionMatrix;
-
-            GL.Enable(EnableCap.DepthTest);
-            GL.DepthFunc(DepthFunction.Less);
-            GL.Enable(EnableCap.CullFace);
 
             TestShader.Bind();
 
-            var model = Matrix4.Identity;
+            ChunkDataPool.Render(this);
 
-            GL.UniformMatrix4(View, false, ref view);
-            GL.UniformMatrix4(Projection, false, ref projection);
-            GL.UniformMatrix4(Model, false, ref model);
-
-            GL.Uniform1(Texture, 0);
-            GL.Uniform3(LightDirectionLocation, LightDirection);
-            GL.Uniform3(CameraPosition, Camera.Position);
-
-            GL.Uniform1(DoAmbientOcclusion, 1);
-
-            if (RealtimeShadows)
-            {
-                _closeFBO.BindDepthTexture(TextureUnit.Texture2);
-                _middleFBO.BindDepthTexture(TextureUnit.Texture3);
-            }
-
-            BlockData.BlockTextureArray.Bind(TextureUnit.Texture0);
-            BlockData.FaceGeometrySSBO.Bind(0);
-
-            ChunkDataPool.Render();
-
-            BlockData.FaceGeometrySSBO.Unbind();
-            BlockData.BlockTextureArray.Unbind();
-
-            if (RealtimeShadows)
-            {
-                _closeFBO.UnbindTexture(TextureUnit.Texture2);
-                _middleFBO.UnbindTexture(TextureUnit.Texture3);
-            }
-
-            TestShader.Unbind();
-
-            GL.Viewport(0, 0, Game.Width, Game.Height);
-            */
+            GFX.Viewport(0, 0, Game.Width, Game.Height);
         }
 
         private void RenderOrtho()

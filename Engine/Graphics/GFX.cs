@@ -32,38 +32,38 @@ public unsafe class GFX
 
     #region Physical device
     public static void GetPhysicalDeviceProperties(PhysicalDeviceProperties* pProperties)
-    => _graphicsContext.vk.GetPhysicalDeviceProperties(_graphicsContext.physicalDevice, pProperties);
+    => Vk.GetPhysicalDeviceProperties(_graphicsContext.physicalDevice, pProperties);
     
     public static void GetPhysicalDeviceProperties(out PhysicalDeviceProperties pProperties)
-    => _graphicsContext.vk.GetPhysicalDeviceProperties(_graphicsContext.physicalDevice, out pProperties);
+    => Vk.GetPhysicalDeviceProperties(_graphicsContext.physicalDevice, out pProperties);
     #endregion
     
     #region Pipeline
     public static Result CreatePipelineLayout(PipelineLayoutCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out PipelineLayout pPipelineLayout)
-    => _graphicsContext.vk.CreatePipelineLayout(Device, pCreateInfo, pAllocator, out pPipelineLayout);
+    => Vk.CreatePipelineLayout(Device, pCreateInfo, pAllocator, out pPipelineLayout);
     
     public static Result CreateDescriptorSetLayout(DescriptorSetLayoutCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out DescriptorSetLayout pSetLayout)
-    => _graphicsContext.vk.CreateDescriptorSetLayout(Device, pCreateInfo, pAllocator, out pSetLayout);
+    => Vk.CreateDescriptorSetLayout(Device, pCreateInfo, pAllocator, out pSetLayout);
 
     public static Result CreateGraphicsPipelines(PipelineCache pipelineCache, uint createInfoCount, GraphicsPipelineCreateInfo* pCreateInfos, AllocationCallbacks* pAllocator, out Pipeline pPipelines)
-    => _graphicsContext.vk.CreateGraphicsPipelines(Device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, out pPipelines);
+    => Vk.CreateGraphicsPipelines(Device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, out pPipelines);
 
     public static Result CreateShaderModule(ShaderModuleCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out ShaderModule pShaderModule)
-    => _graphicsContext.vk.CreateShaderModule(Device, pCreateInfo, pAllocator, out pShaderModule);
+    => Vk.CreateShaderModule(Device, pCreateInfo, pAllocator, out pShaderModule);
 
     public static void UpdateDescriptorSets(uint descriptorWriteCount, WriteDescriptorSet* pDescriptorWrites, uint descriptorCopyCount, CopyDescriptorSet* pDescriptorCopies)
-    => _graphicsContext.vk.UpdateDescriptorSets(Device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
+    => Vk.UpdateDescriptorSets(Device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     #endregion
 
     #region Memory
     public static Result MapMemory(DeviceMemory memory, ulong offset, ulong size, MemoryMapFlags flags, void** ppData)
-    => _graphicsContext.vk.MapMemory(Device, memory, offset, size, flags, ppData);
+    => Vk.MapMemory(Device, memory, offset, size, flags, ppData);
     
     public static Result MapMemory(DeviceMemory memory, ulong offset, ulong size, MemoryMapFlags flags, ref void* pData)
-    => _graphicsContext.vk.MapMemory(Device, memory, offset, size, flags, ref pData);
+    => Vk.MapMemory(Device, memory, offset, size, flags, ref pData);
     
     public static void UnmapMemory(DeviceMemory deviceMemory)
-    => _graphicsContext.vk.UnmapMemory(Device, deviceMemory);
+    => Vk.UnmapMemory(Device, deviceMemory);
     #endregion
     
     #region Image
@@ -75,6 +75,9 @@ public unsafe class GFX
     
     public static void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height)
     => _graphicsContext.CopyBufferToImage(buffer, image, width, height);
+
+    public static void CopyImageToBuffer(Image image, Buffer buffer, uint width, uint height)
+    => _graphicsContext.CopyImageToBuffer(image, buffer, width, height);
     
     public static void CreateImageArray(uint width, uint height, uint layerCount, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, out Image image, out DeviceMemory imageMemory)
     => _graphicsContext.CreateImageArray(width, height, layerCount, format, tiling, usage, properties, out image, out imageMemory);
@@ -85,58 +88,69 @@ public unsafe class GFX
     public static void CopyBufferToImageArray(Buffer buffer, Image image, uint width, uint height, uint layerCount)
     => _graphicsContext.CopyBufferToImageArray(buffer, image, width, height, layerCount);
     
-    public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags, uint layerCount)
+    public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags, uint layerCount = 1)
     => _graphicsContext.CreateImageView(image, format, aspectFlags, layerCount);
     
     public static Result CreateFramebuffer(FramebufferCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out Silk.NET.Vulkan.Framebuffer pFramebuffer)
-    => _graphicsContext.vk.CreateFramebuffer(Device, pCreateInfo, pAllocator, out pFramebuffer);
+    => Vk.CreateFramebuffer(Device, pCreateInfo, pAllocator, out pFramebuffer);
 
     public static Result CreateSampler(SamplerCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out Silk.NET.Vulkan.Sampler pSampler)
-    => _graphicsContext.vk.CreateSampler(Device, pCreateInfo, pAllocator, out pSampler);
+    => Vk.CreateSampler(Device, pCreateInfo, pAllocator, out pSampler);
     #endregion
 
     public static void CreateBuffer(ulong size, BufferUsageFlags usage, MemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory bufferMemory)
     => _graphicsContext.CreateBuffer(size, usage, properties, out buffer, out bufferMemory);
     
+    public static void CreateBuffer<T>(T[] array, BufferUsageFlags bufferType, MemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
+    => _graphicsContext.CreateBuffer(array, bufferType, properties, out buffer, out bufferMemory);
         
     public static void CreateBuffer<T>(BufferUsageFlags bufferType, T[] array, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
     => _graphicsContext.CreateBuffer(bufferType, array, out buffer, out bufferMemory);
     
     public static void UpdateBuffer<T>(T[] array, Buffer buffer) where T : unmanaged
     => _graphicsContext.UpdateBuffer(array, buffer);
+
+    public static void UpdateBuffer<T>(T[] array, Buffer buffer, ulong offsetBytes, ulong sizeBytes) where T : unmanaged
+    => _graphicsContext.UpdateBuffer(array, buffer, offsetBytes, sizeBytes);
+
+    public static void UpdateBufferRange<T>(T[] array, Buffer buffer, ulong offsetBytes, ulong sizeBytes) where T : unmanaged
+    => _graphicsContext.UpdateBufferFull(array, buffer, offsetBytes, sizeBytes);
     
 
     #region Clean up
     // === Destroy ===
     public static void DestroyBuffer(Buffer buffer)
-    => _graphicsContext.vk.DestroyBuffer(Device, buffer, null);
+    => Vk.DestroyBuffer(Device, buffer, null);
 
     public static void DestroyFramebuffer(Silk.NET.Vulkan.Framebuffer framebuffer)
-    => _graphicsContext.vk.DestroyFramebuffer(Device, framebuffer, null);
+    => Vk.DestroyFramebuffer(Device, framebuffer, null);
 
     public static void DestroySampler(Silk.NET.Vulkan.Sampler sampler)
-    => _graphicsContext.vk.DestroySampler(Device, sampler, null);
+    => Vk.DestroySampler(Device, sampler, null);
     
     public static void DestroyImageView(ImageView imageView)
-    => _graphicsContext.vk.DestroyImageView(Device, imageView, null);
+    => Vk.DestroyImageView(Device, imageView, null);
     
     public static void DestroyImage(Image image)
-    => _graphicsContext.vk.DestroyImage(Device, image, null);
+    => Vk.DestroyImage(Device, image, null);
        
     public static void FreeMemory(DeviceMemory deviceMemory)
-    => _graphicsContext.vk.FreeMemory(Device, deviceMemory, null);  
+    => Vk.FreeMemory(Device, deviceMemory, null);  
 
     public static void DestroyShaderModule(ShaderModule module)
-    => _graphicsContext.vk.DestroyShaderModule(Device, module, null);
+    => Vk.DestroyShaderModule(Device, module, null);
 
     public static void DestroyPipeline(Pipeline pipeline)
-    => _graphicsContext.vk.DestroyPipeline(Device, pipeline, null);
+    => Vk.DestroyPipeline(Device, pipeline, null);
 
     public static void DestroyPipelineLayout(PipelineLayout pipelineLayout)
-    => _graphicsContext.vk.DestroyPipelineLayout(Device, pipelineLayout, null);
+    => Vk.DestroyPipelineLayout(Device, pipelineLayout, null);
+    
+    public static void FreeDescriptorSets(DescriptorPool descriptorPool, uint descriptorSetCount, DescriptorSet* pDescriptorSets)
+    => Vk.FreeDescriptorSets(Device, descriptorPool, descriptorSetCount, pDescriptorSets);
 
     public static void DestroyDescriptorSetLayout(DescriptorSetLayout descriptorSetLayout)
-    => _graphicsContext.vk.DestroyDescriptorSetLayout(Device, descriptorSetLayout, null);
+    => Vk.DestroyDescriptorSetLayout(Device, descriptorSetLayout, null);
     #endregion
 
 
@@ -164,6 +178,9 @@ public unsafe class GFX
 
     public static void Draw(uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
     => Vk.CmdDraw(CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+
+    public static void DrawIndexed(uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
+    => Vk.CmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     #endregion
 
 }

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PBG.Data;
 using PBG.MathLibrary;
 using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
@@ -10,21 +11,16 @@ namespace PBG.Graphics;
 public struct ShaderInfo 
 {
     public string VertexShaderPath = "";
-    public string? FragmentShaderPath = "";
+    public string? FragmentShaderPath = null;
     public RenderPass RenderPass = GFX.RenderPass;
+    public CompareOp DepthCompare = CompareOp.Less;
     public ShaderInfo() {}
 }
 
 public unsafe class Shader : BufferBase
 {
     private List<VertexInputBindingDescription> _vertexBindings = [];
-    
     private UniformBufferLayout[] _uniformBindings = [];
-    /*
-    public Buffer[] uniformBuffers = [];
-    public DeviceMemory[] uniformBuffersMemory = [];
-    public void*[] uniformBuffersMapped = [];
-    */
 
     public DescriptorSetLayout descriptorSetLayout;
 
@@ -186,9 +182,27 @@ public unsafe class Shader : BufferBase
         }
         // === End ===
 
+        // === Storage Image Mapping ===
+        int storageImageBindingsIndex = 0;
+        Dictionary<uint, int> storageImageBindingsMap = [];
+        SampledImageLayout[] storageImageBindings = new SampledImageLayout[GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings.Count];
+
+        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes.Count; i++)
+        {
+            var attribute = GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes[i];
+            if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings[attribute.Binding];
+                storageImageBindings[storageImageBindingsIndex] = layout;
+                storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
+                storageImageBindingsIndex++;
+            }
+        }
+        // === End ===
+
 
         // === Create bindings ===
-        DescriptorSetLayoutBinding[] layoutBindings = new DescriptorSetLayoutBinding[_uniformBindings.Length + storageBindings.Length + imageBindings.Length];
+        DescriptorSetLayoutBinding[] layoutBindings = new DescriptorSetLayoutBinding[_uniformBindings.Length + storageBindings.Length + imageBindings.Length + storageImageBindings.Length];
         
         for (int i = 0; i < _uniformBindings.Length; i++)
         {
@@ -208,7 +222,11 @@ public unsafe class Shader : BufferBase
             layoutBindings[_uniformBindings.Length + storageBindings.Length + i] = layout.LayoutBinding;
         }
 
-        Console.WriteLine("Bindings: " + Path.GetFileName(_shaderInfo.VertexShaderPath) + " " + _uniformBindings.Length + " " + storageBindings.Length + " " + imageBindings.Length + " " + layoutBindings.Length);
+        for (int i = 0; i < storageImageBindings.Length; i++)
+        {
+            var layout = storageImageBindings[i];
+            layoutBindings[_uniformBindings.Length + storageBindings.Length + imageBindings.Length + i] = layout.LayoutBinding;
+        }
 
         DescriptorSetLayoutCreateInfo layoutInfo = new()
         {
@@ -232,6 +250,9 @@ public unsafe class Shader : BufferBase
 
         GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes = [];
         GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings = [];
+
+        GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes = [];
+        GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings = [];
         
 
         PipelineShaderStageCreateInfo vertShaderStageInfo = new()
@@ -272,8 +293,8 @@ public unsafe class Shader : BufferBase
         {
             vertexInputInfo.VertexBindingDescriptionCount = (uint)vertexBindings.Length;
 
-            fixed (VertexInputBindingDescription* pVertexBindings = vertexBindings)
-            vertexInputInfo.PVertexBindingDescriptions = pVertexBindings;
+            fixed (VertexInputBindingDescription* PBGertexBindings = vertexBindings)
+            vertexInputInfo.PVertexBindingDescriptions = PBGertexBindings;
         }
 
         if (attributeDescriptions.Length > 0)
@@ -338,7 +359,7 @@ public unsafe class Shader : BufferBase
             DepthClampEnable = false,
             PolygonMode = PolygonMode.Fill,
             CullMode = CullModeFlags.BackBit,
-            FrontFace = FrontFace.Clockwise,
+            FrontFace = FrontFace.CounterClockwise,
             LineWidth = 1f,
             DepthBiasEnable = false,
             DepthBiasConstantFactor = 0.0f, // Optional
@@ -404,7 +425,7 @@ public unsafe class Shader : BufferBase
             SType = StructureType.PipelineDepthStencilStateCreateInfo,
             DepthTestEnable = true,
             DepthWriteEnable = true,
-            DepthCompareOp = CompareOp.Less,
+            DepthCompareOp = _shaderInfo.DepthCompare,
             DepthBoundsTestEnable = false,
             MinDepthBounds = 0.0f, // Optional
             MaxDepthBounds = 1.0f, // Optional
@@ -447,9 +468,8 @@ public unsafe class Shader : BufferBase
 
     public Descriptor GetDescriptorSet()
     {
-        GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets);
-        Console.WriteLine("Descriptor: " + Path.GetFileName(_shaderInfo.VertexShaderPath) + " " + pipelineLayout.Handle + " " + descriptorSetLayout.Handle);
-        return new(this, descriptorSets, _uniformBindings, _uniformAttribues);
+        GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
+        return new(pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
     }
 
     private ShaderModule CreateShaderModule(byte[] code)

@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using PBG.Core;
 using PBG.Data;
+using PBG.Graphics;
 using PBG.MathLibrary;
 using Silk.NET.Input;
 using Plane = System.Numerics.Plane;
@@ -68,10 +69,10 @@ namespace PBG.Rendering
         public Func<bool> CanZoom = () => true;
 
         private Plane[] frustumPlanes = new Plane[6];
-        private GpuPlane[] _gpuPlanes = new GpuPlane[6];
+        public GpuPlane[] GpuPlanes = new GpuPlane[6];
         public Vector2 input => Input.MovementInput;
 
-        //public int FrustumUBO;
+        public SSBO<GpuPlane> FrustumSSBO;
 
         public Camera() : this(new()) {}
         public Camera(int width, int height, Vector3 position)
@@ -93,9 +94,7 @@ namespace PBG.Rendering
 
             _updateAction = _cameraModes[_cameraMode];
 
-            //FrustumUBO = GL.GenBuffer();
-            //GL.BindBuffer(BufferTarget.UniformBuffer, FrustumUBO);
-            //GL.NamedBufferStorage(FrustumUBO, 96, IntPtr.Zero, BufferStorageFlags.DynamicStorageBit);
+            FrustumSSBO = new(6);
         }
 
         public Camera(CameraSettings settings)
@@ -115,6 +114,8 @@ namespace PBG.Rendering
             FirstMove = FirstMove1;
 
             _updateAction = _cameraModes[_cameraMode];
+
+            FrustumSSBO = new(6);
         }   
 
         public void Viewport((int left, int right, int bottom, int top) data) => Viewport(data.left, data.right, data.bottom, data.top);
@@ -206,11 +207,13 @@ namespace PBG.Rendering
                 var plane = frustumPlanes[i];
                 plane = Plane.Normalize(plane);
                 
-                _gpuPlanes[i].Normal = new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z);
-                _gpuPlanes[i].Distance = plane.D;
+                GpuPlanes[i].Normal = new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z);
+                GpuPlanes[i].Distance = plane.D;
 
                 frustumPlanes[i] = plane;
             }
+
+            //FrustumSSBO.Update(_gpuPlanes);
 
             //GL.BindBuffer(BufferTarget.UniformBuffer, FrustumUBO);
             //GL.NamedBufferSubData(FrustumUBO, 0, 96, _gpuPlanes);
@@ -222,15 +225,13 @@ namespace PBG.Rendering
             //GL.BindBufferBase(BufferRangeTarget.UniformBuffer, bindingPoint, FrustumUBO);
         }
 
-        public bool FrustumIntersectsSphere(System.Numerics.Vector3 center, float radius)
+        public bool FrustumIntersectsSphere(Vector3 center, float radius)
         {
-            for (int i = 0; i < frustumPlanes.Length; i++)
+            for (int i = 0; i < GpuPlanes.Length; i++)
             {
-                var plane = frustumPlanes[i];
-                if (Plane.DotCoordinate(plane, center) < -radius)
-                {
+                float dist = Vector3.Dot(GpuPlanes[i].Normal, center) + GpuPlanes[i].Distance;
+                if (dist < -radius)
                     return false;
-                }
             }
             return true;
         }
@@ -247,7 +248,7 @@ namespace PBG.Rendering
 
         public Matrix4 GetViewProjectionMatrix()
         {
-            return ViewMatrix * ProjectionMatrix;
+            return ProjectionMatrix * ViewMatrix;
         }
 
         public void SetCameraMode(CameraMode mode)

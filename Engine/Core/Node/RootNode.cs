@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace PBG.Core
 {
     public class RootNode : Node
@@ -67,6 +69,7 @@ namespace PBG.Core
             {
                 var child = Children[i];
                 child.FixedUpdate();
+                
             }
         }
 

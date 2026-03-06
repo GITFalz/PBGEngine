@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-
+using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Rendering;
@@ -11,8 +11,8 @@ namespace PBG.Voxel;
 public static class ChunkDataPool
 {
     public static List<GPUChunkDataPool> DataPool = [];
-    public const uint CHUNK_COUNT_PER_POOL = 6000;
-    public const uint SLOT_SIZE = 2048; // in vertex count (Vector4i * N)
+    public const uint CHUNK_COUNT_PER_POOL = 8196;
+    public const uint SLOT_SIZE = 8196; // in vertex count (Vector4i * N)
 
     public static bool TryAllocate(uint size, out Allocation alloc)
     {
@@ -32,16 +32,22 @@ public static class ChunkDataPool
         return false;
     }
 
-    public static void UpdateDrawCommands(int passIndex = 0)
+    public static void UpdateDrawCommands(VoxelRenderer renderer, int passIndex = 0)
     {
         for (int i = 0; i < DataPool.Count; i++)
-            DataPool[i].UpdateDrawCommands(passIndex);
+            DataPool[i].UpdateDrawCommands(renderer, passIndex);
     }
 
-    public static void Render(int passIndex = 0)
+    public static void RenderPrePass(VoxelRenderer renderer, int passIndex = 0)
     {
         for (int i = 0; i < DataPool.Count; i++)
-            DataPool[i].Render(passIndex);
+            DataPool[i].RenderPrePass(renderer, passIndex);
+    }
+
+    public static void Render(VoxelRenderer renderer, int passIndex = 0)
+    {
+        for (int i = 0; i < DataPool.Count; i++)
+            DataPool[i].Render(renderer, passIndex);
     }
 
     public static void Dispose()
@@ -54,57 +60,71 @@ public static class ChunkDataPool
 
 public class GPUChunkDataPool : IDisposable
 {
-    public int MeshID;
+    public SSBO<Vector4i> MeshSSBO;
     public ulong SizeInBytes;
     private uint _chunkSize;
 
-    private int[] _indirectIDs;
-    private int[] _matrixIDs;
+    private Descriptor[] _descriptors;
+    private Descriptor[] _prePassDescriptors;
 
+    private IDBO<DrawCommand>[] _indirectSSBOs;
     private DrawCommand[][] _drawCommands;
-    private Matrix4[][] _matrices;
+
+    private SSBO<Matrix4> _matrixSSBO;
+    private Matrix4[] _matrices;
+
+    private bool _updateChunkData = false;
+    private uint _updateStart = ChunkDataPool.CHUNK_COUNT_PER_POOL;
+    private uint _updateEnd = 0;
+
 
     public int VisibleChunks = 0;
     private int _chunkCount = 0;
 
     public List<Allocation> Allocations = [];
 
-    //private static VAO _vao = new();
-
     public const int PASS_COUNT = 4;
+
+    public static int vertexCount = 0;
 
     public GPUChunkDataPool(uint count, uint size)
     {
-        /*
         _chunkSize = size;
         SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector4i>();
 
-        MeshID = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, MeshID);
-        GL.NamedBufferStorage(MeshID, (nint)SizeInBytes, IntPtr.Zero, BufferStorageFlags.DynamicStorageBit);
+        MeshSSBO = new(count * size, false);
 
         Allocations.Add(new() { DataPool = this, Offset = 0, Size = count });
 
-        _indirectIDs = new int[PASS_COUNT];
-        _matrixIDs = new int[PASS_COUNT];
+        _descriptors        = new Descriptor[PASS_COUNT];
+        _prePassDescriptors = new Descriptor[PASS_COUNT];
 
-        _drawCommands = new DrawCommand[PASS_COUNT][];
-        _matrices = new Matrix4[PASS_COUNT][];
+        _indirectSSBOs      = new IDBO<DrawCommand>[PASS_COUNT];
+        _drawCommands       = new DrawCommand[PASS_COUNT][];
+
+        _matrixSSBO         = new(count);
+        _matrices           = new Matrix4[count];
 
         for (int i = 0; i < PASS_COUNT; i++)
         {
+            var descriptor = VoxelRenderer.TestShader.GetDescriptorSet();  
+            var prePassDescriptor = VoxelRenderer.TestPrePassShader.GetDescriptorSet();  
+
+            _descriptors[i] = descriptor;
+            _prePassDescriptors[i] = prePassDescriptor;
+
+            _indirectSSBOs[i] = new(count, true);
             _drawCommands[i] = new DrawCommand[count];
-            _matrices[i] = new Matrix4[count];
 
-            _indirectIDs[i] = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.DrawIndirectBuffer, _indirectIDs[i]);
-            GL.BufferData(BufferTarget.DrawIndirectBuffer, (nint)(count * Marshal.SizeOf<DrawCommand>()), IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            descriptor.BindTextureArray(BlockData.BlockTextureArray, 5);
+            descriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
+            descriptor.BindSSBO(MeshSSBO, 1);
+            descriptor.BindSSBO(_matrixSSBO, 2);
 
-            _matrixIDs[i] = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ShaderStorageBuffer, _matrixIDs[i]);
-            GL.NamedBufferStorage(_matrixIDs[i], (int)count * Marshal.SizeOf<Matrix4>(), IntPtr.Zero, BufferStorageFlags.DynamicStorageBit);
-        }  
-        */
+            prePassDescriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
+            prePassDescriptor.BindSSBO(MeshSSBO, 1);
+            prePassDescriptor.BindSSBO(_matrixSSBO, 2);
+        }    
     }
 
     public bool TryAllocate(uint size, out Allocation alloc)
@@ -140,11 +160,17 @@ public class GPUChunkDataPool : IDisposable
 
     public void Update(VoxelChunk chunk, Vector4i[] data)
     {
-        /*
         nint stride = Marshal.SizeOf<Vector4i>();
-        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, MeshID);
-        GL.NamedBufferSubData(MeshID, (nint)(chunk.Allocation.Offset * _chunkSize * stride), (int)(data.Length * stride), data);
-        */
+        MeshSSBO.Update(data, (ulong)(chunk.Allocation.Offset * _chunkSize * stride), 0);
+        for (int i = 0; i < chunk.Allocation.Size; i++)
+        {
+            long index = chunk.Allocation.Offset + i;
+            _matrices[index] = chunk.ModelMatrix;
+        }
+
+        _updateChunkData = true;
+        if (chunk.Allocation.Start < _updateStart) _updateStart = chunk.Allocation.Start;
+        if (chunk.Allocation.End > _updateEnd) _updateEnd = chunk.Allocation.End;
     }
 
     public void Free(VoxelChunk chunk)
@@ -208,16 +234,15 @@ public class GPUChunkDataPool : IDisposable
             drawCommand.InstanceCount = 1;
             drawCommand.Count = ((uint)vertexCount - (uint)newVertexCount) * 6;
             drawCommand.First = (uint)(alloc.Offset + i) * _chunkSize * 6;
+            drawCommand.BaseInstance = alloc.Offset + (uint)i;
             _drawCommands[passIndex][VisibleChunks] = drawCommand;
-
-            _matrices[passIndex][VisibleChunks] = chunk.ModelMatrix;
 
             vertexCount = (int)newVertexCount;
             VisibleChunks++;
         }
     }
 
-    public void UpdateDrawCommands(int passIndex = 0)
+    public void UpdateDrawCommands(VoxelRenderer renderer, int passIndex = 0)
     {
         if (VisibleChunks == 0)
         {
@@ -225,52 +250,68 @@ public class GPUChunkDataPool : IDisposable
             return;
         }
         
-        /*
-        GL.BindBuffer(BufferTarget.DrawIndirectBuffer, _indirectIDs[passIndex]);
-        GL.NamedBufferSubData(_indirectIDs[passIndex], 0, VisibleChunks * Marshal.SizeOf<DrawCommand>(), _drawCommands[passIndex]);
+        _indirectSSBOs[passIndex].Update(_drawCommands[passIndex], 0, (uint)VisibleChunks * (uint)Marshal.SizeOf<DrawCommand>());
+        if (_updateChunkData && _updateEnd > _updateStart)
+        {
+            _matrixSSBO.Update(_matrices, _updateStart * Matrix4.ByteSize, (_updateEnd - _updateStart) * Matrix4.ByteSize, true);
 
-        GL.BindBuffer(BufferTarget.DrawIndirectBuffer, _matrixIDs[passIndex]);
-        GL.NamedBufferSubData(_matrixIDs[passIndex], 0, VisibleChunks * Marshal.SizeOf<Matrix4>(), _matrices[passIndex]);
-        */
+            _updateChunkData = false;
+            _updateStart = ChunkDataPool.CHUNK_COUNT_PER_POOL;
+            _updateEnd = 0;
+        }
 
         _chunkCount = VisibleChunks;
-        VisibleChunks = 0;
     }
 
-    public void Render(int passIndex = 0)
+    public void RenderPrePass(VoxelRenderer renderer, int passIndex = 0)
     {
         if (_chunkCount == 0)
             return;
 
-        /*
-        _vao.Bind();
-        GL.BindBuffer(BufferTarget.DrawIndirectBuffer, _indirectIDs[passIndex]);
+        var prePassDescriptor = _prePassDescriptors[passIndex];
+        
+        prePassDescriptor.Bind();
+        prePassDescriptor.Uniform(VoxelRenderer.PrePassView, renderer.Camera.ViewMatrix);
+        prePassDescriptor.Uniform(VoxelRenderer.PrePassProjection, renderer.Camera.ProjectionMatrix);
 
-        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, MeshID);
-        GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 1, MeshID);  
+        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[passIndex].Buffer, 0, (uint)_chunkCount, (uint)Marshal.SizeOf<DrawCommand>());
 
-        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, _matrixIDs[passIndex]);
-        GL.BindBufferBase(BufferRangeTarget.ShaderStorageBuffer, 2, _matrixIDs[passIndex]);
+        VisibleChunks = 0;
+    }
 
-        GL.MultiDrawArraysIndirect(PrimitiveType.Triangles, IntPtr.Zero, _chunkCount, Marshal.SizeOf<DrawCommand>());
-        Shader.Error("Indirect buffer error: ");
+    public void Render(VoxelRenderer renderer, int passIndex = 0)
+    {
+        if (_chunkCount == 0)
+            return;
 
-        GL.BindBuffer(BufferTarget.ShaderStorageBuffer, 0);
-        GL.BindBuffer(BufferTarget.DrawIndirectBuffer, 0);
-        */
+        var descriptor = _descriptors[passIndex];
+        
+        descriptor.Bind();
+        descriptor.Uniform(VoxelRenderer.View, renderer.Camera.ViewMatrix);
+        descriptor.Uniform(VoxelRenderer.Projection, renderer.Camera.ProjectionMatrix);
+        descriptor.Uniform(VoxelRenderer.LightDirectionLocation, renderer.LightDirection);
+        descriptor.Uniform(VoxelRenderer.CameraPosition, renderer.Camera.Position);
+        descriptor.Uniform(VoxelRenderer.DoAmbientOcclusion, renderer.AmbientOcclusion ? 1 : 0);
+
+        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[passIndex].Buffer, 0, (uint)_chunkCount, (uint)Marshal.SizeOf<DrawCommand>());
+
+        VisibleChunks = 0;
     }
     
     public void Dispose()
     {
-        /*
-        GL.DeleteBuffer(MeshID);
+        MeshSSBO.Dispose();
+        _matrixSSBO.Dispose();
         
         for (int i = 0; i < PASS_COUNT; i++)
         {
-            GL.DeleteBuffer(_indirectIDs[i]);
-            GL.DeleteBuffer(_matrixIDs[i]);
+            _indirectSSBOs[i].Dispose();
+            _descriptors[i].Dispose();
+            _prePassDescriptors[i].Dispose();
         }  
-        */
+
+        _descriptors = [];
+        _prePassDescriptors = [];
     }
 }
 

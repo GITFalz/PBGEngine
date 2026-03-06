@@ -11,8 +11,25 @@ public unsafe class Texture : BufferBase
     public ImageView textureImageView;
     public Sampler textureSampler;
 
+    private TextureInfo _info;
+    private Format _format = Format.R8G8B8A8Srgb;
+    
+    public bool IsStorageImage => _info.IsStorageImage;
+
     public Texture(TextureInfo info)
     {
+        _info = info;
+        if (info.IsStorageImage)
+        {
+            _format = info.Format;
+            GFX.CreateImage((uint)info.Width, (uint)info.Height, info.Format, ImageTiling.Optimal, ImageUsageFlags.StorageBit | ImageUsageFlags.SampledBit | ImageUsageFlags.TransferSrcBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+            GFX.TransitionImageLayout(textureImage, info.Format, ImageLayout.Undefined, ImageLayout.General);
+
+            CreateStorageImageView();
+            CreateTextureSampler();
+            return;
+        }
+        
         if (info.FilePath != null)
         {
             StbImage.stbi_set_flip_vertically_on_load(1);
@@ -29,7 +46,7 @@ public unsafe class Texture : BufferBase
 
             void* data; 
             GFX.MapMemory(stagingBufferMemory, 0, imageSize, 0, &data);
-            HelperFunctions.MemCpy(texture.Data, data, imageSize, imageSize);
+            HelperFunctions.MemCpyTo(texture.Data, data, imageSize, imageSize);
             GFX.UnmapMemory(stagingBufferMemory);
 
             GFX.CreateImage((uint)texture.Width, (uint)texture.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
@@ -45,11 +62,25 @@ public unsafe class Texture : BufferBase
             CreateTextureImageView();
             CreateTextureSampler();
         }   
+        else
+        {
+            _format = info.Format;
+            GFX.CreateImage((uint)_info.Width, (uint)_info.Height, _info.Format, ImageTiling.Optimal, ImageUsageFlags.StorageBit | ImageUsageFlags.SampledBit | ImageUsageFlags.TransferSrcBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+            GFX.TransitionImageLayout(textureImage, _info.Format, ImageLayout.Undefined, ImageLayout.General);
+
+            CreateTextureImageView();
+            CreateTextureSampler();
+        }
+    }
+
+    public void CreateStorageImageView()
+    {
+        textureImageView = GFX.CreateImageView(textureImage, _format, ImageAspectFlags.ColorBit);
     }
 
     public void CreateTextureImageView() 
     {
-        textureImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit, 1);
+        textureImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit);
     }
 
     public void CreateTextureSampler()
@@ -57,8 +88,8 @@ public unsafe class Texture : BufferBase
         SamplerCreateInfo samplerInfo = new()
         {
             SType = StructureType.SamplerCreateInfo,
-            MagFilter = Filter.Linear,
-            MinFilter = Filter.Linear,
+            MagFilter = Filter.Nearest,
+            MinFilter = Filter.Nearest,
 
             AddressModeU = SamplerAddressMode.Repeat,
             AddressModeV = SamplerAddressMode.Repeat,
@@ -86,6 +117,49 @@ public unsafe class Texture : BufferBase
         if (GFX.CreateSampler(&samplerInfo, null, out textureSampler) != Result.Success) {
             throw new InvalidOperationException("failed to create texture sampler!");
         }
+    }
+
+    public ImageMemoryBarrier GetMemoryBarrier()
+    {
+        return new ImageMemoryBarrier
+        {
+            SType         = StructureType.ImageMemoryBarrier,
+            SrcAccessMask = AccessFlags.ShaderWriteBit,
+            DstAccessMask = AccessFlags.ShaderReadBit,
+            OldLayout     = ImageLayout.General,
+            NewLayout     = ImageLayout.General,
+            Image         = textureImage,
+            SubresourceRange = new ImageSubresourceRange
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                LevelCount = 1,
+                LayerCount = 1,
+            }
+        };
+    }
+
+    public float[] GetPixels()
+    {
+        uint imageSize = (uint)(_info.Width * _info.Height * 4 * sizeof(float));
+
+        GFX.CreateBuffer(imageSize, BufferUsageFlags.TransferDstBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingMemory);
+
+        GFX.TransitionImageLayout(textureImage, _format, ImageLayout.General, ImageLayout.TransferSrcOptimal);
+
+        GFX.CopyImageToBuffer(textureImage, stagingBuffer, (uint)_info.Width, (uint)_info.Height);
+
+        GFX.TransitionImageLayout(textureImage, _format, ImageLayout.TransferSrcOptimal, ImageLayout.General);
+
+        void* data;
+        GFX.MapMemory(stagingMemory, 0, imageSize, 0, &data);
+        float[] pixels = new float[_info.Width * _info.Height * 4];
+        HelperFunctions.MemCpyFrom(data, pixels, imageSize, imageSize);
+        GFX.UnmapMemory(stagingMemory);
+
+        GFX.DestroyBuffer(stagingBuffer);
+        GFX.FreeMemory(stagingMemory);
+
+        return pixels;
     }
 
     protected override void Destroy()

@@ -5,19 +5,40 @@ namespace PBG.Graphics;
 public unsafe static class HelperFunctions
 {
     public static bool Empty<T>(this T[] array) where T : struct => array.Length == 0;
-    public static void MemCpy<T>(T[] array, void* data, long destinationSizeInBytes, long sourceBytesToCopy) where T : unmanaged
+    public static void MemCpyTo<T>(void* source, void* data, ulong destinationSizeInBytes, ulong sourceBytesToCopy) where T : unmanaged
     {
-        fixed (T* pVertices = array)
+        Buffer.MemoryCopy(source, data, destinationSizeInBytes, sourceBytesToCopy);
+    }
+
+    public static void MemCpyTo<T>(T[] array, void* data, long destinationSizeInBytes, long sourceBytesToCopy) where T : unmanaged
+    {
+        fixed (T* Pdata = array)
         {
-            Buffer.MemoryCopy(pVertices, data, destinationSizeInBytes, sourceBytesToCopy);
+            Buffer.MemoryCopy(Pdata, data, destinationSizeInBytes, sourceBytesToCopy);
         }
     }
 
-    public static void MemCpy<T>(T[] array, void* data, ulong destinationSizeInBytes, ulong sourceBytesToCopy) where T : unmanaged
+    public static void MemCpyTo<T>(T[] array, void* data, ulong destinationSizeInBytes, ulong sourceBytesToCopy) where T : unmanaged
     {
-        fixed (T* pVertices = array)
+        fixed (T* Pdata = array)
         {
-            Buffer.MemoryCopy(pVertices, data, destinationSizeInBytes, sourceBytesToCopy);
+            Buffer.MemoryCopy(Pdata, data, destinationSizeInBytes, sourceBytesToCopy);
+        }
+    }
+
+    public static void MemCpyFrom<T>(void* data, T[] array, long destinationSizeInBytes, long sourceBytesToCopy) where T : unmanaged
+    {
+        fixed (T* Pdata = array)
+        {
+            Buffer.MemoryCopy(data, Pdata, destinationSizeInBytes, sourceBytesToCopy);
+        }
+    }
+
+    public static void MemCpyFrom<T>(void* data, T[] array, ulong destinationSizeInBytes, ulong sourceBytesToCopy) where T : unmanaged
+    {
+        fixed (T* Pdata = array)
+        {
+            Buffer.MemoryCopy(data, Pdata, destinationSizeInBytes, sourceBytesToCopy);
         }
     }
 

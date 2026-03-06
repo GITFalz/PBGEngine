@@ -3,7 +3,7 @@ namespace PBG.MathLibrary
     public struct Quaternion
     {
         public float X, Y, Z, W;
-        public Vector3 XYZ => (X, Y, Z);
+        public Vector3 Xyz => (X, Y, Z);
 
         public static readonly Quaternion Identity = new Quaternion(0, 0, 0, 1);
 
@@ -48,6 +48,7 @@ namespace PBG.MathLibrary
             return new Quaternion(axis.X * s, axis.Y * s, axis.Z * s, MathF.Cos(half));
         }
 
+        public static Quaternion FromEuler(Vector3 v) => FromEuler(v.X, v.Y, v.Z);
         public static Quaternion FromEuler(float pitchRad, float yawRad, float rollRad)
         {
             float cp = MathF.Cos(pitchRad * 0.5f), sp = MathF.Sin(pitchRad * 0.5f);
@@ -98,6 +99,9 @@ namespace PBG.MathLibrary
                 a.W * b.W - a.X * b.X - a.Y * b.Y - a.Z * b.Z
             );
 
+        public static bool operator ==(Quaternion a, Quaternion b) => a.Xyz == b.Xyz && a.W == b.W;
+        public static bool operator !=(Quaternion a, Quaternion b) => a.Xyz != b.Xyz || a.W != b.W;
+
         public Vector3 Rotate(Vector3 v)
         {
             var qv = new Quaternion(v.X, v.Y, v.Z, 0f);
@@ -147,5 +151,15 @@ namespace PBG.MathLibrary
         }
 
         public override string ToString() => $"Quaternion({X:F4}, {Y:F4}, {Z:F4}, {W:F4})";
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Quaternion q && q == this;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y, Z, W);
+        }
     }
 }

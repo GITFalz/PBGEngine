@@ -9,7 +9,7 @@ public abstract class BufferBase : IDisposable
 
     public BufferBase()
     {
-        if (this is Shader)
+        if (this is Shader || this is ComputeShader)
             _highPriorityDisposeBuffer.Add(this);
         else
             _lowPriorityDisposeBuffer.Add(this);
@@ -29,22 +29,29 @@ public abstract class BufferBase : IDisposable
 
     public void Dispose()
     {
-        Destroy();
-        RemoveFromList();
+        if (RemoveFromList())
+            Destroy();
     }
 
-    protected void RemoveFromList()
+    protected bool RemoveFromList()
     {
         if (this is Descriptor)
         {
             _lowPriorityResizeList.Remove(this);
-            _highPriorityDisposeBuffer.Remove(this);
         }
         else
         {
             _highPriorityResizeList.Remove(this);
-            _lowPriorityDisposeBuffer.Remove(this);
         }      
+
+        if (this is Shader || this is ComputeShader)
+        {
+            return _highPriorityDisposeBuffer.Remove(this);
+        }
+        else
+        {
+            return _lowPriorityDisposeBuffer.Remove(this);
+        }   
     }
 
     public static void ResizeAll(uint width, uint height)

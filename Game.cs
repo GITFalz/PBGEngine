@@ -6,6 +6,7 @@ using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Rendering;
+using PBG.Threads;
 using PBG.UI;
 using PBG.Voxel;
 using Silk.NET.Input;
@@ -19,19 +20,19 @@ public class Game : GameWindow
     public static int Width;
     public static int Height;
 
-    public static string MainPath = FileManager.CreatePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".projectVoxel");
-    public static string AssetsPath = FileManager.CreatePath(MainPath, "assets");
-    public static string ShaderPath = FileManager.CreatePath(AssetsPath, "shaders");
-    public static string TexturePath = FileManager.CreatePath(AssetsPath, "textures");
+    public static PString MainPath = FileManager.CreatePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".projectVoxel");
+    public static PString AssetsPath = FileManager.CreatePath(MainPath, "assets");
+    public static PString ShaderPath = FileManager.CreatePath(AssetsPath, "shaders");
+    public static PString TexturePath = FileManager.CreatePath(AssetsPath, "textures");
 
-    public static string DataPath = FileManager.CreatePath(MainPath, "data");
-    public static string ModelPath = FileManager.CreatePath(DataPath, "models");
-    public static string UndoModelPath = FileManager.CreatePath(ModelPath, "undo");
-    public static string EditorRegistryPath = FileManager.CreatePath(DataPath, "registry");
-    public static string EditorPalettePath = FileManager.CreatePath(DataPath, "palette");
+    public static PString DataPath = FileManager.CreatePath(MainPath, "data");
+    public static PString ModelPath = FileManager.CreatePath(DataPath, "models");
+    public static PString UndoModelPath = FileManager.CreatePath(ModelPath, "undo");
+    public static PString EditorRegistryPath = FileManager.CreatePath(DataPath, "registry");
+    public static PString EditorPalettePath = FileManager.CreatePath(DataPath, "palette");
 
-    public static string CustomPath = FileManager.CreatePath(MainPath, "custom");
-    public static string CustomTempPath = FileManager.CreatePath(CustomPath, "temp");
+    public static PString CustomPath = FileManager.CreatePath(MainPath, "custom");
+    public static PString CustomTempPath = FileManager.CreatePath(CustomPath, "temp");
 
 
     double accumulator = 0.0;
@@ -50,7 +51,7 @@ public class Game : GameWindow
 
     private bool shouldRender = false;
 
-    public static bool ForceSyncedRendering = false;
+    public static bool ForceSyncedRendering = true;
 
     public static int Counter = 0;
 
@@ -61,6 +62,7 @@ public class Game : GameWindow
         Instance = this;
         Width = width;
         Height = height;
+        //GraphicsContext.graphicsContext.window.FramesPerSecond = 20;
     }
 
     public override void OnKeyDown(IKeyboard keyboard, Key key, int scanCode)
@@ -168,6 +170,8 @@ public class Game : GameWindow
 
     public override void OnUpdate(double delta)
     {
+        Scene.LoadSceneFinal();
+
         shouldRender = false;
         double dt = frameTimer.Elapsed.TotalSeconds;
         if (dt >= TargetRenderingFrameTime)
@@ -208,21 +212,18 @@ public class Game : GameWindow
                 shouldRender = true;
         }
 
-        if (GameTime.FpsUpdated)
-        {
-            Console.WriteLine(GameTime.Fps);
-        }
+        TaskPool.Update();
 
-        //TaskPool.Update();
+        if (GameTime.FpsUpdated)
+            Console.WriteLine(GameTime.Fps);
     }
 
     public override void OnRender()
     {
-        if (!shouldRender) return;
-        
         GameTime.Render((float)_renderingDeltaTime);
 
         UIController.ClearFrameBuffer();
+        
         Scene.CurrentScene?.Render();
 
         UIController.GlobalRender();
@@ -238,8 +239,18 @@ public class Game : GameWindow
         Instance.CursorMode = cursorMode;
     }
 
+    public static CursorMode GetCursorState()
+    {
+        return Instance.CursorMode;
+    }
+
     public static bool IsCursorState(CursorMode cursorMode)
     {
         return Instance.CursorMode == cursorMode;
+    }
+
+    internal static void SetCursorState(object disabled)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -7,15 +7,6 @@
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Microsoft.Extensions.DependencyModel.dll
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Newtonsoft.Json.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Audio.OpenAL.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Compute.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Core.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Graphics.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Input.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Mathematics.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Windowing.Common.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Windowing.Desktop.dll
-/home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/OpenTK.Windowing.GraphicsLibraryFramework.dll
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Silk.NET.Core.dll
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Silk.NET.GLFW.dll
 /home/bjorn/Documents/Projects/PBGEngine/bin/Debug/net9.0/Silk.NET.Input.Common.dll

@@ -1,8 +1,9 @@
+using PBG.Core;
 using PBG.MathLibrary;
 
 namespace PBG.Rendering;
 
-public class Viewport//
+public class Viewport : ScriptingNode
 {
     int _left = 0;
     int _right = 0;

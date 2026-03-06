@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PBG.Data;
 using PBG.MathLibrary;
 using Silk.NET.Core;
 using Silk.NET.Input;
@@ -14,7 +16,11 @@ namespace PBG.Graphics;
 
 public unsafe class VulkanInstance
 {
-    const bool enableValidationLayers = true;
+    #if DEBUG
+        const bool enableValidationLayers = true;
+    #else
+        const bool enableValidationLayers = false;
+    #endif
 
     public GraphicsContext context;
     public GameWindow gameWindow;
@@ -34,7 +40,7 @@ public unsafe class VulkanInstance
     };
 
     private readonly string[] validationLayers = ["VK_LAYER_KHRONOS_validation"];
-    private readonly string[] deviceExtensions = [KhrSwapchain.ExtensionName];
+    private readonly string[] deviceExtensions = [KhrSwapchain.ExtensionName, "VK_EXT_memory_budget"];
 
     private IInputContext? input = null;
 
@@ -69,13 +75,15 @@ public unsafe class VulkanInstance
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.Undefined, ImageLayout.PresentSrcKhr, AttachmentLoadOp.Clear, out context.renderPass);
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.PresentSrcKhr, ImageLayout.PresentSrcKhr, AttachmentLoadOp.Load, out context.renderPassLoad);
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.Undefined, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Clear, out context.framebufferRenderPass);
-        CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.PresentSrcKhr, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Load, out context.framebufferRenderPassLoad);
+        CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Load, out context.framebufferRenderPassLoad);
 
         CreateCommandPool();
         CreateDepthResources();
         CreateFramebuffers();
         CreateCommandBuffer();
         CreateSyncObjects();
+
+        VRAMInfo.Initialize();
     }
 
     private void OnLoad()
@@ -266,7 +274,7 @@ public unsafe class VulkanInstance
     {
         string message = Marshal.PtrToStringAnsi((nint)pCallbackData->PMessage) ?? "";
     
-        if (message.Contains("INFO") || message.Contains("loader")) 
+        if (message.Contains("INFO") || message.Contains("loader") || message.Contains("VkQueue")) 
             return Vk.False;
 
         Console.ForegroundColor = messageSeverity switch
@@ -401,6 +409,12 @@ public unsafe class VulkanInstance
     #region Logical Device
     private void CreateLogicalDevice()
     {
+        PhysicalDeviceFeatures supportedFeatures;
+        GFX.Vk.GetPhysicalDeviceFeatures(context.physicalDevice, &supportedFeatures);
+
+        if (!supportedFeatures.MultiDrawIndirect)
+            throw new Exception("GPU does not support MultiDrawIndirect!");
+            
         QueueFamilyIndices indices = FindQueueFamilies(context.physicalDevice);
 
         HashSet<uint> uniqueQueueFamilies = [ indices.GraphicsFamily!.Value, indices.PresentFamily!.Value ];
@@ -420,9 +434,22 @@ public unsafe class VulkanInstance
             i++;
         }
 
+        var vulkan11Features = new PhysicalDeviceVulkan11Features
+        {
+            SType                = StructureType.PhysicalDeviceVulkan11Features,
+            ShaderDrawParameters = true
+        };
+
+        var deviceFeatures2 = new PhysicalDeviceFeatures2
+        {
+            SType = StructureType.PhysicalDeviceFeatures2,
+            PNext = &vulkan11Features
+        };
+
         PhysicalDeviceFeatures deviceFeatures = new()
         {
-            SamplerAnisotropy = true
+            SamplerAnisotropy = true,
+            MultiDrawIndirect  = true
         };
 
         DeviceCreateInfo createInfo = new()
@@ -431,6 +458,7 @@ public unsafe class VulkanInstance
             QueueCreateInfoCount = (uint)queueCreateInfos.Length,
             PEnabledFeatures = &deviceFeatures,
             EnabledExtensionCount = (uint)deviceExtensions.Length,
+            PNext = &deviceFeatures2
         };
         createInfo.PpEnabledExtensionNames = (byte**)deviceExtensions.ToPtr(out var pDeviceExtensions);
 
@@ -659,7 +687,7 @@ public unsafe class VulkanInstance
             Format             = depthFormat,
             Samples            = SampleCountFlags.Count1Bit,
             LoadOp             = loadOp,
-            StoreOp            = AttachmentStoreOp.DontCare,
+            StoreOp            = AttachmentStoreOp.Store,
             StencilLoadOp      = AttachmentLoadOp.DontCare,
             StencilStoreOp     = AttachmentStoreOp.DontCare,
             InitialLayout      = loadOp == AttachmentLoadOp.Clear ? ImageLayout.Undefined : ImageLayout.DepthStencilAttachmentOptimal,
@@ -925,7 +953,7 @@ public unsafe class VulkanInstance
         renderPassInfo.RenderArea.Extent = context.swapChainExtent;
 
         ClearValue[] clearValues = new ClearValue[2];
-        clearValues[0].Color = new(0.0f, 0.0f, 0.0f, 1.0f);
+        clearValues[0].Color = new(0.53f * 0.5f, 0.81f * 0.5f, 0.92f * 0.5f, 1.0f);
         clearValues[1].DepthStencil = new(1.0f, 0);
 
         renderPassInfo.ClearValueCount = (uint)clearValues.Length;
@@ -942,6 +970,8 @@ public unsafe class VulkanInstance
         context.vk.CmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         GFX.Viewport(0, 0, context.swapChainExtent.Width, context.swapChainExtent.Height);
+
+        FBO.currentRenderPassState = FBO.RenderPassState.Main;
 
         gameWindow.OnRender();
 

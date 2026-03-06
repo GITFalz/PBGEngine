@@ -47,6 +47,19 @@ public struct Vector3
         Z = z;
     }
 
+    public Vector3(Vector2 v)
+    {
+        X = v.X;
+        Y = v.Y;
+    }
+
+    public Vector3(Vector3 v)
+    {
+        X = v.X;
+        Y = v.Y;
+        Z = v.Z;
+    }
+
     public Vector3(float v)
     {
         X = v; Y = v; Z = v;
@@ -79,6 +92,12 @@ public struct Vector3
         result = (left.X * right.X) + (left.Y * right.Y) + (left.Z * right.Z);
     }
 
+    public static float CalculateAngle(Vector3 a, Vector3 b)
+    {
+        float dot = Vector3.Dot(Vector3.Normalize(a), Vector3.Normalize(b));
+        return MathF.Acos(Math.Clamp(dot, -1f, 1f));
+    }
+
     public static Vector3 Cross(Vector3 left, Vector3 right)
     {
         Cross(left, right, out var result);
@@ -99,7 +118,7 @@ public struct Vector3
 
     public static void Transform(in Vector3 vec, in Quaternion quat, out Vector3 result)
     {
-        Vector3 xyz = quat.XYZ;
+        Vector3 xyz = quat.Xyz;
         Cross(xyz, vec, out Vector3 temp);
         Vector3 temp2 = vec * quat.W;
         temp += temp2;
@@ -117,12 +136,27 @@ public struct Vector3
         );
     }
 
+    public static Vector3 TransformNormal(Vector3 normal, Matrix4 matrix)
+    {
+        return Vector3.Normalize(new Vector3(
+            matrix.M11 * normal.X + matrix.M12 * normal.Y + matrix.M13 * normal.Z,
+            matrix.M21 * normal.X + matrix.M22 * normal.Y + matrix.M23 * normal.Z,
+            matrix.M31 * normal.X + matrix.M32 * normal.Y + matrix.M33 * normal.Z
+        ));
+    }
+
+    public static float Distance(Vector3 a, Vector3 b)
+    {
+        return (b - a).Length;
+    }
+
     public static float DistanceSquared(Vector3 a, Vector3 b)
     {
         return (b - a).LengthSquared;
     }
 
     public static implicit operator Vector3((float x, float y, float z) data) => new(data.x, data.y, data.z);
+    public static implicit operator (float x, float y, float z)(Vector3 data) => (data.X, data.Y, data.Z);
 
     public static bool operator ==(Vector3 a, Vector3 b) => a.X == b.X && a.Y == b.Y && a.Z == b.Z;
     public static bool operator !=(Vector3 a, Vector3 b) => a.X != b.X || a.Y != b.Y || a.Z != b.Z;
@@ -172,8 +206,5 @@ public struct Vector3
         return false;
     }
 
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(X, Y, Z);
-    }
+    public override int GetHashCode() => HashCode.Combine(X, Y, Z);
 }

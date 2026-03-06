@@ -1,4 +1,5 @@
 using PBG.Graphics;
+using Silk.NET.Vulkan;
 
 namespace PBG.UI
 {
@@ -27,15 +28,15 @@ namespace PBG.UI
             UiShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag") });
             UiShader.Compile();
 
-            UiTexture = new TextureArray("UITextures.png", 64, 64);
-            IconTexture = new TextureArray("Icons.png", 64, 64);
-            ItemTexture = new TextureArray("Icons.png", 64, 64);
+            UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest});
+            IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest});
+            ItemTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest});
 
             //ItemTexture = ItemDataManager.Image;
             TextShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag") });
             TextShader.Compile();
 
-            TextTexture = new TextureArray("TextAtlas.png", 14, 18); 
+            TextTexture = new TextureArray(new("TextAtlas.png", 14, 18) { Filter = Filter.Linear, SamplerMode = SamplerAddressMode.ClampToEdge }); 
 
             modelLoc = UiShader.GetLocation("ubo.model");
             projectionLoc = UiShader.GetLocation("ubo.projection");

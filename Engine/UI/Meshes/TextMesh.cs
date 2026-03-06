@@ -1,4 +1,6 @@
 
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
@@ -16,6 +18,7 @@ namespace PBG.Rendering.Meshes
         
         public int GlyphCount = 0;
         public int VisibleGlyphCount = 0;
+        public int VisibleLineCount = 0;
         public UIGlyphStruct[] GlyphStructs = [];
         public Dictionary<UI.IUIText, TextMetadata> Texts = [];
 
@@ -207,6 +210,7 @@ namespace PBG.Rendering.Meshes
         {
             int visibleIndex = 0;
             VisibleGlyphCount = 0;
+            VisibleLineCount = 0;
             foreach (var (text, metaData) in Texts)
             {
                 if (text.Visible)
@@ -223,6 +227,7 @@ namespace PBG.Rendering.Meshes
                         visibleIndex++;
                     }
                     VisibleGlyphCount += metaData.CharCount;
+                    VisibleLineCount++;
                 }
             }
 
@@ -246,6 +251,8 @@ namespace PBG.Rendering.Meshes
             if (_bufferUpdateState != BufferEnum.None)
             {
                 UpdateBuffers();
+                _bufferUpdateState = BufferEnum.None;
+                _updateVisibility = false;
             }
         }
 
@@ -264,8 +271,8 @@ namespace PBG.Rendering.Meshes
                     if (_updateVisibility)
                         UpdateVisibility();
 
-                    _lineSSBO.Update(LineStructs);
-                    _glyphSSBO.Update(GlyphStructs);
+                    _lineSSBO.Update(LineStructs, 0, (uint)VisibleLineCount * (uint)Marshal.SizeOf<UILineStruct>());
+                    _glyphSSBO.Update(GlyphStructs, 0, (uint)VisibleGlyphCount * (uint)Marshal.SizeOf<UIGlyphStruct>());
                     break;
                 case BufferEnum.Recreate:
 
@@ -348,9 +355,6 @@ namespace PBG.Rendering.Meshes
                     Descriptor.BindSSBO(_glyphSSBO, 2);
                     break;
             }
-
-            _bufferUpdateState = BufferEnum.None;
-            _updateVisibility = false;
         }
 
         public void UpdateAnimationTranslation(UI.IUIText text)

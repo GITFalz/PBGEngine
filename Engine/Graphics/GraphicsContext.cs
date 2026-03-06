@@ -140,6 +140,25 @@ public unsafe class GraphicsContext
 
         return cb;
     }
+    
+    public void CreateBuffer<T>(T[] array, BufferUsageFlags bufferType, MemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
+    {
+        var bufferSize = (ulong)(Marshal.SizeOf<T>() * array.Length);
+
+        CreateBuffer(bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
+
+        void* data; 
+        vk.MapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        HelperFunctions.MemCpyTo(array, data, bufferSize, bufferSize);
+        vk.UnmapMemory(device, stagingBufferMemory);
+
+        CreateBuffer(bufferSize, BufferUsageFlags.TransferDstBit | bufferType, properties, out buffer, out bufferMemory);
+    
+        CopyBuffer(stagingBuffer, buffer, bufferSize);
+
+        vk.DestroyBuffer(device, stagingBuffer, null);
+        vk.FreeMemory(device, stagingBufferMemory, null);
+    }
 
     public void CreateBuffer<T>(BufferUsageFlags bufferType, T[] array, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
     {
@@ -149,7 +168,7 @@ public unsafe class GraphicsContext
 
         void* data; 
         vk.MapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        HelperFunctions.MemCpy(array, data, bufferSize, bufferSize);
+        HelperFunctions.MemCpyTo(array, data, bufferSize, bufferSize);
         vk.UnmapMemory(device, stagingBufferMemory);
 
         CreateBuffer(bufferSize, BufferUsageFlags.TransferDstBit | bufferType, MemoryPropertyFlags.DeviceLocalBit, out buffer, out bufferMemory);
@@ -158,68 +177,6 @@ public unsafe class GraphicsContext
 
         vk.DestroyBuffer(device, stagingBuffer, null);
         vk.FreeMemory(device, stagingBufferMemory, null);
-    }
-
-    public void UpdateBuffer<T>(T[] array, Buffer buffer) where T : unmanaged
-    {
-        var bufferSize = (ulong)(Marshal.SizeOf<T>() * array.Length);
-
-        CreateBuffer(bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
-
-        void* data; 
-        vk.MapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-        HelperFunctions.MemCpy(array, data, bufferSize, bufferSize);
-        vk.UnmapMemory(device, stagingBufferMemory);
-    
-        CopyBuffer(stagingBuffer, buffer, bufferSize);
-
-        vk.DestroyBuffer(device, stagingBuffer, null);
-        vk.FreeMemory(device, stagingBufferMemory, null);
-    }
-
-    public void CopyBuffer(Buffer srcBuffer, Buffer dstBuffer, ulong size) 
-    {
-        CommandBufferAllocateInfo allocInfo = new()
-        {
-            SType = StructureType.CommandBufferAllocateInfo,
-            Level = CommandBufferLevel.Primary,
-            CommandPool = commandPool,
-            CommandBufferCount = 1
-        };
-
-        CommandBuffer commandBuffer;
-        vk.AllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-
-        CommandBufferBeginInfo beginInfo = new()
-        {
-            SType = StructureType.CommandBufferBeginInfo,
-            Flags = CommandBufferUsageFlags.OneTimeSubmitBit
-        };
-
-        vk.BeginCommandBuffer(commandBuffer, &beginInfo);
-
-        BufferCopy copyRegion = new()
-        {
-            SrcOffset = 0, // Optional
-            DstOffset = 0, // Optional
-            Size = size
-        };
-
-        vk.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        vk.EndCommandBuffer(commandBuffer);
-
-        SubmitInfo submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo,
-            CommandBufferCount = 1,
-            PCommandBuffers = &commandBuffer
-        };
-
-        vk.QueueSubmit(graphicsQueue, 1, &submitInfo, default);
-        vk.QueueWaitIdle(graphicsQueue);
-
-        vk.FreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
 
     public void CreateBuffer(ulong size, BufferUsageFlags usage, MemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory bufferMemory) 
@@ -253,6 +210,116 @@ public unsafe class GraphicsContext
         }
 
         vk.BindBufferMemory(device, buffer, bufferMemory, 0);
+    }
+
+    public void UpdateBuffer<T>(T[] array, Buffer buffer) where T : unmanaged
+    {
+        var bufferSize = (ulong)(Marshal.SizeOf<T>() * array.Length);
+
+        CreateBuffer(bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
+
+        void* data; 
+        vk.MapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        HelperFunctions.MemCpyTo(array, data, bufferSize, bufferSize);
+        vk.UnmapMemory(device, stagingBufferMemory);
+    
+        CopyBuffer(stagingBuffer, buffer, bufferSize);
+
+        vk.DestroyBuffer(device, stagingBuffer, null);
+        vk.FreeMemory(device, stagingBufferMemory, null);
+    }
+
+    public void UpdateBuffer<T>(T[] array, Buffer buffer, ulong offsetBytes = 0, ulong sizeBytes = 0) where T : unmanaged
+    {
+        ulong elementSize = (ulong)Marshal.SizeOf<T>();
+        ulong totalSize   = elementSize * (ulong)array.Length;
+        ulong copySize    = sizeBytes == 0 ? totalSize : sizeBytes;
+
+        CreateBuffer(copySize, BufferUsageFlags.TransferSrcBit, 
+            MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, 
+            out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
+
+        void* data;
+        vk.MapMemory(device, stagingBufferMemory, 0, copySize, 0, &data);
+        HelperFunctions.MemCpyTo(array, data, copySize, copySize);
+        vk.UnmapMemory(device, stagingBufferMemory);
+
+        CopyBuffer(stagingBuffer, buffer, copySize, 0, offsetBytes);
+
+        vk.DestroyBuffer(device, stagingBuffer, null);
+        vk.FreeMemory(device, stagingBufferMemory, null);
+    }
+
+    public void UpdateBufferFull<T>(T[] array, Buffer buffer, ulong offsetBytes = 0, ulong sizeBytes = 0) where T : unmanaged
+    {
+        ulong elementSize = (ulong)Marshal.SizeOf<T>();
+        ulong totalSize   = elementSize * (ulong)array.Length;
+        ulong copySize    = sizeBytes == 0 ? totalSize : sizeBytes;
+
+        CreateBuffer(copySize, BufferUsageFlags.TransferSrcBit, 
+            MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, 
+            out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory);
+
+        void* data;
+        vk.MapMemory(device, stagingBufferMemory, 0, copySize, 0, &data);
+
+        // offset into the source array too!
+        fixed (T* pArray = array)
+        {
+            byte* src = (byte*)pArray + offsetBytes; // <-- offset source
+            HelperFunctions.MemCpyTo<T>(src, data, copySize, copySize);
+        }
+
+        vk.UnmapMemory(device, stagingBufferMemory);
+        CopyBuffer(stagingBuffer, buffer, copySize, 0, offsetBytes); // dst offset on GPU
+
+        vk.DestroyBuffer(device, stagingBuffer, null);
+        vk.FreeMemory(device, stagingBufferMemory, null);
+    }
+
+    public void CopyBuffer(Buffer srcBuffer, Buffer dstBuffer, ulong size, ulong srcOffset = 0, ulong dstOffset = 0) 
+    {
+        CommandBufferAllocateInfo allocInfo = new()
+        {
+            SType = StructureType.CommandBufferAllocateInfo,
+            Level = CommandBufferLevel.Primary,
+            CommandPool = commandPool,
+            CommandBufferCount = 1
+        };
+
+        CommandBuffer commandBuffer;
+        vk.AllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+        CommandBufferBeginInfo beginInfo = new()
+        {
+            SType = StructureType.CommandBufferBeginInfo,
+            Flags = CommandBufferUsageFlags.OneTimeSubmitBit
+        };
+
+        vk.BeginCommandBuffer(commandBuffer, &beginInfo);
+
+        BufferCopy copyRegion = new()
+        {
+            SrcOffset = srcOffset, // Optional
+            DstOffset = dstOffset, // Optional
+            Size = size
+        };
+
+        vk.CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+        vk.EndCommandBuffer(commandBuffer);
+
+        SubmitInfo submitInfo = new()
+        {
+            SType = StructureType.SubmitInfo,
+            CommandBufferCount = 1,
+            PCommandBuffers = &commandBuffer
+        };
+
+        vk.QueueSubmit(graphicsQueue, 1, &submitInfo, default);
+        vk.QueueWaitIdle(graphicsQueue);
+
+        vk.FreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
     
     public void CreateImage(uint width, uint height, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, out Image image, out DeviceMemory imageMemory)
@@ -458,6 +525,41 @@ public unsafe class GraphicsContext
             sourceStage = PipelineStageFlags.TopOfPipeBit;
             destinationStage = PipelineStageFlags.EarlyFragmentTestsBit;
         }
+        else if (oldLayout == ImageLayout.Undefined && newLayout == ImageLayout.General)
+        {
+            barrier.SrcAccessMask = 0;
+            barrier.DstAccessMask = AccessFlags.ShaderReadBit | AccessFlags.ShaderWriteBit;
+            sourceStage      = PipelineStageFlags.TopOfPipeBit;
+            destinationStage = PipelineStageFlags.ComputeShaderBit;
+        }
+        else if (oldLayout == ImageLayout.General && newLayout == ImageLayout.ShaderReadOnlyOptimal)
+        {
+            barrier.SrcAccessMask = AccessFlags.ShaderWriteBit;
+            barrier.DstAccessMask = AccessFlags.ShaderReadBit;
+            sourceStage      = PipelineStageFlags.ComputeShaderBit;
+            destinationStage = PipelineStageFlags.FragmentShaderBit;
+        }
+        else if (oldLayout == ImageLayout.ShaderReadOnlyOptimal && newLayout == ImageLayout.General)
+        {
+            barrier.SrcAccessMask = AccessFlags.ShaderReadBit;
+            barrier.DstAccessMask = AccessFlags.ShaderWriteBit;
+            sourceStage      = PipelineStageFlags.FragmentShaderBit;
+            destinationStage = PipelineStageFlags.ComputeShaderBit;
+        }
+        else if (oldLayout == ImageLayout.General && newLayout == ImageLayout.TransferSrcOptimal)
+        {
+            barrier.SrcAccessMask = AccessFlags.ShaderWriteBit;
+            barrier.DstAccessMask = AccessFlags.TransferReadBit;
+            sourceStage      = PipelineStageFlags.ComputeShaderBit;
+            destinationStage = PipelineStageFlags.TransferBit;
+        }
+        else if (oldLayout == ImageLayout.TransferSrcOptimal && newLayout == ImageLayout.General)
+        {
+            barrier.SrcAccessMask = AccessFlags.TransferReadBit;
+            barrier.DstAccessMask = AccessFlags.ShaderWriteBit;
+            sourceStage      = PipelineStageFlags.TransferBit;
+            destinationStage = PipelineStageFlags.ComputeShaderBit;
+        }
         else
         {
             throw new ArgumentException("Unsupported layout transition!");
@@ -572,14 +674,31 @@ public unsafe class GraphicsContext
         region.ImageOffset = new(0, 0, 0);
         region.ImageExtent = new(width, height, 1);
 
-        vk.CmdCopyBufferToImage(
-            commandBuffer,
-            buffer,
-            image,
-            ImageLayout.TransferDstOptimal,
-            1,
-            &region
-        );
+        vk.CmdCopyBufferToImage(commandBuffer, buffer, image, ImageLayout.TransferDstOptimal, 1, &region);
+
+        EndSingleTimeCommands(commandBuffer);
+    }
+
+    public void CopyImageToBuffer(Image image, Buffer buffer, uint width, uint height) 
+    {
+        CommandBuffer commandBuffer = BeginSingleTimeCommands();
+
+        BufferImageCopy region = new()
+        {
+            BufferOffset = 0,
+            BufferRowLength = 0,
+            BufferImageHeight = 0
+        };
+
+        region.ImageSubresource.AspectMask = ImageAspectFlags.ColorBit;
+        region.ImageSubresource.MipLevel = 0;
+        region.ImageSubresource.BaseArrayLayer = 0;
+        region.ImageSubresource.LayerCount = 1;
+
+        region.ImageOffset = new(0, 0, 0);
+        region.ImageExtent = new(width, height, 1);
+
+        vk.CmdCopyImageToBuffer(commandBuffer, image, ImageLayout.TransferSrcOptimal, buffer, 1, &region);
 
         EndSingleTimeCommands(commandBuffer);
     }
@@ -670,9 +789,9 @@ public unsafe class GraphicsContext
         vk.CmdBindPipeline(cmd, PipelineBindPoint.Graphics, shader.graphicsPipeline);
         //vk.CmdBindDescriptorSets(cmd, PipelineBindPoint.Graphics, shader.pipelineLayout, 0, 1, ref shader.descriptorSets[currentFrame], 0, null);
 
-        fixed (Buffer* pVert = vertexBuffers)
+        fixed (Buffer* PBGert = vertexBuffers)
         fixed (ulong* pOffset = offsets)
-        vk.CmdBindVertexBuffers(cmd, 0, (uint)vertexBuffers.Length, pVert, pOffset);
+        vk.CmdBindVertexBuffers(cmd, 0, (uint)vertexBuffers.Length, PBGert, pOffset);
 
         vk.CmdBindIndexBuffer(cmd, indexBuffer, 0, IndexType.Uint32);
 

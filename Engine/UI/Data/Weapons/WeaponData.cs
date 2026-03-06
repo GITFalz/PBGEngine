@@ -11,7 +11,7 @@ public class WeaponData
 
     public static Dictionary<string, WeaponDefinition> WeaponDefinitions = [];
 
-    //public static Dictionary<string, SimpleModel> Weapons = [];
+    public static Dictionary<string, SimpleModel> Weapons = [];
 
     public string Name = "";
     public uint Index = 0;
@@ -20,7 +20,7 @@ public class WeaponData
     {
     }
 
-    //public static bool TryGet(string name, out SimpleModel? model) => Weapons.TryGetValue(name, out model);
+    public static bool TryGet(string name, out SimpleModel? model) => Weapons.TryGetValue(name, out model);
 
     public static void Init()
     {

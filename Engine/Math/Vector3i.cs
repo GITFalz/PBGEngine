@@ -40,6 +40,12 @@ public struct Vector3i
         Z = z;
     }
 
+    public Vector3i(Vector2i xy, int z)
+    {
+        Xy = xy;
+        Z = z;
+    }
+
     public Vector3i(int v)
     {
         X = v; Y = v; Z = v;

@@ -30,7 +30,7 @@ namespace PBG.Voxel
 
         public Texture? AmbientOcclusionTexture = null;
 
-        public IndirectVoxelMesh ChunkMesh = new(); //new(VertexDataType.Position | VertexDataType.Normal | VertexDataType.Uv | VertexDataType.TextureIndex);
+        public IndirectVoxelMesh ChunkMesh; //new(VertexDataType.Position | VertexDataType.Normal | VertexDataType.Uv | VertexDataType.TextureIndex);
         public Allocation Allocation;
         public int[] ChunkInfoSlot;
 
@@ -57,6 +57,8 @@ namespace PBG.Voxel
             {
                 Chunk = this
             };
+
+            ChunkMesh = new(this);
         }
 
         public Block Get(Vector3i position) => Blocks?.Get(position) ?? Block.Air;
@@ -115,11 +117,9 @@ namespace PBG.Voxel
             if (_isDisposed || (Process != null && Process.Failed))
                 return;
 
-            ChunkMesh.VertexData = vertexData;
+            ChunkMesh.VertexData = [..vertexData];
 
             ChunkMesh.GenerateMesh();
-
-            HasBlocks = ChunkMesh.HasVertices();
             /*
             if (_isDisposed || (Process != null && Process.Failed))
                 return;

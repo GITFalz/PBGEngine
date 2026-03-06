@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using PBG.Graphics;
 using PBG.Rendering;
 using PBG.UI;
 
@@ -10,6 +11,7 @@ namespace PBG.Core
         public static Dictionary<string, Scene> Scenes = [];
         public static Scene CurrentScene { get; private set; } = null!;
         public static Scene? CurrentlyLoadingScene = null;
+        private static Scene? _sceneToBeLoaded = null;
 
         public List<TransformNode> PendingList = [];
 
@@ -42,23 +44,32 @@ namespace PBG.Core
 
         public static void LoadScene(string name)
         {
-            if (Scenes.TryGetValue(name, out Scene? scene) && CurrentScene != scene)
+            if (_sceneToBeLoaded == null && Scenes.TryGetValue(name, out Scene? scene) && CurrentScene != scene)
+                _sceneToBeLoaded = scene;
+        }
+
+        public static void LoadSceneFinal()
+        {
+            if (_sceneToBeLoaded != null)
             {
+                Console.WriteLine("Loading scene");
                 CurrentScene?.Exit();
-                CurrentScene = scene;
-                scene.InitComponents();
-                scene.RootNode.InitAwake();
-                if (!scene.Started)
+                CurrentScene = _sceneToBeLoaded;
+                _sceneToBeLoaded.InitComponents();
+                _sceneToBeLoaded.RootNode.InitAwake();
+                if (!_sceneToBeLoaded.Started)
                 {
-                    scene.Start();
-                    scene.Started = true;
+                    _sceneToBeLoaded.Start();
+                    _sceneToBeLoaded.Started = true;
                 }
-                scene.Awake();
-                if (scene.ShouldResize)
+                _sceneToBeLoaded.Awake();
+                if (_sceneToBeLoaded.ShouldResize)
                 {
-                    scene.Resize();
-                    scene.ShouldResize = false;
+                    _sceneToBeLoaded.Resize();
+                    _sceneToBeLoaded.ShouldResize = false;
                 }
+
+                _sceneToBeLoaded = null;
             }
         }
 

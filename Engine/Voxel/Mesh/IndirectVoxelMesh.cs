@@ -8,50 +8,40 @@ namespace PBG.Voxel;
 
 public class IndirectVoxelMesh
 {
-    //private static VAO _vao = new();
+    private Descriptor _descriptor;
     private SSBO<Vector4i>? sSBO = null;
-    public List<Vector4i> VertexData = [];
+    public Vector4i[] VertexData = [];
     private int _vertexCount = 0;
+    private VoxelChunk _chunk;
 
-    public IndirectVoxelMesh()
+    public IndirectVoxelMesh(VoxelChunk chunk)
     {
-
+        _chunk = chunk;
     }
 
     public void GenerateMesh()
     {
-        /*
-        if (sSBO == null)
-            sSBO = new(VertexData);
-        else
-            sSBO.Renew(VertexData);
-
-        _vertexCount = VertexData.Count * 6;
+        
+        
+        _vertexCount = VertexData.Length * 6;
         VertexData = [];
-        */
     }
-
-    public bool HasVertices() => _vertexCount > 0;
 
     public void Render()
     {
-        /*
-        if (sSBO == null) return;
+        if (sSBO == null) 
+            return;
 
-        BlockData.FaceGeometrySSBO.Bind(0);
-        sSBO.Bind(1);
-        _vao.Bind();
+        _descriptor.Bind();
+        _descriptor.Uniform(VoxelRenderer.View, Scene.CurrentScene.DefaultCamera.ViewMatrix);
+        _descriptor.Uniform(VoxelRenderer.Projection, Scene.CurrentScene.DefaultCamera.ProjectionMatrix);
 
-        GL.DrawArrays(PrimitiveType.Triangles, 0, _vertexCount);
-
-        _vao.Unbind();
-        sSBO.Unbind();
-        BlockData.FaceGeometrySSBO.Unbind();
-        */
+        GFX.Draw((uint)_vertexCount, 1, 0, 0);
     }
 
     public void Dispose()
     {
-        //sSBO?.DeleteBuffer();
+        _descriptor?.Dispose();
+        sSBO?.Dispose();
     }
 }

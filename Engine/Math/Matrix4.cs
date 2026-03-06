@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace PBG.MathLibrary
 {
     public struct Matrix4
@@ -9,6 +11,8 @@ namespace PBG.MathLibrary
         public float M13, M23, M33, M43;
 
         public float M14, M24, M34, M44;
+
+        public static readonly uint ByteSize = (uint)Marshal.SizeOf<Matrix4>();
 
         public static readonly Matrix4 Identity = new Matrix4(
             1,0,0,0,
@@ -66,8 +70,8 @@ namespace PBG.MathLibrary
             float c = MathF.Cos(angleRad), s = MathF.Sin(angleRad);
             return new Matrix4(
                 1,  0, 0, 0,
-                0,  c, s, 0,
-                0, -s, c, 0,
+                0,  c,-s, 0,
+                0,  s, c, 0,
                 0,  0, 0, 1
             );
         }
@@ -76,10 +80,10 @@ namespace PBG.MathLibrary
         {
             float c = MathF.Cos(angleRad), s = MathF.Sin(angleRad);
             return new Matrix4(
-                c, 0, -s, 0,
-                0, 1,  0, 0,
-                s, 0,  c, 0,
-                0, 0,  0, 1
+                c, 0, s, 0,
+                0, 1, 0, 0,
+                -s, 0, c, 0,
+                0, 0, 0, 1
             );
         }
 
@@ -87,10 +91,10 @@ namespace PBG.MathLibrary
         {
             float c = MathF.Cos(angleRad), s = MathF.Sin(angleRad);
             return new Matrix4(
-                 c, s, 0, 0,
-                -s, c, 0, 0,
-                 0, 0, 1, 0,
-                 0, 0, 0, 1
+                c, -s, 0, 0,
+                s,  c, 0, 0,
+                0,  0, 1, 0,
+                0,  0, 0, 1
             );
         }
 
@@ -146,6 +150,56 @@ namespace PBG.MathLibrary
             );
         }
 
+        public Quaternion ExtractRotation()
+        {
+            Vector3 col0 = Vector3.Normalize(new Vector3(M11, M21, M31));
+            Vector3 col1 = Vector3.Normalize(new Vector3(M12, M22, M32));
+            Vector3 col2 = Vector3.Normalize(new Vector3(M13, M23, M33));
+
+            float trace = col0.X + col1.Y + col2.Z;
+
+            if (trace > 0f)
+            {
+                float s = 0.5f / MathF.Sqrt(trace + 1f);
+                return new Quaternion(
+                    (col2.Y - col1.Z) * s,
+                    (col0.Z - col2.X) * s,
+                    (col1.X - col0.Y) * s,
+                    0.25f / s
+                );
+            }
+            else if (col0.X > col1.Y && col0.X > col2.Z)
+            {
+                float s = 2f * MathF.Sqrt(1f + col0.X - col1.Y - col2.Z);
+                return new Quaternion(
+                    0.25f * s,
+                    (col0.Y + col1.X) / s,
+                    (col0.Z + col2.X) / s,
+                    (col2.Y - col1.Z) / s
+                );
+            }
+            else if (col1.Y > col2.Z)
+            {
+                float s = 2f * MathF.Sqrt(1f + col1.Y - col0.X - col2.Z);
+                return new Quaternion(
+                    (col0.Y + col1.X) / s,
+                    0.25f * s,
+                    (col1.Z + col2.Y) / s,
+                    (col0.Z - col2.X) / s
+                );
+            }
+            else
+            {
+                float s = 2f * MathF.Sqrt(1f + col2.Z - col0.X - col1.Y);
+                return new Quaternion(
+                    (col0.Z + col2.X) / s,
+                    (col1.Z + col2.Y) / s,
+                    0.25f * s,
+                    (col1.X - col0.Y) / s
+                );
+            }
+        }
+
         public static Matrix4 CreateLookAt(Vector3 eye, Vector3 target, Vector3 up)
         {
             Vector3 f = Vector3.Normalize(target - eye);
@@ -167,6 +221,56 @@ namespace PBG.MathLibrary
                 M31, M32, M33, M34,
                 M41, M42, M43, M44
             );
+
+        public Matrix4 Inverted()
+        {
+            if (Invert(out var m))
+                return m;
+            return this;
+        }
+
+        public bool Invert(out Matrix4 result)
+        {
+            float c11 =  (M22 * (M33 * M44 - M34 * M43) - M23 * (M32 * M44 - M34 * M42) + M24 * (M32 * M43 - M33 * M42));
+            float c12 = -(M21 * (M33 * M44 - M34 * M43) - M23 * (M31 * M44 - M34 * M41) + M24 * (M31 * M43 - M33 * M41));
+            float c13 =  (M21 * (M32 * M44 - M34 * M42) - M22 * (M31 * M44 - M34 * M41) + M24 * (M31 * M42 - M32 * M41));
+            float c14 = -(M21 * (M32 * M43 - M33 * M42) - M22 * (M31 * M43 - M33 * M41) + M23 * (M31 * M42 - M32 * M41));
+
+            float det = M11 * c11 + M12 * c12 + M13 * c13 + M14 * c14;
+
+            if (MathF.Abs(det) < 1e-6f)
+            {
+                result = default;
+                return false; // Matrix is singular, cannot be inverted
+            }
+
+            float invDet = 1.0f / det;
+
+            result = new Matrix4
+            {
+                M11 =  c11 * invDet,
+                M12 =  c12 * invDet,
+                M13 =  c13 * invDet,
+                M14 =  c14 * invDet,
+
+                M21 = -(M12 * (M33 * M44 - M34 * M43) - M13 * (M32 * M44 - M34 * M42) + M14 * (M32 * M43 - M33 * M42)) * invDet,
+                M22 =  (M11 * (M33 * M44 - M34 * M43) - M13 * (M31 * M44 - M34 * M41) + M14 * (M31 * M43 - M33 * M41)) * invDet,
+                M23 = -(M11 * (M32 * M44 - M34 * M42) - M12 * (M31 * M44 - M34 * M41) + M14 * (M31 * M42 - M32 * M41)) * invDet,
+                M24 =  (M11 * (M32 * M43 - M33 * M42) - M12 * (M31 * M43 - M33 * M41) + M13 * (M31 * M42 - M32 * M41)) * invDet,
+
+                M31 =  (M12 * (M23 * M44 - M24 * M43) - M13 * (M22 * M44 - M24 * M42) + M14 * (M22 * M43 - M23 * M42)) * invDet,
+                M32 = -(M11 * (M23 * M44 - M24 * M43) - M13 * (M21 * M44 - M24 * M41) + M14 * (M21 * M43 - M23 * M41)) * invDet,
+                M33 =  (M11 * (M22 * M44 - M24 * M42) - M12 * (M21 * M44 - M24 * M41) + M14 * (M21 * M42 - M22 * M41)) * invDet,
+                M34 = -(M11 * (M22 * M43 - M23 * M42) - M12 * (M21 * M43 - M23 * M41) + M13 * (M21 * M42 - M22 * M41)) * invDet,
+
+                M41 = -(M12 * (M23 * M34 - M24 * M33) - M13 * (M22 * M34 - M24 * M32) + M14 * (M22 * M33 - M23 * M32)) * invDet,
+                M42 =  (M11 * (M23 * M34 - M24 * M33) - M13 * (M21 * M34 - M24 * M31) + M14 * (M21 * M33 - M23 * M31)) * invDet,
+                M43 = -(M11 * (M22 * M34 - M24 * M32) - M12 * (M21 * M34 - M24 * M31) + M14 * (M21 * M32 - M22 * M31)) * invDet,
+                M44 =  (M11 * (M22 * M33 - M23 * M32) - M12 * (M21 * M33 - M23 * M31) + M13 * (M21 * M32 - M22 * M31)) * invDet,
+            };
+
+            return true;
+        }
 
         public static Matrix4 operator *(Matrix4 a, Matrix4 b)
         {
@@ -192,6 +296,22 @@ namespace PBG.MathLibrary
                 a.M41*b.M14 + a.M42*b.M24 + a.M43*b.M34 + a.M44*b.M44
             );
         }
+
+        public static Vector4 operator *(Matrix4 m, Vector4 v) =>
+            new Vector4(
+                m.M11 * v.X + m.M12 * v.Y + m.M13 * v.Z + m.M14 * v.W,
+                m.M21 * v.X + m.M22 * v.Y + m.M23 * v.Z + m.M24 * v.W,
+                m.M31 * v.X + m.M32 * v.Y + m.M33 * v.Z + m.M34 * v.W,
+                m.M41 * v.X + m.M42 * v.Y + m.M43 * v.Z + m.M44 * v.W
+            );
+
+        public static Vector4 operator *(Vector4 v, Matrix4 m) =>
+            new Vector4(
+                v.X * m.M11 + v.Y * m.M21 + v.Z * m.M31 + v.W * m.M41,
+                v.X * m.M12 + v.Y * m.M22 + v.Z * m.M32 + v.W * m.M42,
+                v.X * m.M13 + v.Y * m.M23 + v.Z * m.M33 + v.W * m.M43,
+                v.X * m.M14 + v.Y * m.M24 + v.Z * m.M34 + v.W * m.M44
+            );
 
         public Vector3 TransformPoint(Vector3 v)
         {
