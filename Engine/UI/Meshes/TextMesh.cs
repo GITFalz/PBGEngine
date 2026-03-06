@@ -270,9 +270,9 @@ namespace PBG.Rendering.Meshes
                 case BufferEnum.Update:
                     if (_updateVisibility)
                         UpdateVisibility();
-
-                    _lineSSBO.Update(LineStructs, 0, (uint)VisibleLineCount * (uint)Marshal.SizeOf<UILineStruct>());
-                    _glyphSSBO.Update(GlyphStructs, 0, (uint)VisibleGlyphCount * (uint)Marshal.SizeOf<UIGlyphStruct>());
+                        
+                    _lineSSBO.Update(LineStructs);
+                    _glyphSSBO.Update(GlyphStructs);
                     break;
                 case BufferEnum.Recreate:
 
@@ -310,7 +310,7 @@ namespace PBG.Rendering.Meshes
                             TextAlign.Right => maxWidth - width,
                             _ => 0
                         };
-                        
+
                         for (int i = 0; i < textMetaData.CharCount; i++)
                         {
                             Vector2 pos = (0, 0);
@@ -396,18 +396,6 @@ namespace PBG.Rendering.Meshes
                 return;
 
             Descriptor.Bind();
-            /*
-            _vao.Bind();
-            _lineSSBO.Bind(0);
-            _glyphSSBO.Bind(1);
-
-            GL.DrawArrays(PrimitiveType.Triangles, 0, VisibleGlyphCount * 6);
-            Shader.Error($"TextMesh {controller.Name} error: ");
-
-            _lineSSBO.Unbind();
-            _glyphSSBO.Unbind();
-            _vao.Unbind();
-            */
             GFX.Draw((uint)VisibleGlyphCount * 6, 1, 0, 0);
         }
 

@@ -395,17 +395,17 @@
           "runtimes/win-arm64/native/glfw3.dll": {
             "rid": "win-arm64",
             "assetType": "native",
-            "fileVersion": "0.0.0.0"
+            "fileVersion": "3.4.0.0"
           },
           "runtimes/win-x64/native/glfw3.dll": {
             "rid": "win-x64",
             "assetType": "native",
-            "fileVersion": "0.0.0.0"
+            "fileVersion": "3.4.0.0"
           },
           "runtimes/win-x86/native/glfw3.dll": {
             "rid": "win-x86",
             "assetType": "native",
-            "fileVersion": "0.0.0.0"
+            "fileVersion": "3.4.0.0"
           }
         }
       }
@@ -595,7 +595,7 @@
     "StbImageSharp/2.30.15": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-7QqbuPBGhz2kcFUPTgMw4iHR9rYDHGundzzee19Mwmd1typ2Lnv8EVJcLJxlkeBM2+4ex0NwsMtdbGSJctp1XCQ==",
+      "sha512": "sha512-7QqbupVhz2kcFUPTgMw4iHR9rYDHGundzzee19Mwmd1typ2Lnv8EVJcLJxlkeBM2+4ex0NwsMtdbGSJctp1XCQ==",
       "path": "stbimagesharp/2.30.15",
       "hashPath": "stbimagesharp.2.30.15.nupkg.sha512"
     },

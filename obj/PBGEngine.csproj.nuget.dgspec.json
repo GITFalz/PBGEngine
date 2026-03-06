@@ -1,20 +1,24 @@
 {
   "format": 1,
   "restore": {
-    "/home/bjorn/Documents/Projects/PBGEngine/PBGEngine.csproj": {}
+    "C:\\Users\\Björn\\Documents\\Projects\\PBGEngine\\PBGEngine\\PBGEngine.csproj": {}
   },
   "projects": {
-    "/home/bjorn/Documents/Projects/PBGEngine/PBGEngine.csproj": {
+    "C:\\Users\\Björn\\Documents\\Projects\\PBGEngine\\PBGEngine\\PBGEngine.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/bjorn/Documents/Projects/PBGEngine/PBGEngine.csproj",
+        "projectUniqueName": "C:\\Users\\Björn\\Documents\\Projects\\PBGEngine\\PBGEngine\\PBGEngine.csproj",
         "projectName": "PBGEngine",
-        "projectPath": "/home/bjorn/Documents/Projects/PBGEngine/PBGEngine.csproj",
-        "packagesPath": "/home/bjorn/.nuget/packages/",
-        "outputPath": "/home/bjorn/Documents/Projects/PBGEngine/obj/",
+        "projectPath": "C:\\Users\\Björn\\Documents\\Projects\\PBGEngine\\PBGEngine\\PBGEngine.csproj",
+        "packagesPath": "C:\\Users\\Björn\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Björn\\Documents\\Projects\\PBGEngine\\PBGEngine\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/bjorn/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Björn\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -38,7 +42,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.200"
+        "SdkAnalysisLevel": "9.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -121,7 +125,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/9.0.203/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

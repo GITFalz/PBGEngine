@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PBGEngine")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7bb63174d325ebb8f4e928dd97740f0c19549bc9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a6962e632ad54db3377ff7da6df9e910ce4922bd")]
 [assembly: System.Reflection.AssemblyProductAttribute("PBGEngine")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PBGEngine")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

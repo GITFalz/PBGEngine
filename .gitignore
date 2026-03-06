@@ -1,8 +1,17 @@
-# .NET build outputs
-**/obj
-**/bin
+# Build outputs
+**/bin/
+**/obj/
+
+# Compiled binaries
 *.dll
 *.exe
 *.pdb
 *.lib
 *.winmd
+
+# Debug / profiling
+*.mdb
+*.ilk
+*.log
+*.tlog
+*.cache
