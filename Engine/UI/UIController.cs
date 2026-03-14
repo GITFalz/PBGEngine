@@ -13,7 +13,6 @@ namespace PBG.UI
         private static Descriptor _uiPlaneDescriptor;
 
         public static List<UIController> Controllers = [];
-        public static Matrix4 OrthographicProjection = Matrix4.CreateOrthographicOffCenter(0, 1, 1, 0, -1, 1);
 
         public static PBG.UI.UIField? ActiveInputField = null;
         private static bool _clickedInputField = false;
@@ -21,7 +20,12 @@ namespace PBG.UI
         public static int CursorCharacter = 0;
         public static int SelectionSize = 0;
 
-        public static float CumulativeDepth = 0f;
+        public static float CumulativeDepth
+        {
+            get => _cumulativeDepth += 0.00001f;
+            set => _cumulativeDepth = value;
+        }
+        private static float _cumulativeDepth = 0f;
 
         public HashSet<UI.UIElementBase> AbsoluteElements = [];
         public HashSet<UI.UIElementBase> Elements = [];
@@ -64,39 +68,32 @@ namespace PBG.UI
         private static List<UIController> _currentControllers = [];
         public bool DisableInputHandling = false;
 
+        public bool Show = true;
+        private TextureType _textureType;
+
         public UIController(string? name = null, TextureType textureType = TextureType.Nearest)
         {
             Name = name ?? "UIController";
+            _textureType = textureType;
             if (_uiPlaneShader == null)
             {
+                _fbo = new(() => (uint)Game.Width, () => (uint)Game.Height);
+
                 _uiPlaneShader = new(new()
                 {
                     VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
                     FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
                 });
                 _uiPlaneShader.Compile();
-
-                /*
-                _uiPlaneModelLocation = _uiPlaneShader.GetLocation("ubo.model");
-                _uiPlaneProjectionLocation = _uiPlaneShader.GetLocation("ubo.projection");
-                _uiPlaneSizeLocation = _uiPlaneShader.GetLocation("ubo.size");
-                */
                 
                 _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
-
-                _fbo = new(Game.Width, Game.Height);
-
-                _uiPlaneDescriptor.BindFramebuffer(_fbo, 0);
+                _uiPlaneDescriptor.BindFramebufferColor(_fbo, 0);
             }
 
             if (name != null)
                 Name = name;
 
-            UIData = textureType == TextureType.Linear ? UIData.LinearUI : UIData.PixelPerfectUI;
             Controllers.Add(this);
-            MaskData = new(this);
-            UIMesh = new(this);
-            TextMesh = new(this);
             Alignment = new(this);
         }
 
@@ -125,7 +122,7 @@ namespace PBG.UI
             for (int i = 0; i < _currentControllers.Count; i++)
             {
                 var controller = _currentControllers[i];
-                if (controller.HandleInputs())
+                if (controller.Show && controller.HandleInputs())
                     return;
             }
         }
@@ -351,9 +348,17 @@ namespace PBG.UI
         {
             int width = Alignment.Width;
             int height = Alignment.Height;
-            return Matrix4.CreateOrthographicOffCenter(0, width, height, 0, -2, 2);
+            return Matrix4.CreateOrthographicOffCenter(0, width, 0, height, -2, 2);
         }
 
+        void Start()
+        {
+            UIData = _textureType == TextureType.Linear ? UIData.LinearUI : UIData.PixelPerfectUI;
+
+            MaskData = new(this);
+            UIMesh = new(this);
+            TextMesh = new(this);
+        }
 
         void Resize()
         {
@@ -365,7 +370,7 @@ namespace PBG.UI
                 element.SecondPass();
             }
 
-            _uiPlaneDescriptor.BindFramebuffer(_fbo, 0);
+            _uiPlaneDescriptor.BindFramebufferColor(_fbo, 0);
 
             UIMesh.Resize();
             TextMesh.Resize();
@@ -396,7 +401,7 @@ namespace PBG.UI
 
             Vector2 offset = (Alignment.Left, Alignment.Top);
             
-            if (_clickedInputField && Input.IsMouseDown(MouseButton.Left) && ActiveInputField != null && Input.MouseDelta.X != 0)
+            if (_clickedInputField && Input.IsMouseDown(MouseButton.Left) && ActiveInputField != null && ActiveInputField.UIController == this && Input.MouseDelta.X != 0)
             {
                 int charCount = ActiveInputField.GetText().Length;
                 float maxWidth = ActiveInputField.Point2.X - ActiveInputField.Point1.X;
@@ -408,12 +413,16 @@ namespace PBG.UI
                     TextAlign.Right => maxWidth - width,
                     _ => 0
                 };
-                
+
                 var character = Mathf.Max(0, Mathf.RoundToInt((ActiveInputField.HoverFactor.X - (start / maxWidth)) * (float)(ActiveInputField.MaxCharCount ?? 20)));
                 if (charCount < character && ActiveInputField.TextAlign != TextAlign.Left)
+                {
                     character = 0;
+                }
                 else
+                {
                     character = Mathf.Min(character, charCount);
+                }
 
                 var result = character - CursorCharacter;
                 if (result != SelectionSize)
@@ -567,11 +576,14 @@ namespace PBG.UI
 
         public static void ClearFrameBuffer()
         {
-            CumulativeDepth = 0f;
+            _fbo.Clear();
         }
 
         void Render()
         {
+            if (!Show)
+                return;
+
             var viewport = GFX.GetViewport();
 
             int width = Alignment.Width;
@@ -606,7 +618,7 @@ namespace PBG.UI
                 TextMesh.Render();
             }
 
-            CumulativeDepth += MaxDepth + 0.00001f;
+            _cumulativeDepth += MaxDepth;
 
             _fbo.Unbind();
 
@@ -617,9 +629,9 @@ namespace PBG.UI
 
         public static void GlobalRender()
         {
-            if (_uiPlaneShader == null)
+            if (_uiPlaneShader == null || _cumulativeDepth == 0)
                 return;
-
+            
             _uiPlaneShader.Bind();
             _uiPlaneDescriptor.Bind();
 

@@ -13,6 +13,7 @@ namespace PBG.Assets.Scripts.NoiseNodes
     {
         private static Action<NoiseNodeManager, Vector2i> _basicAction = (_, _) => {};
         private static Action<NoiseNodeManager, VoxelChunk, Vector2i> _terrainAction = (_, _, _) => {};
+        private static Action<NoiseNodeManager, LODChunk, Vector2i> _lodTerrainAction = (_, _, _) => {};
         public static List<NoiseNodeManager> Managers = [];
 
         public int ThreadIndex { get; private set; } = threadIndex;
@@ -35,6 +36,11 @@ namespace PBG.Assets.Scripts.NoiseNodes
                     _terrainAction(manager, chunk, new Vector2i(x, y) + chunk.WorldPosition.Xz);
                 } 
             } 
+        }
+
+        public static void RunLOD(LODChunk chunk)
+        {
+
         }
 
         public static bool Run(ThreadProcess process, VoxelChunk chunk) => RunBasic(process, chunk);

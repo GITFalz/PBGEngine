@@ -118,12 +118,16 @@ public class WorldGenerator : VoxelRendererGenerator
 
             if (!ready)  
             {
-                HeightMapCompute.Bind(out var commandBuffer);
-                _descriptor!.Bind(commandBuffer, PipelineBindPoint.Compute);
+                var cmd = GFX.BeginSingleTimeCommands();
+
+                HeightMapCompute.Bind(cmd);
+                _descriptor!.Bind(cmd, PipelineBindPoint.Compute);
 
                 _descriptor!.Uniform(ChunkHeightLocation, worldPosition);
 
-                HeightMapCompute.DispatchBarrier(_descriptor, 4, 1, 4);
+                HeightMapCompute.DispatchBarrier(cmd, _descriptor, 4, 1, 4);
+                
+                GFX.EndSingleTimeCommands(cmd);
 
                 TextureData = texture!.GetPixels();
                 

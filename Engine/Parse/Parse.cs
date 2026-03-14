@@ -88,7 +88,7 @@ namespace PBG.Parse
         {
             try
             {
-                result = Parse(value);
+                result = float.Parse(value.Trim(), CultureInfo.InvariantCulture);
                 return true;
             }
             catch (Exception)
@@ -128,22 +128,6 @@ namespace PBG.Parse
                 default: return replacement;
             }
         }
-
-        public static bool TryParse(string value, out Vector2 result)
-        {
-            try
-            {
-                result = Parse(value);
-                return true;
-            }
-            catch
-            {
-                result = default;
-                return false;
-            }
-        }
-
-        public static string Str(Vector2 value) => $"{value.X.ToString(CultureInfo.InvariantCulture)}, {value.Y.ToString(CultureInfo.InvariantCulture)}";
     }
 
     // ---------------------- VECTOR3 ----------------------
@@ -171,23 +155,6 @@ namespace PBG.Parse
                 default: return replacement;
             }
         }
-
-        public static bool TryParse(string value, out Vector3 result)
-        {
-            try
-            {
-                result = Parse(value);
-                return true;
-            }
-            catch
-            {
-                result = default;
-                return false;
-            }
-        }
-
-        public static string Str(Vector3 value)
-            => $"{value.X.ToString(CultureInfo.InvariantCulture)}, {value.Y.ToString(CultureInfo.InvariantCulture)}, {value.Z.ToString(CultureInfo.InvariantCulture)}";
     }
 
     // ---------------------- VECTOR4 ----------------------
@@ -216,23 +183,6 @@ namespace PBG.Parse
                 default: return replacement;
             }
         }
-
-        public static bool TryParse(string value, out Vector4 result)
-        {
-            try
-            {
-                result = Parse(value);
-                return true;
-            }
-            catch
-            {
-                result = default;
-                return false;
-            }
-        }
-
-        public static string Str(Vector4 value)      
-            => $"{value.X.ToString(CultureInfo.InvariantCulture)}, {value.Y.ToString(CultureInfo.InvariantCulture)}, {value.Z.ToString(CultureInfo.InvariantCulture)}, {value.W.ToString(CultureInfo.InvariantCulture)}";
     }
 
     public static class Bool

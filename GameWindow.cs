@@ -27,6 +27,7 @@ public abstract class GameWindow
     public abstract void OnMouseUp(IMouse mouse, MouseButton button);
     public abstract void OnScroll(IMouse mouse, ScrollWheel scroll);
     public abstract void OnLoad();
+    public virtual void OnRenderLoad() {}
     public abstract void OnResize(int width, int height);
     public abstract void OnUpdate(double delta);
     public abstract void OnRender();

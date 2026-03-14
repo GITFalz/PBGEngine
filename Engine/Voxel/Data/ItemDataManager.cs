@@ -1,7 +1,13 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using PBG;
 using PBG.Graphics;
+using PBG.MathLibrary;
 using PBG.Rendering;
 using PBG.Voxel;
+using Silk.NET.Vulkan;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 public static class ItemDataManager
 {
@@ -11,97 +17,180 @@ public static class ItemDataManager
     public static int BlockCount = 0;
     public static int WeaponCount = 0;
 
-    //public static FBO FBO = new FBO(128, 128, FBOType.Color);
-    //public static ShaderProgram BlockShader = new ShaderProgram("Utils/Cube.vert", "Inventory/Data/Block.frag");
+    public static Shader BlocksShader;
+    public static Descriptor BlocksDescriptor;
+
+    public static int BlockViewLocation;
+    public static int BlockProjectionLocation;
+    public static int BlockModelLocation;
+
+    public static int BlockLightDirectionLocation;
+
+    private static ComputeShader? _textureArrayWrite;
+    private static Descriptor _textureWriteDescriptor;
+
+    private static int _textureArraySizeLocation = -1;
+    private static int _textureArrayLayerLocation = -1;
+
+    public static FBO FBO;
+
     public static TextureArray Image = null!;
 
     public static List<byte[]> Data = new List<byte[]>();
 
     public static int CubeModelLocation = -1;  
     public static int CubeProjectionLocation = -1;
-    public static int CubeTextureLocation = -1;
     public static int CubeIndicesLocation = -1;
+
+    private static bool _started = false;
+
+    public static void Init()
+    {
+        if (_started)
+            return;
+
+        FBO = new FBO(128, 128);
+    }
 
     static ItemDataManager()
     {
-        /*
-        CubeModelLocation = BlockShader.GetLocation("model"); 
-        CubeProjectionLocation = BlockShader.GetLocation("projection");
-        CubeTextureLocation = BlockShader.GetLocation("textureArray");
-        CubeIndicesLocation = BlockShader.GetLocation("indices");
-        */
+        
     }
 
     public static void GenerateIcons()
     {
+        if (_started)
+            return;
+    
+        _started = true;
+
+        uint imageCount = 0;
+        foreach (var (_, item) in AllItems)
+        {
+            if (item is BlockItemData blockItemData)
+                imageCount++;
+        }
+
         /*
+        foreach (var (_, item) in AllItems)
+        {
+            if (item is WeaponItemData)
+                imageCount++;
+        }
+        */
+
+        Image = new(imageCount, new() { Width = 128, Height = 128 });
+
+        _textureArrayWrite ??= new ComputeShader(new() { ComputeShaderPath = Game.ShaderPath / "computeShaders/textureArrayWrite.comp"});
+        _textureArrayWrite.Compile();
+
+        _textureArraySizeLocation = _textureArrayWrite.GetLocation("ubo.size");
+        _textureArrayLayerLocation = _textureArrayWrite.GetLocation("ubo.layer");
+        int _textureArrayOutlineRadiusLocation = _textureArrayWrite.GetLocation("ubo.outlineRadius");
+        int _textureArrayOutlineColorLocation = _textureArrayWrite.GetLocation("ubo.outlineColor");
+
+        _textureWriteDescriptor = _textureArrayWrite.GetDescriptorSet();
+        _textureWriteDescriptor.BindFramebufferColor(FBO, 0);
+        _textureWriteDescriptor.BindTextureArray(Image, 1, DescriptorType.StorageImage, ImageLayout.General);
+
+        _textureWriteDescriptor.Uniform(_textureArrayOutlineRadiusLocation, 6);
+        _textureWriteDescriptor.Uniform(_textureArrayOutlineColorLocation, new Vector4(0, 0, 0, 1));
+
+        BlocksShader = new Shader(new(Game.ShaderPath / "world_vulkan/world_base.vert", Game.ShaderPath / "world_vulkan/world_base.frag"));
+        BlocksShader.BindVertexBuffer<BlockVertexData>(0);
+        BlocksShader.Compile();
+        BlocksDescriptor = BlocksShader.GetDescriptorSet();
+
+        BlockViewLocation = BlocksShader.GetLocation("ubo.uView");
+        BlockProjectionLocation = BlocksShader.GetLocation("ubo.uProjection");
+        BlockModelLocation = BlocksShader.GetLocation("ubo.uModel");
+
+        BlockLightDirectionLocation = BlocksShader.GetLocation("fubo.lightDirection");
+
         Data.Clear();
 
+        BlocksDescriptor.BindTextureArray(BlockData.BlockTextureArray, 2);
+
+        GFX.TransitionImageArrayLayout(Image.TextureImage, Format.R8G8B8A8Unorm, ImageLayout.Undefined, ImageLayout.General, Image.LayerCount);
+
         try
-        {
-            GL.Viewport(0, 0, 128, 128);
-            
-            FBO.Bind();
-
-            VoxelRenderer.BaseShader.Bind();
-
-            GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-            GL.Enable(EnableCap.CullFace);
-            GL.FrontFace(FrontFaceDirection.Ccw);
-            GL.CullFace(TriangleFace.Front);
-            GL.Enable(EnableCap.DepthTest);
-
-            Matrix4 model = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(45 + 180)) * Matrix4.CreateRotationX(MathHelper.DegreesToRadians(45 + 90)) * Matrix4.CreateScale(64) * Matrix4.CreateTranslation(64, 64, 0);
-            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, 128, 128, 0, -64, 64);
+        {    
+            Matrix4 model = 
+                Matrix4.CreateTranslation(64, 64, 0) * 
+                Matrix4.CreateScale(64) * 
+                Matrix4.CreateRotationX(Mathf.DegreesToRadians(45 + 90)) * 
+                Matrix4.CreateRotationY(Mathf.DegreesToRadians(45 + 180));
+                
+            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, 128, 0, 128, -64, 64);
             Matrix4 view = Matrix4.Identity;
 
-            GL.UniformMatrix4(VoxelRenderer.BaseShaderLocation.Model, false, ref model);
-            GL.UniformMatrix4(VoxelRenderer.BaseShaderLocation.View, false, ref view); 
-            GL.UniformMatrix4(VoxelRenderer.BaseShaderLocation.Projection, false, ref projection);
-            GL.Uniform1(VoxelRenderer.BaseShaderLocation.Texture, 0);
-            GL.Uniform3(VoxelRenderer.BaseShaderLocation.LightDirection, new Vector3(-1, 1, 1) * 2f);
+            BlocksDescriptor.UniformMatrix4(BlockModelLocation, model);
+            BlocksDescriptor.UniformMatrix4(BlockViewLocation, view); 
+            BlocksDescriptor.UniformMatrix4(BlockProjectionLocation, projection);
+            BlocksDescriptor.Uniform3(BlockLightDirectionLocation, new Vector3(-1, 1, 1) * 2f);
 
-            BlockData.BlockTextureArray.Bind(TextureUnit.Texture0);
-
+            int i = 0;
             foreach (var (_, item) in AllItems)
             {
-                if (item is BlockItemData)
-                {
-                    GL.Clear(ClearBufferMask.ColorBufferBit);
-                    item.GenerateIcon();
+                if (item is BlockItemData blockItemData)
+                {    
+                    var cmd = GFX.BeginSingleTimeCommands();
+
+                    BlocksShader.Bind(cmd);
+                    BlocksDescriptor.Bind(cmd);
+
+                    FBO.Reset();
+                    FBO.Bind(cmd);
+                    GFX.Viewport(cmd, 0, 0, 128, 128);
+
+                    blockItemData.GenerateIcon(cmd);
+                    
+                    FBO.Unbind(cmd);
+
+                    _textureArrayWrite.Bind(cmd);
+
+                    _textureWriteDescriptor.Uniform(_textureArraySizeLocation, new Vector2i(128, 128));
+                    _textureWriteDescriptor.Uniform(_textureArrayLayerLocation, i);
+
+                    _textureWriteDescriptor.Bind(cmd, PipelineBindPoint.Compute);
+
+                    _textureArrayWrite.DispatchBarrier(cmd, _textureWriteDescriptor, 16, 16, 1);
+
+                    GFX.EndSingleTimeCommands(cmd);
+
+                    i++;
                 }
             }
-
-            BlockData.BlockTextureArray.Unbind();
-            VoxelRenderer.BaseShader.Unbind();
-
-            GL.CullFace(TriangleFace.Back);
 
             foreach (var (_, item) in AllItems)
             {
                 if (item is WeaponItemData)
                 {
-                    GL.Clear(ClearBufferMask.ColorBufferBit);
+                    /*
+                    FBO.Bind();
+
                     item.GenerateIcon();
+
+                    FBO.Unbind();
+
+                    FBO.Clear();
+                    */
                 }   
             }
 
-            FBO.Unbind();
-
-            GL.Viewport(0, 0, Game.Width, Game.Height);
-
-            Image = new(Data, 128, 128);
+            //Image = new(Data, new() { Width = 128, Height = 128 });
         }
+
         catch (Exception ex)
         {
             Console.WriteLine($"[Critical Error] : Failed to generate icons: {ex.Message}");
             Console.WriteLine($"[Stack Trace] : {ex.StackTrace}");
             throw; // Re-throw to maintain original behavior
         }
-        */
+
+        GFX.TransitionImageArrayLayout(Image.TextureImage, GFX.SwapChainFormat, ImageLayout.General, ImageLayout.ShaderReadOnlyOptimal, Image.LayerCount);
+        
+        GFX.Viewport(0, 0, Game.Width, Game.Height);
     }
 
     public static void ForeachBlockItems(Action<BlockItemData> action)

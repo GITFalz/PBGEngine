@@ -165,8 +165,6 @@ public class PlayerController : ScriptingNode
         WeaponModel?.Update();
         CurrentState.Update();
 
-        Skybox.LightDirection = World.LightDirection;
-
         World.Transform.Position.Xz = Transform.Position.Xz;
 
         if (Input.IsKeyAndControlPressed(Key.P))

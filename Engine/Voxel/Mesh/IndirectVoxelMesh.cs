@@ -32,11 +32,6 @@ public class IndirectVoxelMesh
         if (sSBO == null) 
             return;
 
-        _descriptor.Bind();
-        _descriptor.Uniform(VoxelRenderer.View, Scene.CurrentScene.DefaultCamera.ViewMatrix);
-        _descriptor.Uniform(VoxelRenderer.Projection, Scene.CurrentScene.DefaultCamera.ProjectionMatrix);
-
-        GFX.Draw((uint)_vertexCount, 1, 0, 0);
     }
 
     public void Dispose()

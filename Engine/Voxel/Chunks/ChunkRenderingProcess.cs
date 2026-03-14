@@ -71,7 +71,7 @@ namespace PBG.Voxel
                     Chunk.HasBlocks = false;
                     Chunk.Renderer.VisibleChunks.Remove(Chunk);
                 }
-                else if (ChunkDataPool.TryAllocate((uint)VertexData.Count, out var alloc))
+                else if (Chunk.Renderer.DataPool.TryAllocate((uint)VertexData.Count, out var alloc))
                 {
                     Chunk.Allocation.Set(alloc);
                     alloc.DataPool.Update(Chunk, [..VertexData]);

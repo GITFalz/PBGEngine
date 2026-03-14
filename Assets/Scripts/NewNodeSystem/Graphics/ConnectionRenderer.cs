@@ -2,26 +2,61 @@ using PBG.MathLibrary;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.UI;
+using PBG;
+using Silk.NET.Vulkan;
 
 public class ConnectionRenderer
 {
-    //public static ShaderProgram ConnectorLineShaderProgram = new ShaderProgram("Noise/ConnectorLine.vert", "Noise/ConnectorLine.frag");
-    //private static VAO _connectorLineVAO = new VAO();
-    //private SSBO<PointsStruct> _connectorLineSSBO = new(new List<PointsStruct>());
+    private static bool _started = false;
+
+    public static Shader ConnectorLineShader = null!;
+    private static int modelLocation = -1;
+    private static int projectionLocation = -1;
+    private static int timeLocation = -1;
+    
+    private SSBO<PointsStruct> _connectorLineSSBO = null!;
+    private Descriptor _descriptor = null!;
     private int _vertexCount;
+
+    public ConnectionRenderer()
+    {
+        if (!_started)
+        {
+            ShaderInfo info = new() {
+                VertexShaderPath = Game.ShaderPath / "Noise_vulkan/ConnectorLine.vert",
+                FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/ConnectorLine.frag",
+            };
+            
+            ConnectorLineShader = new(info);
+
+            ConnectorLineShader.Compile();
+
+            modelLocation = ConnectorLineShader.GetLocation("ubo.model");
+            projectionLocation = ConnectorLineShader.GetLocation("ubo.projection");
+            timeLocation = ConnectorLineShader.GetLocation("d.time");
+
+            _started = true;
+        }
+
+        _connectorLineSSBO = new(0);
+
+        _descriptor = ConnectorLineShader.GetDescriptorSet();
+        _descriptor.BindSSBO(_connectorLineSSBO, 0);
+    }
 
     public void GenerateLines(NodeCollection nodeCollection)
     {
         var points = GetLines(nodeCollection);
         _vertexCount = points.Count * 6;
-        //_connectorLineSSBO.Renew(points);
+        _connectorLineSSBO.Renew([..points]);
+        _descriptor.BindSSBO(_connectorLineSSBO, 0);
     }
 
     public void UpdateLines(NodeCollection nodeCollection)
     {
         var points = GetLines(nodeCollection);
         _vertexCount = points.Count * 6;
-        //_connectorLineSSBO.Update(points, 0);
+        _connectorLineSSBO.Update([..points]);
     }
 
     private List<PointsStruct> GetLines(NodeCollection nodeCollection)
@@ -55,7 +90,6 @@ public class ConnectionRenderer
             }
         }
 
-        //_connectorLineSSBO.Renew(points);
         _vertexCount = points.Count * 6;
 
         return points;
@@ -63,47 +97,35 @@ public class ConnectionRenderer
 
     public void RenderLines(UIController uIController)
     {
-        /*
-        int[] viewport = new int[4];
-        GL.GetInteger(GetPName.Viewport, viewport);
+        if (_vertexCount == 0)
+            return;
+            
+        var viewport = GFX.GetViewport();
 
         UIController.BindFramebuffer();
 
         int width = uIController.Alignment.Width;
         int height = uIController.Alignment.Height;
 
-        GL.Viewport(uIController.Alignment.Left, uIController.Alignment.Bottom, width, height);
+        GFX.Viewport(uIController.Alignment.Left, uIController.Alignment.Top, width, height);
 
-        ConnectorLineShaderProgram.Bind();
-
-        int modelLocation = ConnectorLineShaderProgram.GetLocation("model");
-        int projectionLocation = ConnectorLineShaderProgram.GetLocation("projection");
-        int timeLocation = ConnectorLineShaderProgram.GetLocation("time");
+        ConnectorLineShader.Bind();
+        _descriptor.Bind();
 
         Matrix4 model = uIController.ModelMatrix * Matrix4.CreateTranslation((0, 0, UIController.CumulativeDepth));
         Matrix4 projection = uIController.GetProjection();
 
-        GL.UniformMatrix4(modelLocation, false, ref model);
-        GL.UniformMatrix4(projectionLocation, false, ref projection);
+        _descriptor.Uniform(modelLocation, model);
+        _descriptor.Uniform(projectionLocation, projection);
+        _descriptor.Uniform(timeLocation, GameTime.TotalTime);
 
-        GL.Uniform1(timeLocation, GameTime.TotalTime);
-
-        _connectorLineSSBO.Bind(0);
-        _connectorLineVAO.Bind();
-
-        GL.DrawArrays(PrimitiveType.Triangles, 0, _vertexCount);
-
-        _connectorLineVAO.Unbind();
-        _connectorLineSSBO.Unbind();
-
-        ConnectorLineShaderProgram.Unbind();
+        GFX.Draw((uint)_vertexCount, 1, 0, 0);
 
         UIController.CumulativeDepth += 0.00001f;
 
         UIController.UnbindFramebuffer();
 
-        GL.Viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-        */
+        GFX.Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
     }
 
     private struct PointsStruct

@@ -53,9 +53,9 @@ public class GroupOutputUI(
 
     public void NameClick(UIText text, NodeInputField field)
     {
-        StructureNodeUI.GroupInputSettings.SetVisible(true);
-        StructureNodeUI.GroupInputSettings.QueryElement("values")?.SetVisible(false);
-        StructureNodeUI.GroupInputName.UpdateText(text.GetText());
+        StructureNodeUI._groupInputSettings.SetVisible(true);
+        StructureNodeUI._groupInputSettings.QueryElement("values")?.SetVisible(false);
+        StructureNodeUI._groupInputName.UpdateText(text.GetText());
         StructureNodeManager.GroupInputField = field;
         StructureNodeManager.GroupRemoveField = node.RemoveValue;
         StructureNodeManager.SetGroupFieldName = f =>

@@ -25,7 +25,6 @@ public class StructureEngineManager : ScriptingNode
         Scene.DefaultCamera.SetCameraSpeed(10f);
 
         Skybox = Scene.GetNode("Root/World").GetComponent<Skybox>();
-        Skybox.Color = GRAY_010.Xyz;
         MeshRenderer.Start();
     }
 

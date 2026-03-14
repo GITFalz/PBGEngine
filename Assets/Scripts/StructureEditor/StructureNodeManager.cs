@@ -16,11 +16,9 @@ public class StructureNodeManager : ScriptingNode
     public static int NodePanelWidth = Game.Width - 500;
     public static int NodePanelHeight = Game.Height - 60;
 
-    /*
-    public static ShaderProgram NoiseGridShader = new ShaderProgram("Noise/noiseGrid.vert", "Noise/noiseGrid.frag");
-    public static ShaderProgram NodeSystemShader = new ShaderProgram("Utils/Rectangle.vert", "Utils/Image.frag");
-
-    public static VAO NoiseVao = new();
+    public static Shader NoiseGridShader;
+    private static Descriptor _gridDescriptor;
+    //public static Shader NodeSystemShader;
 
     private static int _noiseModelLocation = -1;
     private static int _noiseViewLocation = -1;
@@ -28,7 +26,8 @@ public class StructureNodeManager : ScriptingNode
     private static int _noiseSizeLocation = -1;
     private static int _noisePositionLocation = -1;
     private static int _noiseScaleLocation = -1;
-    */
+
+    private static bool _started = false;
 
     public static bool UpdateIconsAfterUpdate = false;
 
@@ -67,12 +66,14 @@ public class StructureNodeManager : ScriptingNode
 
     public static Vector2 DisplayPosition = new Vector2(100, 100);
 
-    public static Matrix4 DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, Game.Height, 0, -4, 0);
+    public static Matrix4 DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -4, 0);
 
     public StructureEngineManager Parent = null!;
 
     // Editors
     public StructureEditor StructureEditor = null!;
+    public BoundingBoxRenderer BuildBoundingBox;
+    public BoundingBoxRenderer BlockBoundingBox;
     
 
     // UI
@@ -88,14 +89,25 @@ public class StructureNodeManager : ScriptingNode
 
         Parent = parent;
 
-        /*
-        _noiseModelLocation = NoiseGridShader.GetLocation("model");
-        _noiseViewLocation = NoiseGridShader.GetLocation("view");
-        _noiseProjectionLocation = NoiseGridShader.GetLocation("projection");
-        _noiseSizeLocation = NoiseGridShader.GetLocation("size");
-        _noisePositionLocation = NoiseGridShader.GetLocation("position");
-        _noiseScaleLocation = NoiseGridShader.GetLocation("scale");
-        */
+        if (!_started)
+        {
+            ShaderInfo gridInfo = new()
+            {
+                VertexShaderPath = Game.ShaderPath / "Noise_vulkan/noiseGrid.vert",
+                FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/noiseGrid.frag"
+            };
+            NoiseGridShader = new(gridInfo);
+            NoiseGridShader.Compile();
+            _gridDescriptor = NoiseGridShader.GetDescriptorSet();
+            //NodeSystemShader = new Shader("Utils/Rectangle.vert", "Utils/Image.frag");
+
+            _noiseModelLocation = NoiseGridShader.GetLocation("ubo.model");
+            _noiseViewLocation = NoiseGridShader.GetLocation("ubo.view");
+            _noiseProjectionLocation = NoiseGridShader.GetLocation("ubo.projection");
+            _noiseSizeLocation = NoiseGridShader.GetLocation("subo.size");
+            _noisePositionLocation = NoiseGridShader.GetLocation("fubo.position");
+            _noiseScaleLocation = NoiseGridShader.GetLocation("fubo.scale");
+        }
     }
 
     void Start()
@@ -105,7 +117,7 @@ public class StructureNodeManager : ScriptingNode
         dragBlockUI = new(this);
         structureNodeUI = new(this);
 
-        var controller = Transform.GetComponent<UIController>();
+        var controller = Transform.ParentNode!.GetNode("WorldUI").GetComponent<UIController>();
 
         controller.AddElement(dragBlockUI);
         controller.AddElement(structureNodeUI);
@@ -197,6 +209,7 @@ public class StructureNodeManager : ScriptingNode
                 }
                 break;
             case "Noise":
+                NodeManager.NodeUIController.Show = state;
                 foreach (var element in structureNodeUI.NoiseElements)
                 {
                     element.SetVisible(state);
@@ -343,7 +356,7 @@ public class StructureNodeManager : ScriptingNode
 
         InternalNodeWindowPosition = new Vector2i(0, Game.Height - NodePanelHeight);
 
-        DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, Game.Height, 0, -4, 0);
+        DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -4, 0);
     }
 
     public void Awake()
@@ -353,9 +366,7 @@ public class StructureNodeManager : ScriptingNode
 
     public void Resize()
     {
-        StructureEditor.Rezise();
         ResizeNodeWindow();
-
         DisplayPosition = new Vector2(Game.Width - 235, Game.Height - 235);
     }
 
@@ -496,10 +507,9 @@ public class StructureNodeManager : ScriptingNode
 
     public void Render()
     {
-        /*
         if (Parent.Editor == EditorType.Tree)
         {
-            GL.Clear(ClearBufferMask.DepthBufferBit);
+            //GL.Clear(ClearBufferMask.DepthBufferBit);
         }
         else if (Parent.Editor == EditorType.Structure)
         {
@@ -507,38 +517,32 @@ public class StructureNodeManager : ScriptingNode
         }
         else if (Parent.Editor == EditorType.Noise)
         {
-            GL.Viewport(InternalNodeWindowPosition.X + 240, InternalNodeWindowPosition.Y - 60, NodePanelWidth, NodePanelHeight);
-
-            GL.Disable(EnableCap.DepthTest);
+            GFX.Viewport(InternalNodeWindowPosition.X + 240, InternalNodeWindowPosition.Y, NodePanelWidth, NodePanelHeight);
 
             NoiseGridShader.Bind();
+            _gridDescriptor.Bind();
 
             Matrix4 model = Matrix4.Identity;
             Matrix4 view = Matrix4.Identity;
             Matrix4 projection = NodeManager.NodeUIController.GetProjection();
 
-            GL.UniformMatrix4(_noiseModelLocation, false, ref model);
-            GL.UniformMatrix4(_noiseViewLocation, false, ref view);
-            GL.UniformMatrix4(_noiseProjectionLocation, false, ref projection);
-            GL.Uniform2(_noiseSizeLocation, new Vector2(NodePanelWidth, NodePanelHeight));
-            GL.Uniform2(_noisePositionLocation, NodeManager.NodeUIController.Position.Xy);
-            GL.Uniform1(_noiseScaleLocation, NodeManager.NodeUIController.Scale);
+            _gridDescriptor.UniformMatrix4(_noiseModelLocation, model);
+            _gridDescriptor.UniformMatrix4(_noiseViewLocation, view);
+            _gridDescriptor.UniformMatrix4(_noiseProjectionLocation, projection);
+            _gridDescriptor.Uniform2(_noiseSizeLocation, new Vector2(NodePanelWidth, NodePanelHeight));
+            _gridDescriptor.Uniform2(_noisePositionLocation, NodeManager.NodeUIController.Position.Xy);
+            _gridDescriptor.Uniform1(_noiseScaleLocation, NodeManager.NodeUIController.Scale);
 
-            NoiseVao.Bind();
+            GFX.Draw(6, 1, 0, 0);
 
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
-            Shader.Error("Noise grid shader error: ");
+            GFX.Viewport(0, 0, Game.Width, Game.Height);
 
-            NoiseVao.Unbind();
-            NoiseGridShader.Unbind();
-
-            GL.Enable(EnableCap.DepthTest);
-
-            GL.Viewport(0, 0, Game.Width, Game.Height);
+            UIController.BindFramebuffer();
 
             GLSLManager.Render(DisplayProjectionMatrix, DisplayPosition, (230, 230), NoiseSize, Offset, (1, 1, 1, 1));
+
+            UIController.UnbindFramebuffer();
         }
-        */
     }
 
     public void Exit()

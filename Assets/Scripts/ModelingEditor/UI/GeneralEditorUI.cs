@@ -138,7 +138,7 @@ public class GeneralEditorUI : UIScript
                         new UIText("+", Class(mc_[1], fs_[2f], middle_center))
                     ))
                 )),
-                newVScroll(Class(w_full_minus_[4], top_center, h_half_minus_[30], border_[5, 5, 5, 5], spacing_[5], blank_sharp_g_[10]), Sub(
+                newVScroll(Class(w_full_minus_[4], top_center, h_half_minus_[30], border_[5, 5, 5, 5], spacing_[5], blank_sharp_g_[10], mask_children), Sub(
 
                 ), ref Hierarchy)
             ), ref ModelingLeftPanel),

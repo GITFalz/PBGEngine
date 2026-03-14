@@ -14,13 +14,12 @@ public abstract class ItemData
     public static int IconTextureLocation = -1;
     public static int IconIndexLocation = -1;
 
-    //protected static FBO FBO => ItemDataManager.FBO;
+    protected static FBO FBO => ItemDataManager.FBO;
 
     protected static List<byte[]> Data => ItemDataManager.Data;
 
     protected static int CubeModelLocation => ItemDataManager.CubeModelLocation;
     protected static int CubeProjectionLocation => ItemDataManager.CubeProjectionLocation;
-    protected static int CubeTextureLocation => ItemDataManager.CubeTextureLocation;
     protected static int CubeIndicesLocation => ItemDataManager.CubeIndicesLocation;
 
     public string Name = "empty";

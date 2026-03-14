@@ -22,7 +22,7 @@ public class DragBlockUI(StructureNodeManager nodeManager) : UIScript
         DragBlockCollection.SetVisible(true);
         DragBlockCollection.Clicked = true;
         DragBlockCollection.Dataset["block"] = name;
-        DragBlockCollection.BaseOffset = collection.Origin - (0, nodeManager.structureNodeUI.NoisePaletteBlockSelection.ScrollPosition);
+        DragBlockCollection.BaseOffset = collection.Origin - (0, nodeManager.structureNodeUI._noisePaletteBlockSelection.ScrollPosition);
         DragBlockCollection.ApplyChanges(UIChange.Transform);
 
         _blockImg.UpdateItem(name);

@@ -1,26 +1,22 @@
 ﻿using PBG.MathLibrary;
 using PBG.Graphics;
+using Buffer = Silk.NET.Vulkan.Buffer;
 
 public class SkyboxMesh
 {
-    /*
-    private VAO _vao = new VAO();
+    private VBO<Vector3> _vertVbo;
+    private VBO<Vector2> _uvVbo;
+    private VBO<int> _textureVbo;
+    private IBO _ibo;
 
-    private IBO _ibo = new IBO();
-    private VBO<Vector3> _vertVbo = new();
-    private VBO<Vector2> _uvVbo = new();
-    private VBO<int> _textureVbo = new();
+    private Buffer[] _buffers = [];
+    private ulong[] _offsets = [];
 
-    public List<Vector2> Uvs = new List<Vector2>();
-    public List<uint> Indices = new List<uint>();
-    public List<int> TextureIndices = new List<int>();
-    public List<Vector3> _transformedVerts = new List<Vector3>();
-    */
+
 
     public SkyboxMesh()
     {
-        /*
-        _transformedVerts =
+        Vector3[] vertices =
         [
             // Front
             (-1, -1, -1),
@@ -59,7 +55,19 @@ public class SkyboxMesh
             (-1, 1, 1)
         ];
 
-        Indices =
+        Vector2[] uvs =
+        [
+            (0, 0), (1, 0), (1, 1), (0, 1),
+            (0, 0), (1, 0), (1, 1), (0, 1),
+            (0, 0), (1, 0), (1, 1), (0, 1),
+            (0, 0), (1, 0), (1, 1), (0, 1),
+            (0, 0), (1, 0), (1, 1), (0, 1),
+            (0, 0), (1, 0), (1, 1), (0, 1)
+        ];
+        
+        int[] textureIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,];
+
+        uint[] indices =
         [
             0, 1, 2, 2, 3, 0,
             4, 5, 6, 6, 7, 4,
@@ -69,59 +77,20 @@ public class SkyboxMesh
             20, 22, 21, 22, 20, 23
         ];
 
-        Uvs =
-        [
-            (0, 0), (1, 0), (1, 1), (0, 1),
-            (0, 0), (1, 0), (1, 1), (0, 1),
-            (0, 0), (1, 0), (1, 1), (0, 1),
-            (0, 0), (1, 0), (1, 1), (0, 1),
-            (0, 0), (1, 0), (1, 1), (0, 1),
-            (0, 0), (1, 0), (1, 1), (0, 1)
-        ];
+        _vertVbo = new(vertices);
+        _uvVbo = new(uvs);
+        _textureVbo = new(textureIndices);
+        _ibo = new(indices);
 
-        TextureIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,];
-
-        GenerateBuffers();
-        */
-    }
-
-    public void GenerateBuffers()
-    {
-        /*
-        _vertVbo = new(_transformedVerts);
-        _uvVbo = new(Uvs);
-        _textureVbo = new(TextureIndices);
-
-        _vao.Bind();
-
-        _vertVbo.Bind();
-        _vao.Link(0, 3, VertexAttribPointerType.Float, 0, 0);
-        _vertVbo.Unbind();
-
-        _uvVbo.Bind();
-        _vao.Link(1, 2, VertexAttribPointerType.Float, 0, 0);
-        _uvVbo.Unbind();
-
-        _textureVbo.Bind();
-        _vao.IntLink(2, 1, VertexAttribIntegerType.Int, 0, 0);
-        _textureVbo.Unbind();
-
-        _vao.Unbind();
-
-        _ibo = new(Indices);
-        */
+        _buffers = [_vertVbo.Buffer, _uvVbo.Buffer, _textureVbo.Buffer];
+        _offsets = [0, 0, 0];
     }
 
     public void Render()
     {
-        /*
-        _vao.Bind();
+        VBOBase.Bind(_buffers, _offsets);
         _ibo.Bind();
 
-        GL.DrawElements(PrimitiveType.Triangles, Indices.Count, DrawElementsType.UnsignedInt, 0);
-
-        _ibo.Unbind();
-        _vao.Unbind();
-        */
+        GFX.DrawIndexed(36, 1, 0, 0, 0);
     }
 }

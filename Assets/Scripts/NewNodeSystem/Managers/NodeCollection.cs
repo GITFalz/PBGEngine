@@ -39,7 +39,6 @@ public class NodeCollection : ScriptingNode
         for (int i = 0; i < Nodes.Count; i++)
         {
             NodeBase node = Nodes[i];
-            Console.WriteLine("Node: " + node);
             if (node is CustomNode customNode && customNode.IsOutput)
                 outputNodes.Add(customNode);
             if (node is StructureNode)

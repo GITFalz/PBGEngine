@@ -10,6 +10,8 @@ using PBG.Threads;
 using PBG.UI;
 using PBG.Voxel;
 using Silk.NET.Input;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace PBG;
 
@@ -68,6 +70,7 @@ public class Game : GameWindow
     public override void OnKeyDown(IKeyboard keyboard, Key key, int scanCode)
     {
         Input.OnKeyDown(key);
+        UIController.InputField(key);
     }
 
     public override void OnKeyUp(IKeyboard keyboard, Key key, int scanCode)
@@ -107,7 +110,7 @@ public class Game : GameWindow
 
         BlockData.Init();
         //WeaponData.Init();
-        ItemDataManager.GenerateIcons();
+        ItemDataManager.Init();
 
         VoxelChunkGenerator.InitCache();
 
@@ -158,6 +161,12 @@ public class Game : GameWindow
         
 
         Scene.LoadScene("MainMenu");
+    }
+
+    public override void OnRenderLoad()
+    {
+        ItemDataManager.GenerateIcons();
+        UIData.Init();
     }
 
     public override void OnResize(int width, int height)
@@ -222,11 +231,12 @@ public class Game : GameWindow
     {
         GameTime.Render((float)_renderingDeltaTime);
 
-        UIController.ClearFrameBuffer();
+        UIController.CumulativeDepth = 0f;
         
         Scene.CurrentScene?.Render();
 
         UIController.GlobalRender();
+        FBO.ResetAll();
     }
 
     public override void OnUnload()

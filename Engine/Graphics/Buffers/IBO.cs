@@ -18,11 +18,11 @@ public unsafe class IBO : BufferBase
         {
             Size = (uint)Marshal.SizeOf<uint>();
             var dummy = new uint[1];
-            GFX.CreateBuffer(BufferUsageFlags.IndexBufferBit, dummy, out Buffer, out BufferMemory);
+            GFX.CreateBuffer(dummy, BufferUsageFlags.IndexBufferBit, MemoryPropertyFlags.DeviceLocalBit, out Buffer, out BufferMemory);
             return;
         }
         Size = (uint)Marshal.SizeOf<uint>() * (uint)data.Length;
-        GFX.CreateBuffer(BufferUsageFlags.IndexBufferBit, data, out Buffer, out BufferMemory);
+        GFX.CreateBuffer(data, BufferUsageFlags.IndexBufferBit, MemoryPropertyFlags.DeviceLocalBit, out Buffer, out BufferMemory);
     }
 
     public void Update(uint[] data)
@@ -46,18 +46,16 @@ public unsafe class IBO : BufferBase
         {
             Size = (uint)Marshal.SizeOf<uint>();
             var dummy = new uint[1];
-            GFX.CreateBuffer(BufferUsageFlags.IndexBufferBit, dummy, out Buffer, out BufferMemory);
+            GFX.CreateBuffer(dummy, BufferUsageFlags.IndexBufferBit, MemoryPropertyFlags.DeviceLocalBit, out Buffer, out BufferMemory);
             return;
         }
         Size = (uint)Marshal.SizeOf<uint>() * (uint)data.Length;
-        GFX.CreateBuffer(BufferUsageFlags.IndexBufferBit, data, out Buffer, out BufferMemory);
+        GFX.CreateBuffer(data, BufferUsageFlags.IndexBufferBit, MemoryPropertyFlags.DeviceLocalBit, out Buffer, out BufferMemory);
     }
 
-    public void Bind()
-    {
-        GFX.Vk.CmdBindIndexBuffer(GFX.CommandBuffer, Buffer, 0, IndexType.Uint32);
-    }
-
+    public void Bind() => Bind(GFX.CommandBuffer);
+    public void Bind(CommandBuffer commandBuffer) => GFX.Vk.CmdBindIndexBuffer(commandBuffer, Buffer, 0, IndexType.Uint32);
+    
     protected override void Destroy()
     {
         GFX.DestroyBuffer(Buffer);

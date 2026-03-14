@@ -5,8 +5,9 @@ using PBG.Data;
 using PBG.Rendering;
 using PBG.Threads;
 using PBG.Voxel;
+using PBG.Graphics;
 
-public class LODVoxelRenderer : ScriptingNode
+public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
 {
     public Dictionary<Vector3i, LODBaseChunk> LODChunks = [];
 
@@ -20,6 +21,7 @@ public class LODVoxelRenderer : ScriptingNode
     public LinkedList<LODChunk> RenderingQueue = [];
     public LinkedList<LODChunk> RerenderingQueue = [];
     public Queue<LODChunk> ToBeFreedQueue = [];
+    public List<VoxelChunk> VisibleChunks = [];
 
     public LODWorldGenerator Generator = new();
 
@@ -31,17 +33,21 @@ public class LODVoxelRenderer : ScriptingNode
     private int _width;
     private int _height;
 
+    public ChunkDataPool DataPool;
+
     public LODVoxelRenderer()
     {
         _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
         _viewport = (0, 0, 0, 0);
         _width = Game.Width;
         _height = Game.Height;
+
+        DataPool = new(this);
     }
 
     void Start()
     {
-        //Init(3);
+        Init(3);
 
         voxelRenderer = Transform.GetComponent<VoxelRenderer>(); 
     }
@@ -134,26 +140,6 @@ public class LODVoxelRenderer : ScriptingNode
 
     public void Update()
     {
-        /*
-        if (GenerateChunks)
-        {
-            Vector3i newPosition = VoxelData.BlockToChunkRelative(Mathf.FloorToInt(Transform.Position));
-            if (_enableTerrainGeneration && newPosition.Xz != _currentChunk.Xz)
-            {
-                _currentChunk.Xz = Mathf.FloorToInt(newPosition.Xz);
-                ChunkCheck(_currentChunk);
-            }
-
-            ChunkGenerator.GenerateChunk(this);
-        }
-        
-        CheckFrustum();
-
-        Info.SetGenerationQueueCount(GenerationQueue.Count);
-        */
-        return;
-        CheckFrustum();
-        
         if (GenerationQueue.Count > 0)
         {
             Generator.Generate(this);
@@ -166,14 +152,6 @@ public class LODVoxelRenderer : ScriptingNode
                 var chunk = RenderingQueue.First;
                 if (chunk != null)
                 {
-                    /*
-                    if (!ChunkDictionary.ContainsKey(chunk.Value.RelativePosition))
-                    {
-                        RenderingQueue.Remove(chunk);
-                        continue;
-                    }
-                    */
-
                     if (!chunk.Value.ToBeRemoved)
                     {
                         LODChunkRenderingProcess renderingProcess = new LODChunkRenderingProcess(chunk.Value);
@@ -188,7 +166,6 @@ public class LODVoxelRenderer : ScriptingNode
                 }
             }
         }
-        //Console.WriteLine("Rendering queue: " + RenderingQueue.Count);
     }
 
     void LateUpdate()
@@ -203,60 +180,47 @@ public class LODVoxelRenderer : ScriptingNode
 
     void Render()
     {
-        /*
-        GL.Viewport(0, 0, Game.Width, Game.Height);
+        DataPool.Reset();
+        GFX.Viewport(_viewport.left, _viewport.top, _width, _height);
 
-        Matrix4 view = Scene.DefaultCamera.ViewMatrix;
-        Matrix4 projection = _camera.ProjectionMatrix;
+        if (DataPool.Updated || Input.MouseDelta != Vector2.Zero)
+        {
+            DataPool.Updated = false;
 
-        GL.Enable(EnableCap.DepthTest);
-        GL.DepthFunc(DepthFunction.Less);
-        GL.Enable(EnableCap.CullFace);
+            for (int i = 0; i < VisibleChunks.Count; i++)
+            {
+                var chunk = VisibleChunks[i];
+                if (chunk.ForceDisabled || !Camera.FrustumIntersectsSphere(chunk.Center, 28))
+                {
+                    chunk.Visible = false;
+                    continue;
+                }
+
+                chunk.Visible = true;
+                chunk.Allocation.DataPool.UpdateDrawCommand(chunk, chunk.Allocation);
+            }
+
+            DataPool.UpdateDrawCommands();
+        }
 
         VoxelRenderer.WorldShader.Bind();
 
-        GL.UniformMatrix4(VoxelRenderer.WorldShaderLocation.View, false, ref view);
-        GL.UniformMatrix4(VoxelRenderer.WorldShaderLocation.Projection, false, ref projection);
+        DataPool.Render();
 
-        GL.Uniform1(VoxelRenderer.WorldShaderLocation.Texture, 0);
-        GL.Uniform3(VoxelRenderer.WorldShaderLocation.LightDirection, voxelRenderer.LightDirection);
-        GL.Uniform3(VoxelRenderer.WorldShaderLocation.CameraPosition, Camera.Position);
-        GL.Uniform3(VoxelRenderer.WorldShaderLocation.PlayerPosition, Transform.Position);
-        GL.Uniform1(VoxelRenderer.WorldShaderLocation.AmbientOcclusionTexture, 1);
-        GL.Uniform1(VoxelRenderer.WorldShaderLocation.DoAmbientOcclusion, 0);
-        GL.Uniform1(VoxelRenderer.WorldShaderLocation.DoRealtimeShadows, 0);
-
-        BlockData.BlockTextureArray.Bind(TextureUnit.Texture0);
-
-        int count = 0;
-        for (int i = 0; i < Chunks.Count; i++)
-        {
-            var chunk = Chunks[i];
-            if (chunk.IsDisabled)
-                continue;
-
-            GL.UniformMatrix4(VoxelRenderer.WorldShaderLocation.Model, false, ref chunk.ModelMatrix);
-            chunk.Render();
-            count++;
-        }
-
-        //Console.WriteLine(count);
-
-        BlockData.BlockTextureArray.Unbind();
-        VoxelRenderer.WorldShader.Unbind();
-        */
+        GFX.Viewport(0, 0, Game.Width, Game.Height);
     }
 
-    public void CheckFrustum()
+    public void UpdateUniforms(Descriptor descriptor)
     {
-        for (int i = 0; i < Chunks.Count; i++)
-        {
-            var chunk = Chunks[i];
-            if (!chunk.HasBlocks)
-                continue;
+        descriptor.Uniform(VoxelRenderer.WorldViewLocation, Camera.ViewMatrix);
+        descriptor.Uniform(VoxelRenderer.WorldProjectionLocation, voxelRenderer.ProjectionMatrix);
 
-            bool frustum = Scene.DefaultCamera.FrustumIntersectsSphere(chunk.Center, 28 * (1 << chunk.Level));
-            chunk.IsDisabled = !frustum;
-        }
+        descriptor.Uniform(VoxelRenderer.WorldLightDirectionLocation, voxelRenderer.LightDirection);
+        descriptor.Uniform(VoxelRenderer.WorldDoRealtimeShadowsLocation, 0);
+        descriptor.Uniform(VoxelRenderer.WorldDoAmbientOcclusionLocation, voxelRenderer.AmbientOcclusion ? 1 : 0);
+        descriptor.Uniform(VoxelRenderer.WorldPlayerPositionLocation, Camera.Position);
+        descriptor.Uniform(VoxelRenderer.WorldTimeLocation, voxelRenderer.Time);
     }
+
+    public Camera GetCamera() => Camera;
 }

@@ -28,9 +28,11 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
 
     private float? _saveTimer = null;
 
+    public Formatter Formatter = new();
+
     public override UIElementBase Script() =>
     new UICol(Class(w_full_minus_[480], h_full_minus_[60], top_center, top_[60], mask_children), Sub(
-        new UICol(Class(w_full, h_[30], blank_full_g_[20]), Sub(
+        new UICol(Class(w_full, h_[30], blank_full_g_[10]), Sub(
             new UIImg(Class(w_[20], h_[20], icon_[15], bg_white, left_[5], middle_left, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => editor.CloseScript())),
             newImg(Class(w_[20], h_[20], icon_[24], bg_white, right_[55], middle_right, hidden), OnClickImg(_ => Save()), ref LoadingIcon),
             newText("Compilation Successfull", Class(middle_right, rgba_[0, 1, 0, 1], right_[55], hidden), ref SuccessText),
@@ -38,18 +40,18 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
             new UIImg(Class(w_[20], h_[20], icon_[27], bg_white, right_[30], middle_right, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => Save())),
             new UIImg(Class(w_[20], h_[20], icon_[0], bg_white, right_[5], middle_right, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => Compile()))
         )),
-        newVScroll(Class(w_[40], h_full_minus_[30], bottom_left, spacing_[5], border_[0, 5, 0, 0]), Sub(
+        newVScroll(Class(w_[40], h_full_minus_[30], bottom_left, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5]), Sub(
             new UIText("1", Class(left_[5]))
         ), ref IndexCanvasCol),
-        new UIImg(w_[2], h_full_minus_[30], bottom_left, blank_full_g_[30], left_[40]),
+        new UIImg(w_[2], h_full_minus_[30], bottom_left, blank_full_g_[10], left_[40]),
         newCol(Class(bottom_right, w_full_minus_[45], h_full_minus_[33]), Sub(), ref HighlightCol),
-        newVCol(Class(depth_[10], grow_children, blank_full_g_[20], hidden), [
-            new UICol(Class(w_full, h_[15], blank_full_g_[30]), []),
-            newVCol("test", Class(grow_children, border_[5, 5, 5, 5]), [
+        newVCol(Class(depth_[10], grow_children, blank_full_g_[10], hidden), [
+            new UICol(Class(w_full, h_[15], blank_full_g_[10]), []),
+            newVCol(Class(grow_children, border_[5, 5, 5, 5]), [
                 new UIText("No error yet"),
             ], ref InfoTextCol)
         ], ref InfoPanel),
-        newVScroll(Class(w_full_minus_[42], h_full_minus_[30], bottom_right, spacing_[5], border_[0, 5, 0, 0]), 
+        newVScroll(Class(w_full_minus_[42], h_full_minus_[30], bottom_right, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5]), 
         OnHoverVScroll(_ => Hover()),
         Sub(
             new UIField("", Class(mc_[1000], data_["index", 0], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange))
@@ -71,6 +73,7 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
             var newLine = new UIField(lines[i], Class(mc_[1000], data_["index", 0], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange));
             TextCanvasCol.AddElement(newLine);
             UIController.AddElement(newLine);
+            newLine.OnCreated += () => Formatter.FormatLine(newLine);
         }
         RegenerateIndices();
     }
@@ -103,7 +106,6 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
         if (editor.SelectedBoundingBox != null && !StructureCompiler.CompileDefault(lines, ref editor.SelectedBoundingBox))
         {
             var data = StructureCompiler.Compiler.CompileData;
-            Console.WriteLine("test");
             data.Print();
             if (data.ErrorLog.Count > 0)
             {
@@ -200,8 +202,9 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
         InfoPanel.SetVisible(false);
     }
 
-    private void OnFieldChange(UIField _)
+    private void OnFieldChange(UIField field)
     {
+        Formatter.FormatLine(field, field.GetText());
         PlayLoading();
         ClearMarkers();
     }

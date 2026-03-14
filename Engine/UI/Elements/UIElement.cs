@@ -94,6 +94,8 @@ namespace PBG.UI
 
         public UIQueueAction? UpdateAction = null;
 
+        public Action? OnCreated = null;
+
         public UIElementBase() { }
         public UIElementBase(Vector4 defaultColor, params UIStyleData[] classes)
         {
@@ -107,6 +109,12 @@ namespace PBG.UI
         public UIElementBase(string name) { Name = name; }
         public UIElementBase(UIAlign alignement) { Alignement = alignement; }
         public UIElementBase(string name, UIAlign alignement) { Name = name; Alignement = alignement; }
+
+        public void Created()
+        {
+            OnCreated?.Invoke();
+            OnCreated = null;
+        }
 
         public bool IsParent(UIElementBase element)
         {

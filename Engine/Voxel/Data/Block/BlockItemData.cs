@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Voxel;
+using Silk.NET.Vulkan;
 
 public class BlockItemData : ItemData
 {
@@ -18,53 +19,29 @@ public class BlockItemData : ItemData
         Base(); 
     }
 
-    public override void GenerateIcon()
+    public override void GenerateIcon() => GenerateIcon(GFX.CommandBuffer);
+    public void GenerateIcon(CommandBuffer commandBuffer)
     {
-        /*
         List<BlockVertexData> vertices = [];
         List<uint> indices = [];
         Block.GenerateFullBlock(new IconVoxelHandler(vertices, indices), (-0.5f, -0.5f, -0.5f));
 
-        VAO vao = new();
-        Shader.Error("Error creating block data VAO");
-        IBO ibo = new(indices);
-        Shader.Error("Error creating block data IBO");
-        VBO<BlockVertexData> vertexVBO = new(vertices);
-        Shader.Error("Error creating block data VBO");
+        if (indices.Count == 0 || vertices.Count == 0)
+        {
+            Console.WriteLine("[Warning] : Block with no indices");
+            return;
+        }
 
-        vao.Bind();
+        IBO ibo = new([..indices]);
+        VBO<BlockVertexData> vbo = new([..vertices]);
 
-        vertexVBO.Bind();
-        int stride = Marshal.SizeOf<BlockVertexData>();
+        vbo.Bind(commandBuffer);
+        ibo.Bind(commandBuffer);
 
-        vao.Link(0, 3, VertexAttribPointerType.Float, stride, 0);
-        vao.Link(1, 2, VertexAttribPointerType.Float, stride, sizeof(float) * 3);
-        vao.Link(2, 3, VertexAttribPointerType.Float, stride, sizeof(float) * 5);
-        vao.IntLink(3, 1, VertexAttribIntegerType.Int, stride, sizeof(float) * 8);
+        GFX.DrawIndexed(commandBuffer, (uint)indices.Count, 1, 0, 0, 0);
 
-        vertexVBO.Unbind();
-
-        vao.Unbind();
-
-        GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-        vao.Bind();
-        ibo.Bind();
-
-        GL.DrawElements(PrimitiveType.Triangles, indices.Count, DrawElementsType.UnsignedInt, 0);
-
-        Shader.Error("Rendering blocks for icons");
-
-        ibo.Unbind();
-        vao.Unbind();
-
-        ItemDataManager.Data.Add(FBO.GetPixels(0, 0, 128, 128, false));
-
-        vertexVBO.DeleteBuffer();
-        ibo.DeleteBuffer();
-        vao.DeleteBuffer();
-        */
+        ibo.Dispose();
+        vbo.Dispose();
     }
 
     private class IconVoxelHandler(List<BlockVertexData> vertices, List<uint> indices) : BaseVoxelChunkHandler((0, 0, 0), [])

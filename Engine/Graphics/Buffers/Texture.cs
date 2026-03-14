@@ -3,13 +3,10 @@ using Silk.NET.Vulkan;
 using StbImageSharp;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-public unsafe class Texture : BufferBase
+public unsafe class Texture : ImageBuffer
 {
     private Image textureImage;
     private DeviceMemory textureImageMemory;
-
-    public ImageView textureImageView;
-    public Sampler textureSampler;
 
     private TextureInfo _info;
     private Format _format = Format.R8G8B8A8Srgb;
@@ -75,12 +72,12 @@ public unsafe class Texture : BufferBase
 
     public void CreateStorageImageView()
     {
-        textureImageView = GFX.CreateImageView(textureImage, _format, ImageAspectFlags.ColorBit);
+        ImageView = GFX.CreateImageView(textureImage, _format, ImageAspectFlags.ColorBit);
     }
 
     public void CreateTextureImageView() 
     {
-        textureImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit);
+        ImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit);
     }
 
     public void CreateTextureSampler()
@@ -114,7 +111,7 @@ public unsafe class Texture : BufferBase
         samplerInfo.MinLod = 0.0f;
         samplerInfo.MaxLod = 0.0f;
 
-        if (GFX.CreateSampler(&samplerInfo, null, out textureSampler) != Result.Success) {
+        if (GFX.CreateSampler(&samplerInfo, null, out Sampler) != Result.Success) {
             throw new InvalidOperationException("failed to create texture sampler!");
         }
     }
@@ -164,8 +161,11 @@ public unsafe class Texture : BufferBase
 
     protected override void Destroy()
     {
-        GFX.DestroySampler(textureSampler);
-        GFX.DestroyImageView(textureImageView);
+        OnDispose?.Invoke(this);
+        OnDispose = null;
+        
+        GFX.DestroySampler(Sampler);
+        GFX.DestroyImageView(ImageView);
 
         GFX.DestroyImage(textureImage);
         GFX.FreeMemory(textureImageMemory);

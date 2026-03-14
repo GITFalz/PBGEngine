@@ -16,7 +16,7 @@ public struct ComputeShaderInfo
     }
 }
 
-public unsafe class ComputeShader : BufferBase
+public unsafe class ComputeShader : BufferBase, IShader
 {
     private UniformBufferLayout[] _uniformBindings = [];
 
@@ -35,6 +35,8 @@ public unsafe class ComputeShader : BufferBase
     private Dictionary<string, int> _locations = [];
     private UniformBufferAttribute[] _uniformAttribues = [];
 
+    public string GetPath() => _shaderInfo.ComputeShaderPath;
+
     public int GetLocation(string name)
     {
         if (_locations.TryGetValue(name, out var index))
@@ -44,34 +46,30 @@ public unsafe class ComputeShader : BufferBase
         return -1;
     }
 
-
-    private CommandBuffer _commandBuffer;
-    public void Bind(out CommandBuffer commandBuffer)
+    public void Bind() => Bind(GFX.CommandBuffer);
+    public void Bind(CommandBuffer commandBuffer)
     {
-        commandBuffer = GraphicsContext.graphicsContext.BeginSingleTimeCommands();
         GFX.Vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Compute, pipeline);
-        _commandBuffer = commandBuffer;
     }
 
-    public void Dispatch(uint groupsX, uint groupsY, uint groupsZ)
+    public void Dispatch(uint groupsX, uint groupsY, uint groupsZ) => Dispatch(GFX.CommandBuffer, groupsX, groupsY, groupsZ);
+    public void Dispatch(CommandBuffer commandBuffer, uint groupsX, uint groupsY, uint groupsZ)
     {
-        GFX.Vk.CmdDispatch(_commandBuffer, groupsX, groupsY, groupsZ);
-        GraphicsContext.graphicsContext.EndSingleTimeCommands(_commandBuffer);
+        GFX.Vk.CmdDispatch(commandBuffer, groupsX, groupsY, groupsZ);
     }
 
-    public void DispatchBarrier(Descriptor descriptor, uint groupsX, uint groupsY, uint groupsZ)
+    public void DispatchBarrier(Descriptor descriptor, uint groupsX, uint groupsY, uint groupsZ) => DispatchBarrier(GFX.CommandBuffer, descriptor, groupsX, groupsY, groupsZ);
+    public void DispatchBarrier(CommandBuffer commandBuffer, Descriptor descriptor, uint groupsX, uint groupsY, uint groupsZ)
     {
         var imageBarriers = descriptor.GetImageBarriers();
         var bufferBarriers = descriptor.GetBufferBarriers();
 
-        GFX.Vk.CmdDispatch(_commandBuffer, groupsX, groupsY, groupsZ);
+        GFX.Vk.CmdDispatch(commandBuffer, groupsX, groupsY, groupsZ);
         
         fixed (BufferMemoryBarrier* pBufferBarrier = bufferBarriers)
         fixed (ImageMemoryBarrier* pImageBarrier = imageBarriers)
-        GFX.Vk.CmdPipelineBarrier(_commandBuffer, PipelineStageFlags.ComputeShaderBit, PipelineStageFlags.VertexShaderBit, DependencyFlags.None, 0, null, 
+        GFX.Vk.CmdPipelineBarrier(commandBuffer, PipelineStageFlags.ComputeShaderBit, PipelineStageFlags.VertexShaderBit, DependencyFlags.None, 0, null, 
             (uint)bufferBarriers.Length, pBufferBarrier, (uint)imageBarriers.Length, pImageBarrier);
-            
-        GraphicsContext.graphicsContext.EndSingleTimeCommands(_commandBuffer);
     }
     
     public void Compile()
@@ -273,7 +271,7 @@ public unsafe class ComputeShader : BufferBase
     public Descriptor GetDescriptorSet()
     {
         GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
-        return new(pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+        return new(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
     }
 
     private ShaderModule CreateShaderModule(byte[] code)

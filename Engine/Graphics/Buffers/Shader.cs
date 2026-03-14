@@ -13,14 +13,63 @@ public struct ShaderInfo
     public string VertexShaderPath = "";
     public string? FragmentShaderPath = null;
     public RenderPass RenderPass = GFX.RenderPass;
-    public CompareOp DepthCompare = CompareOp.Less;
+
+    public PipelineRasterizationStateCreateInfo Rasterizer = new()
+    {
+        SType = StructureType.PipelineRasterizationStateCreateInfo,
+        DepthClampEnable = false,
+        PolygonMode = PolygonMode.Fill,
+        CullMode = CullModeFlags.BackBit,
+        FrontFace = FrontFace.CounterClockwise,
+        LineWidth = 1f,
+        DepthBiasEnable = false,
+        DepthBiasConstantFactor = 0.0f,
+        DepthBiasClamp = 0.0f,
+        DepthBiasSlopeFactor = 0.0f
+    };
+
+    public PipelineColorBlendAttachmentState ColorBlendAttachment = new()
+    {
+        ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit,
+        BlendEnable = false,
+        SrcColorBlendFactor = BlendFactor.One,
+        DstColorBlendFactor = BlendFactor.Zero,
+        ColorBlendOp = BlendOp.Add,
+        SrcAlphaBlendFactor = BlendFactor.One,
+        DstAlphaBlendFactor = BlendFactor.Zero,
+        AlphaBlendOp = BlendOp.Add
+    };
+
+    public PipelineDepthStencilStateCreateInfo DepthStencil = new()
+    {
+        SType = StructureType.PipelineDepthStencilStateCreateInfo,
+        DepthTestEnable = true,
+        DepthWriteEnable = true,
+        DepthCompareOp = CompareOp.Less,
+        DepthBoundsTestEnable = false,
+        MinDepthBounds = 0.0f, // Optional
+        MaxDepthBounds = 1.0f, // Optional
+        StencilTestEnable = false,
+        Front = new(), // Optional
+        Back = new() // Optional
+    };
+    
+    public ShaderInfo(string vertShader, string fragShader)
+    {
+        VertexShaderPath = vertShader;
+        FragmentShaderPath = fragShader;
+    }
+
     public ShaderInfo() {}
 }
 
-public unsafe class Shader : BufferBase
+public unsafe class Shader : BufferBase, IShader
 {
     private List<VertexInputBindingDescription> _vertexBindings = [];
     private UniformBufferLayout[] _uniformBindings = [];
+
+    private Dictionary<string, int> _locations = [];
+    private UniformBufferAttribute[] _uniformAttribues = [];
 
     public DescriptorSetLayout descriptorSetLayout;
 
@@ -33,6 +82,8 @@ public unsafe class Shader : BufferBase
     {
         _shaderInfo = info;
     }
+
+    public string GetPath() => _shaderInfo.VertexShaderPath;
 
     public void BindVertexBuffer(uint bindingPoint, uint stride)
     {
@@ -54,9 +105,6 @@ public unsafe class Shader : BufferBase
         });
     }
 
-    private Dictionary<string, int> _locations = [];
-    private UniformBufferAttribute[] _uniformAttribues = [];
-
     public int GetLocation(string name)
     {
         if (_locations.TryGetValue(name, out var index))
@@ -66,9 +114,10 @@ public unsafe class Shader : BufferBase
         return -1;
     }
 
-    public void Bind()
+    public void Bind() => Bind(GFX.CommandBuffer);
+    public void Bind(CommandBuffer commandBuffer)
     {
-        GFX.Vk.CmdBindPipeline(GFX.CommandBuffer, PipelineBindPoint.Graphics, graphicsPipeline);
+        GFX.Vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, graphicsPipeline);
     }
     
     public void Compile()
@@ -100,8 +149,6 @@ public unsafe class Shader : BufferBase
             attributeDescriptions[i].Binding = 0;
             attributeDescriptions[i].Format = attribute.Format;
             attributeDescriptions[i].Offset = attribute.Offset;
-
-            Console.WriteLine(attribute);
         }
         // === End ===
 
@@ -353,19 +400,7 @@ public unsafe class Shader : BufferBase
             PScissors = &scissor
         };
 
-        PipelineRasterizationStateCreateInfo rasterizer = new()
-        {
-            SType = StructureType.PipelineRasterizationStateCreateInfo,
-            DepthClampEnable = false,
-            PolygonMode = PolygonMode.Fill,
-            CullMode = CullModeFlags.BackBit,
-            FrontFace = FrontFace.CounterClockwise,
-            LineWidth = 1f,
-            DepthBiasEnable = false,
-            DepthBiasConstantFactor = 0.0f, // Optional
-            DepthBiasClamp = 0.0f, // Optional
-            DepthBiasSlopeFactor = 0.0f // Optional
-        };
+        var rasterizer = _shaderInfo.Rasterizer;
 
         PipelineMultisampleStateCreateInfo multisampling = new()
         {
@@ -378,17 +413,7 @@ public unsafe class Shader : BufferBase
             AlphaToOneEnable = false // Optional
         };
 
-        PipelineColorBlendAttachmentState colorBlendAttachment = new()
-        {
-            ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit,
-            BlendEnable = false,
-            SrcColorBlendFactor = BlendFactor.One, // Optional
-            DstColorBlendFactor = BlendFactor.Zero, // Optional
-            ColorBlendOp = BlendOp.Add, // Optional
-            SrcAlphaBlendFactor = BlendFactor.One, // Optional
-            DstAlphaBlendFactor = BlendFactor.Zero, // Optional
-            AlphaBlendOp = BlendOp.Add // Optional
-        };
+        var colorBlendAttachment = _shaderInfo.ColorBlendAttachment;
 
         PipelineColorBlendStateCreateInfo colorBlending = new()
         {
@@ -418,22 +443,7 @@ public unsafe class Shader : BufferBase
             throw new InvalidOperationException("failed to create pipeline layout!");
         }
 
-        Console.WriteLine("Shader: " + Path.GetFileName(_shaderInfo.VertexShaderPath) + " " + pipelineLayout.Handle + " " + descriptorSetLayout.Handle);
-
-        PipelineDepthStencilStateCreateInfo depthStencil = new()
-        {
-            SType = StructureType.PipelineDepthStencilStateCreateInfo,
-            DepthTestEnable = true,
-            DepthWriteEnable = true,
-            DepthCompareOp = _shaderInfo.DepthCompare,
-            DepthBoundsTestEnable = false,
-            MinDepthBounds = 0.0f, // Optional
-            MaxDepthBounds = 1.0f, // Optional
-            StencilTestEnable = false,
-            Front = new(), // Optional
-            Back = new() // Optional
-        };
-
+        var depthStencil = _shaderInfo.DepthStencil;
 
         GraphicsPipelineCreateInfo pipelineInfo = new()
         {
@@ -469,7 +479,7 @@ public unsafe class Shader : BufferBase
     public Descriptor GetDescriptorSet()
     {
         GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
-        return new(pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+        return new(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
     }
 
     private ShaderModule CreateShaderModule(byte[] code)
@@ -491,8 +501,26 @@ public unsafe class Shader : BufferBase
         return shaderModule;
     }
 
+    public void Renew()
+    {
+        Destroy();
+        Compile();
+    }
+
+    public void Renew(ShaderInfo info)
+    {
+        _shaderInfo = info;
+        Destroy();
+        Compile();
+    }
+
     protected override void Destroy()
     {
+        _vertexBindings = [];
+        _uniformBindings = [];
+        _locations = [];
+        _uniformAttribues = [];
+        
         GFX.DestroyPipeline(graphicsPipeline);
         GFX.DestroyPipelineLayout(pipelineLayout);
 

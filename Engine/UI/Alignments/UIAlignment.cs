@@ -1,6 +1,6 @@
 namespace PBG.UI;
 
-public class UIAlignment(UIController controller)
+public struct UIAlignment(UIController controller)
 {
     public int Left = 0;
     public int Right = 0;

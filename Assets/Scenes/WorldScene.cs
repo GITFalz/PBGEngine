@@ -25,7 +25,8 @@ public class WorldScene : Scene
         
         var worldManager = new WorldManager();
         var skybox = new Skybox();
-        skybox.Color = new Vector3(0.39f, 0.58f, 0.93f);
+        skybox.Day = new Vector3(0.41f, 0.62f, 0.78f);
+        skybox.Night = new Vector3(0.05f, 0.07f, 0.24f);
         var voxelRenderer = new VoxelRenderer();
         voxelRenderer.ChunkGenerator = new WorldGenerator();
         var LODVoxelRenderer = new LODVoxelRenderer();

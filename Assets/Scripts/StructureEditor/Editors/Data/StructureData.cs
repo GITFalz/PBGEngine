@@ -6,15 +6,6 @@ using PBG.MathLibrary;
 using PBG.UI;
 using PBG.Voxel;
 
-public struct BoundingBoxData
-{
-    public Vector3 Position;
-    private readonly float p1;
-    public Vector3 Size;
-    private readonly float p2;
-    public Vector4 Color;
-}
-
 public class StructureBoundingBox(Vector3i size, Vector3i position)
 {
     public Vector3i Size = size;

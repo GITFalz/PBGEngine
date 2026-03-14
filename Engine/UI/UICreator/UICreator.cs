@@ -17,14 +17,14 @@ namespace PBG.UI.Creator
     }
 
     // Generic base class for type-safe implementation
-    public abstract record Event<TSelf> : IEvent where TSelf : UIElement<TSelf>
+    public abstract record Event<TSlef> : IEvent where TSlef : UIElement<TSlef>
     {
-        public abstract void Apply(UIElement<TSelf> element);
+        public abstract void Apply(UIElement<TSlef> element);
         
         // Implementation for non-generic interface
         public void Apply(UIElementBase element)
         {
-            if (element is UIElement<TSelf> typedElement)
+            if (element is UIElement<TSlef> typedElement)
                 Apply(typedElement);
         }
     }

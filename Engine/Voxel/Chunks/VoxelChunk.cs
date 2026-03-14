@@ -223,7 +223,7 @@ public enum ChunkStatus
     Rendered = 2,
 }
 
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct BlockVertexData
 {
     public float PX, PY, PZ;

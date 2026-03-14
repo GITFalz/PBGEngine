@@ -2,6 +2,8 @@ using PBG;
 using PBG.Graphics;
 using PBG.Threads;
 using PBG.Voxel;
+using PBG.MathLibrary;
+using PBG.Assets.Scripts.NoiseNodes;
 
 public class LODWorldGenerator
 {
@@ -45,11 +47,7 @@ public class LODWorldGenerator
 
     public void Generate(LODVoxelRenderer renderer)
     {
-        if (renderer.GenerationQueue.TryDequeue(out var chunk))
-        {
-            LODWorldGenerationProcess process = new(renderer, chunk);
-            TaskPool.QueueAction(process, TaskPriority.Low);
-        }
+        
 
         /*
         if (LodComputeShader == null)

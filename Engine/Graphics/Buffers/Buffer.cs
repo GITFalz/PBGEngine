@@ -2,10 +2,14 @@ namespace PBG.Graphics;
 
 public abstract class BufferBase : IDisposable
 {
-    private static HashSet<BufferBase> _highPriorityResizeList = [];
-    private static HashSet<BufferBase> _lowPriorityResizeList = [];
+    private static HashSet<IResizeable> _highPriorityResizeList = [];
+    private static HashSet<IResizeable> _lowPriorityResizeList = [];
     private static HashSet<BufferBase> _highPriorityDisposeBuffer = [];
     private static HashSet<BufferBase> _lowPriorityDisposeBuffer = [];
+
+    private static HashSet<BufferBase> _toBeDisposed = [];
+
+    public Action<BufferBase>? OnDispose = null;
 
     public BufferBase()
     {
@@ -14,35 +18,43 @@ public abstract class BufferBase : IDisposable
         else
             _lowPriorityDisposeBuffer.Add(this);
 
-        var method = GetType().GetMethod(nameof(Resize));
-        if(method?.DeclaringType != typeof(BufferBase))
+        if (this is IResizeable resizeable)
         {
             if (this is Descriptor)
-                _lowPriorityResizeList.Add(this);
+                _lowPriorityResizeList.Add(resizeable);
             else
-                _highPriorityResizeList.Add(this);
+                _highPriorityResizeList.Add(resizeable);
         }
     }
 
-    public virtual void Resize(uint width, uint height) {}
     protected abstract void Destroy();
 
     public void Dispose()
     {
         if (RemoveFromList())
-            Destroy();
+            _toBeDisposed.Add(this);
+    }
+
+    public static void DisposeCached()
+    {
+        foreach (var buffer in _toBeDisposed)
+        {
+            buffer.OnDispose?.Invoke(buffer);
+            buffer.OnDispose = null;
+            buffer.Destroy();
+        }
+        _toBeDisposed = [];
     }
 
     protected bool RemoveFromList()
     {
-        if (this is Descriptor)
+        if (this is IResizeable resizeable)
         {
-            _lowPriorityResizeList.Remove(this);
-        }
-        else
-        {
-            _highPriorityResizeList.Remove(this);
-        }      
+            if (this is Descriptor)
+                _lowPriorityResizeList.Remove(resizeable);
+            else
+                _highPriorityResizeList.Remove(resizeable);
+        }  
 
         if (this is Shader || this is ComputeShader)
         {
@@ -66,10 +78,18 @@ public abstract class BufferBase : IDisposable
     public static void DisposeAll()
     {
         foreach (var buffer in _highPriorityDisposeBuffer)
-            buffer.Dispose();
+        {
+            buffer.OnDispose?.Invoke(buffer);
+            buffer.OnDispose = null;
+            buffer.Destroy();
+        }
 
         foreach (var buffer in _lowPriorityDisposeBuffer)
-            buffer.Dispose();
+        {
+            buffer.OnDispose?.Invoke(buffer);
+            buffer.OnDispose = null;
+            buffer.Destroy();
+        }
 
         _highPriorityResizeList = [];
         _lowPriorityResizeList = [];

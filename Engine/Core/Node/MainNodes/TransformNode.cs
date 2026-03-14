@@ -144,6 +144,16 @@ namespace PBG.Core
             return newArr;
         }
 
+        public T? TryGetComponent<T>() where T : ScriptingNode
+        {
+            for (int i = 0; i < Components.Count; i++)
+            {
+                if (Components[i] is T t)
+                    return t;
+            }
+            return null;
+        }
+
         public T GetComponent<T>() where T : ScriptingNode
         {
             for (int i = 0; i < Components.Count; i++)

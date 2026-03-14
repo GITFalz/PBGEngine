@@ -84,13 +84,19 @@ public unsafe class ShaderCompiler
         Resources* resources;
         _cross.CompilerCreateShaderResources(compiler, &resources);
 
-        var vertexAttributes = GetVertexAttributes(compiler, resources);
+        var shaderData = new ShaderData
+        {
+            SpirV = spirV,
+            Kind = kind,
+            VertexAttributes = []
+        };
 
         switch (kind)
         {
             case ShaderKind.VertexShader:
                 ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.VertexBit);
                 ReflectStorageBufferBindings(compiler, resources, ShaderStageFlags.VertexBit);
+                shaderData.VertexAttributes = GetVertexAttributes(compiler, resources);
                 break;
             case ShaderKind.FragmentShader:
                 ReflectUniformBufferBindings(compiler, resources, ShaderStageFlags.FragmentBit);
@@ -106,12 +112,7 @@ public unsafe class ShaderCompiler
                 break;
         }
 
-        return new ShaderData
-        {
-            SpirV = spirV,
-            Kind = kind,
-            VertexAttributes = kind == ShaderKind.VertexShader ? vertexAttributes : []
-        };
+        return shaderData;
     }
 
     private VertexAttribute[] GetVertexAttributes(CrossCompiler* compiler, Resources* resources)
@@ -134,8 +135,15 @@ public unsafe class ShaderCompiler
             attributes[i].Name = name;
             attributes[i].Location = (int)location;
             attributes[i].Format = SPBGTypeToFormat(typeHandle, out var s);
-            attributes[i].Offset = size;
+            attributes[i].Offset = s;
+        }
 
+        Array.Sort(attributes, (a, b) => a.Location.CompareTo(b.Location));
+
+        for (int i = 0; i < (int)inputCount; i++)
+        {
+            var s = attributes[i].Offset;
+            attributes[i].Offset = size;
             size += s * 4;
         }
 

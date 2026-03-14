@@ -44,6 +44,8 @@ public unsafe class VulkanInstance
 
     private IInputContext? input = null;
 
+    private bool _isLoading = true;
+
     public VulkanInstance(GameWindow gameWindow, int width, int height)
     {
         this.gameWindow = gameWindow;
@@ -74,7 +76,7 @@ public unsafe class VulkanInstance
         var depthFormat = context.FindDepthFormat();
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.Undefined, ImageLayout.PresentSrcKhr, AttachmentLoadOp.Clear, out context.renderPass);
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.PresentSrcKhr, ImageLayout.PresentSrcKhr, AttachmentLoadOp.Load, out context.renderPassLoad);
-        CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.Undefined, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Clear, out context.framebufferRenderPass);
+        CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Clear, out context.framebufferRenderPass);
         CreateRenderPass(context.swapChainImageFormat, depthFormat, ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal, AttachmentLoadOp.Load, out context.framebufferRenderPassLoad);
 
         CreateCommandPool();
@@ -125,13 +127,17 @@ public unsafe class VulkanInstance
             return;
 
         RecreateSwapChain();
-        BufferBase.ResizeAll((uint)context.Width, (uint)context.Height);
-
+        
         gameWindow.OnResize(context.Width, context.Height);
+        BufferBase.ResizeAll((uint)context.Width, (uint)context.Height);
     }
 
     private void OnUpdate(double deltaSeconds)
     {
+        if (_isLoading)
+            return;
+            
+        BufferBase.DisposeCached();
         gameWindow.OnUpdate(deltaSeconds);
     }
 
@@ -536,14 +542,17 @@ public unsafe class VulkanInstance
 
     private PresentModeKHR ChooseSwapPresentMode(PresentModeKHR[] availablePresentModes) 
     {
-        foreach (var availablePresentMode in availablePresentModes) 
+        if (!context.VSync)
         {
-            if (availablePresentMode == PresentModeKHR.ImmediateKhr) 
+            foreach (var availablePresentMode in availablePresentModes) 
             {
-                return availablePresentMode;
+                if (availablePresentMode == PresentModeKHR.ImmediateKhr)
+                {
+                    return availablePresentMode;
+                }
             }
         }
-
+    
         return PresentModeKHR.FifoKhr;
     }
 
@@ -973,7 +982,15 @@ public unsafe class VulkanInstance
 
         FBO.currentRenderPassState = FBO.RenderPassState.Main;
 
-        gameWindow.OnRender();
+        if (_isLoading)
+        {
+            gameWindow.OnRenderLoad();
+            _isLoading = false;
+        }
+        else
+        {
+            gameWindow.OnRender();
+        }
 
         context.vk.CmdEndRenderPass(commandBuffer);
 

@@ -68,7 +68,7 @@ namespace PBG.Rendering.Meshes
             {
                 Vector2 pos = (0, 0);
                 Vector2 size = (0, 0);
-                int c = -1;
+                int c = 0x0FFFFFFF;
                 var glyph = GlyphStructs[textMetaData.StartGlyphIndex + i];
                 if (i < text.Length)
                 {
@@ -80,12 +80,33 @@ namespace PBG.Rendering.Meshes
                 {
                     pos = (start + i * 7 * textElement.FontSize, 0);
                     size = (7 * textElement.FontSize, 9 * textElement.FontSize);
-                    c = -1;
+                    c = 0x0FFFFFFF;
                 }
                 glyph.GlyphPosition = pos;
                 glyph.GlyphSize = size;
-                glyph.Data.Z = c;
+                glyph.Data.Z = (glyph.Data.Z & 0x70000000) | c;
                 GlyphStructs[textMetaData.StartGlyphIndex + i] = glyph;
+            }
+            SetBufferUpdateState(BufferEnum.Update);
+        }
+
+        public void SetCharactersColor(IUIText text, Vector3 color, int start, int count)
+        {
+            if (!Texts.TryGetValue(text, out TextMetadata textMetaData) || start >= textMetaData.CharCount)
+                return;
+
+            count = Mathf.Min(start + count, textMetaData.CharCount) - start;
+            uint r = (uint)(color.X * 255).Fti();
+            uint g = (uint)(color.Y * 255).Fti();
+            uint b = (uint)(color.Z * 255).Fti();
+            uint a = 1;
+            uint rgb = (a << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+
+            for (int i = 0; i < count; i++)
+            {
+                var glyph = GlyphStructs[textMetaData.StartGlyphIndex + i + start];
+                glyph.Color = rgb;
+                GlyphStructs[textMetaData.StartGlyphIndex + i + start] = glyph;
             }
             SetBufferUpdateState(BufferEnum.Update);
         }
@@ -142,7 +163,9 @@ namespace PBG.Rendering.Meshes
         {
             RemoveCursor();
             if (!Texts.TryGetValue(text, out TextMetadata metaData))
+            {
                 return;
+            }
 
             if (UIController.CursorCharacter >= 0)
             {
@@ -152,14 +175,14 @@ namespace PBG.Rendering.Meshes
                 {
                     CursorCharacter = UIController.CursorCharacter;
                     var glyph = GlyphStructs[metaData.StartGlyphIndex + CursorCharacter];
-                    glyph.Data.W = 1;
+                    glyph.Data.Z = (1 << 28) | (glyph.Data.Z & 0x0FFFFFFF);
                     GlyphStructs[metaData.StartGlyphIndex + CursorCharacter] = glyph;
                 }
                 else
                 {
                     CursorCharacter = Mathf.Max(textLength - 1, 0);
                     var glyph = GlyphStructs[metaData.StartGlyphIndex + CursorCharacter];
-                    glyph.Data.W = 2;
+                    glyph.Data.Z = (2 << 28) | (glyph.Data.Z & 0x0FFFFFFF);
                     GlyphStructs[metaData.StartGlyphIndex + CursorCharacter] = glyph;
                     start = false;
                 }
@@ -168,18 +191,20 @@ namespace PBG.Rendering.Meshes
                 {
                     for (int i = 0; i < UIController.SelectionSize; i++)
                     {
-                        var glyph = GlyphStructs[metaData.StartGlyphIndex + CursorCharacter + i];
-                        glyph.Data.W = 0b100 | (glyph.Data.W & 0b011);
-                        GlyphStructs[metaData.StartGlyphIndex + CursorCharacter + i] = glyph;
+                        int index = metaData.StartGlyphIndex + CursorCharacter + i;
+                        var glyph = GlyphStructs[index];
+                        glyph.Data.Z = (7 << 28) | (glyph.Data.Z & 0x0FFFFFFF);
+                        GlyphStructs[index] = glyph;
                     }
                 }
                 else
                 {
                     for (int i = start ? -1 : 0; i >= UIController.SelectionSize + (start ? 0 : 1); i--)
                     {
-                        var glyph = GlyphStructs[metaData.StartGlyphIndex + CursorCharacter + i];
-                        glyph.Data.W = 0b100 | (glyph.Data.W & 0b011);
-                        GlyphStructs[metaData.StartGlyphIndex + CursorCharacter + i] = glyph;
+                        int index = metaData.StartGlyphIndex + CursorCharacter + i;
+                        var glyph = GlyphStructs[index];
+                        glyph.Data.Z = (7 << 28) | (glyph.Data.Z & 0x0FFFFFFF);
+                        GlyphStructs[index] = glyph;
                     }
                 }
             }
@@ -196,7 +221,7 @@ namespace PBG.Rendering.Meshes
             for (int i = 0; i < metaData.CharCount; i++)
             {
                 var glyph = GlyphStructs[metaData.StartGlyphIndex + i];
-                glyph.Data.W = 0;
+                glyph.Data.Z &= 0x0FFFFFFF;
                 GlyphStructs[metaData.StartGlyphIndex + i] = glyph;
             }
 
@@ -287,7 +312,8 @@ namespace PBG.Rendering.Meshes
 
                     LineCount = 0;
                     GlyphCount = 0;
-                    foreach (var (textElement, _) in Texts)
+
+                    foreach (var (textElement, oldMetaData) in Texts)
                     {
                         var textMetaData = new TextMetadata(LineCount, GlyphCount, textElement.MaxCharCount ?? 20);
                         Texts[textElement] = textMetaData;
@@ -311,30 +337,44 @@ namespace PBG.Rendering.Meshes
                             _ => 0
                         };
 
+                        bool existed = !TextsToBeAdded.Contains(textElement);
+
                         for (int i = 0; i < textMetaData.CharCount; i++)
                         {
                             Vector2 pos = (0, 0);
                             Vector2 size = (0, 0);
-                            int c = -1;
-                            var glyph = new UIGlyphStruct()
+                            int c = 0x0FFFFFFF;
+                            
+                            UIGlyphStruct glyph;
+                            if (existed)
                             {
-                                Data = (0, LineCount, -1, 0)
-                            };
-                            if (i < text.Length)
-                            {
-                                pos = (start + i * 7 * textElement.FontSize, 0);
-                                size = (7 * textElement.FontSize, 9 * textElement.FontSize);
-                                c = TextShaderHelper.GetChar(text[i]);
+                                glyph = GlyphStructs[oldMetaData.StartGlyphIndex + i];
                             }
-                            else if (text.Length == 0 && i == 0)
+                            else
                             {
-                                pos = (start + i * 7 * textElement.FontSize, 0);
-                                size = (7 * textElement.FontSize, 9 * textElement.FontSize);
-                                c = -1;
+                                glyph = new UIGlyphStruct()
+                                {
+                                    Data = (0, LineCount, 0x0FFFFFFF),
+                                    Color = 0
+                                };
+
+                                if (i < text.Length)
+                                {
+                                    pos = (start + i * 7 * textElement.FontSize, 0);
+                                    size = (7 * textElement.FontSize, 9 * textElement.FontSize);
+                                    c = TextShaderHelper.GetChar(text[i]);
+                                }
+                                else if (text.Length == 0 && i == 0)
+                                {
+                                    pos = (start + i * 7 * textElement.FontSize, 0);
+                                    size = (7 * textElement.FontSize, 9 * textElement.FontSize);
+                                    c = 0x0FFFFFFF;
+                                }
+                                glyph.GlyphPosition = pos;
+                                glyph.GlyphSize = size;
+                                glyph.Data.Z = c;
                             }
-                            glyph.GlyphPosition = pos;
-                            glyph.GlyphSize = size;
-                            glyph.Data.Z = c;
+
                             newGlyphs.Add(glyph);
                         }
 
@@ -344,15 +384,19 @@ namespace PBG.Rendering.Meshes
 
                     GlyphStructs = [..newGlyphs];
 
+                    UpdateVisibility();
+
+                    foreach (var text in TextsToBeAdded)
+                        text.GetElement().Created();
+
                     TextsToBeRemoved = [];
                     TextsToBeAdded = [];
-
-                    UpdateVisibility();
 
                     _lineSSBO.Renew(LineStructs);
                     _glyphSSBO.Renew(GlyphStructs);
                     Descriptor.BindSSBO(_lineSSBO, 1);
                     Descriptor.BindSSBO(_glyphSSBO, 2);
+
                     break;
             }
         }
@@ -440,11 +484,13 @@ namespace PBG.Rendering.Meshes
         }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct UIGlyphStruct
     {
         public Vector2 GlyphPosition;
         public Vector2 GlyphSize;
-        public Vector4i Data; // x is real character index, y is line index, z is char index in texture, w not yet defined
+        public Vector3i Data; // x is real character index, y is line index, z is char index in texture, w not yet defined
+        public uint Color;
 
         public override string ToString()
         {

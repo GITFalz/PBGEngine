@@ -4,16 +4,19 @@ using PBG.MathLibrary;
 using PBG;
 using PBG.Graphics;
 using PBG.Voxel;
+using System.Runtime.InteropServices;
+using PBG.Data;
+using Silk.NET.Input;
+using PBG.UI;
 
 public class GLSLManager
 {
     private static int functionShader;
-    public static int ComputeFunctionsShader;
-    //public static ShaderProgram DisplayShaderProgram;
+    public static Shader DisplayShader;
+    public static Descriptor Descriptor;
 
-    //private static VAO _displayVAO = new VAO();
-    //private static SSBO<float> _valueSSBO = new();
-    private static List<float> _values = [];
+    private static SSBO<float> _valueSSBO;
+    private static float[] _values = [];
 
     private static int modelLocation = -1;
     private static int projectionLocation = -1;
@@ -34,51 +37,12 @@ public class GLSLManager
             return;
 
         _loaded = true;
-        NoiseFragmentPathCopy = Path.Combine(Game.ShaderPath, "Noise", "WorldNoise.frag");
+        NoiseFragmentPathCopy = Path.Combine(Game.ShaderPath, "Noise_vulkan", "WorldNoise.frag");
 
         List<string> nodeFunctions = [];
         List<string> computeFunctions = [];
-        List<string> nodeLines = [
-            "#version 450",
-            ""
-        ];
+        List<string> nodeLines = [];
         List<string> computeLines = [];
-
-        var regex = new Regex(@"
-            ^\s*                                    # leading spaces
-            (?:in|out|inout)?\s*                    # optional qualifier (for return, rare)
-            ([A-Za-z_]\w*)\s+                       # return type
-            ([A-Za-z_]\w*)\s*                       # function name
-            \(\s*                                   # opening parenthesis
-            (                                       # group: parameter list
-                (?:
-                    (?:in|out|inout)?\s*            # optional param modifier
-                    [A-Za-z_]\w*                    # param type
-                    \s+
-                    [A-Za-z_]\w*                    # param name
-                    \s*
-                    (?:,\s*(?:in|out|inout)?\s*[A-Za-z_]\w*\s+[A-Za-z_]\w*\s*)*
-                )?
-            )                                       # end params
-            \)\s*$                                  # closing paren
-        ", RegexOptions.IgnorePatternWhitespace | RegexOptions.Multiline);
-
-        bool FunctionCheck(string line, out string newLine)
-        {
-            newLine = "";
-            // if rest of function is on the same line, remove it
-            string[] splitLines = line.Split(['{'], StringSplitOptions.RemoveEmptyEntries);
-            if (splitLines.Length == 0) return false;
-            line = splitLines[0];
-
-            var match = regex.Match(line);
-            if (match.Success)
-            {
-                newLine = line.Trim() + ";";
-                return true; 
-            }
-            return false; 
-        }
 
         int index = 0;
         foreach (var definition1 in BlockData.BlockDefinitions)
@@ -87,8 +51,7 @@ public class GLSLManager
             computeFunctions.Add($"#define {definition1.Name.ToUpper()} ({definition1.Block.ID} | SOLID)");
             index++;
         }
-        
-        nodeFunctions.Add("");
+    
         computeFunctions.Add("");
 
         foreach (var (_, definition) in NodeDefinitionLoader.NodeDefinitions)
@@ -101,11 +64,6 @@ public class GLSLManager
                 {
                     nodeLines.Add(line);   
                     computeLines.Add(line);
-                    if (FunctionCheck(line, out var functionLine))
-                    {
-                        nodeFunctions.Add(functionLine);
-                        computeFunctions.Add(functionLine);
-                    }
                 }
             }
         }
@@ -121,11 +79,6 @@ public class GLSLManager
                 {
                     nodeLines.Add(line);
                     computeLines.Add(line);
-                    if (FunctionCheck(line, out var functionLine))
-                    {
-                        nodeFunctions.Add(functionLine);
-                        computeFunctions.Add(functionLine);
-                    }
                 }
             }
 
@@ -135,10 +88,6 @@ public class GLSLManager
                 foreach (var line in NodeDefinitionLoader.GetFunction(definition, function))
                 {
                     nodeLines.Add(line);
-                    if (FunctionCheck(line, out var functionLine))
-                    {
-                        nodeFunctions.Add(functionLine);
-                    }
                 }
             }
 
@@ -150,10 +99,6 @@ public class GLSLManager
                     if (definition.Precompile)
                     {
                         computeLines.Add(line);
-                        if (FunctionCheck(line, out var functionLine))
-                        {
-                            computeFunctions.Add(functionLine);
-                        }
                     }
                     else
                     {
@@ -166,7 +111,7 @@ public class GLSLManager
         nodeFunctions.Add("");
         computeFunctions.Add("");
 
-        string nodeFunctionsPath = Path.Combine(Game.ShaderPath, "Noise/NodeFunctions.glsl");
+        string nodeFunctionsPath = Game.ShaderPath / "Noise_vulkan/NodeFunctions.frag";
         File.WriteAllLines(nodeFunctionsPath, nodeLines);
 
         string computeFunctionsPath = Game.ShaderPath / "computeShaders" / "world_vulkan" / "world.comp";
@@ -175,44 +120,52 @@ public class GLSLManager
         _nodeLines = [..nodeFunctions];
         _computeLines = [..computeFunctions];
 
+        _valueSSBO = new(0);
+
         CleanFile();
 
-        /*
-        functionShader = ShaderProgram.CompileFragmentShader("Noise/NodeFunctions.glsl");
-        ComputeFunctionsShader = ComputeShader.Compile("Noise/ComputeFunctions.comp");
-        DisplayShaderProgram = new ShaderProgram("Utils/Rectangle.vert", "Noise/WorldNoise.frag", functionShader);
+        ShaderInfo info = new()
+        {
+            VertexShaderPath = Game.ShaderPath / "Utils_vulkan/Rectangle.vert", 
+            FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/WorldNoise.frag"
+        };
+        info.Rasterizer.CullMode = Silk.NET.Vulkan.CullModeFlags.None;
 
-        modelLocation = DisplayShaderProgram.GetLocation("model");
-        projectionLocation = DisplayShaderProgram.GetLocation("projection");
-        sizeLocation = DisplayShaderProgram.GetLocation("size");
-        ScreenSizeLocation = DisplayShaderProgram.GetLocation("iScreenSize");
-        noiseSizeLocation = DisplayShaderProgram.GetLocation("iNoiseScale");
-        offsetLocation = DisplayShaderProgram.GetLocation("iSample");
-        */
+        DisplayShader = new Shader(info);
+        DisplayShader.Compile();
+        Descriptor = DisplayShader.GetDescriptorSet();
+        Descriptor.BindSSBO(_valueSSBO, 1);
+
+        modelLocation = DisplayShader.GetLocation("ubo.model");
+        projectionLocation = DisplayShader.GetLocation("ubo.projection");
+        sizeLocation = DisplayShader.GetLocation("ubo.size");
+        ScreenSizeLocation = DisplayShader.GetLocation("fubo.iScreenSize");
+        noiseSizeLocation = DisplayShader.GetLocation("fubo.iNoiseScale");
+        offsetLocation = DisplayShader.GetLocation("fubo.iSample");
     }
 
     public static void Compile()
     {
-        List<string > lines = [
-            "#version 450",
-            "",
-            "layout(std430, binding = 0) buffer DataBuffer {",
-            "    float data[];",
-            "} values;",
-            "",
-            "layout(binding = 1) uniform UniformBufferObject {",
-            "   vec2 iScreenSize;",
-            "   float iNoiseScale;",
-            "   vec2 iSample;",
-            "   vec4 iColor;",
-            "} ubo;",
-            "",
-            "layout(location = 0) in vec2 TexCoord;",
-            "",
-            "layout(location = 0) out vec4 FragColor;",
-            ""
-        ];
-        
+        List<string > lines = [@"#version 460 core
+
+layout(std430, binding = 1) readonly buffer DataBuffer { float values[]; };
+
+layout(binding = 2) uniform UniformBufferObject {
+    vec2 iScreenSize;
+    float iNoiseScale;
+    vec2 iSample;
+} fubo;
+
+#define iScreenSize fubo.iScreenSize
+#define iNoiseScale fubo.iNoiseScale
+#define iSample fubo.iSample
+
+layout(location = 0) in vec2 TexCoord;
+
+layout(location = 0) out vec4 FragColor;
+"];     
+        lines.Add("#include \"Noise_vulkan/NodeFunctions.frag\"");
+        lines.Add("");
         lines.AddRange(_nodeLines);
         lines.Add("");
         
@@ -237,8 +190,8 @@ public class GLSLManager
         lines.Add("    FragColor = vec4(display, 1.0);");
         lines.Add("}");
 
-        _values = values;
-        //_valueSSBO.Renew(values);
+        _values = [..values];
+        _valueSSBO.Renew(_values);
 
         File.WriteAllLines(NoiseFragmentPathCopy, lines);
 
@@ -248,7 +201,7 @@ public class GLSLManager
     public static void CompileCompute()
     {
         List<string > lines = [
-@"#version 450
+@"#version 460 core
 layout(local_size_x = 8, local_size_y = 1, local_size_z = 8) in;
 
 layout(rgba32f, binding = 0) uniform image2D heightMap;
@@ -262,6 +215,8 @@ layout(binding = 1) uniform UniformBufferObject {
         
         lines.AddRange(_nodeLines);
         lines.Add("");
+
+        lines.Add("#include \"computeShaders/world_vulkan/world.comp\"");
         
         HashSet<string> groupNodes = [];
         foreach (var node in NodeManager.NodeCollection.Nodes)
@@ -272,7 +227,7 @@ layout(binding = 1) uniform UniformBufferObject {
             groupNode.GetFunction(lines);
             lines.Add("");
         }
-        lines.Add("#include \"computeShaders/world_vulkan/world.comp\"");
+        
 
         lines.Add(@"
 void main() {
@@ -314,23 +269,27 @@ void main() {
 
     public static void CleanFile()
     {
-        List<string > lines = [
-            "#version 460 core",
-            "",
-            "layout(std430, binding = 0) buffer DataBuffer {",
-            "    float values[];",
-            "};",
-            "",
-            "uniform vec2 iScreenSize;",
-            "uniform float iNoiseScale;",
-            "uniform vec2 iSample;",
-            "uniform vec4 iColor;",
-            "in vec2 TexCoord;",
-            "",
-            "out vec4 FragColor;",
-            ""
-        ];
+        List<string > lines = [@"#version 460 core
+
+layout(std430, binding = 1) readonly buffer DataBuffer { float values[]; };
+
+layout(binding = 2) uniform UniformBufferObject {
+    vec2 iScreenSize;
+    float iNoiseScale;
+    vec2 iSample;
+} fubo;
+
+#define iScreenSize fubo.iScreenSize
+#define iNoiseScale fubo.iNoiseScale
+#define iSample fubo.iSample
+
+layout(location = 0) in vec2 TexCoord;
+
+layout(location = 0) out vec4 FragColor;
+"];
         
+        lines.Add("#include \"Noise_vulkan/NodeFunctions.frag\"");
+        lines.Add("");
         lines.AddRange(_nodeLines);
         lines.AddRange([
             "void main() {",
@@ -345,61 +304,43 @@ void main() {
 
     public static void UpdateValue(int index, float value)
     {
-        if (index < 0 || _values.Count <= index)
+        if (index < 0 || _values.Length <= index)
             return;
 
+        ulong stride = (ulong)Marshal.SizeOf<float>();
         _values[index] = value;
-        //_valueSSBO.Update(_values, 0);
+        _valueSSBO.UpdateSlice(_values, (ulong)index * stride, stride);
     }
 
     public static void Reload()
     {
-        /*
-        DisplayShaderProgram.Renew("Utils/Rectangle.vert", "Noise/WorldNoise.frag", functionShader);
+        DisplayShader.Renew();
+        Descriptor.Dispose();
+        Descriptor = DisplayShader.GetDescriptorSet();
+        Descriptor.BindSSBO(_valueSSBO, 1);
 
-        DisplayShaderProgram.Bind();
-
-        modelLocation = DisplayShaderProgram.GetLocation("model");
-        projectionLocation = DisplayShaderProgram.GetLocation("projection");
-        sizeLocation = DisplayShaderProgram.GetLocation("size");
-        ScreenSizeLocation = DisplayShaderProgram.GetLocation("iScreenSize");
-        noiseSizeLocation = DisplayShaderProgram.GetLocation("iNoiseScale");
-        offsetLocation = DisplayShaderProgram.GetLocation("iSample");
-
-        DisplayShaderProgram.Unbind();
-        */
+        modelLocation = DisplayShader.GetLocation("ubo.model");
+        projectionLocation = DisplayShader.GetLocation("ubo.projection");
+        sizeLocation = DisplayShader.GetLocation("ubo.size");
+        ScreenSizeLocation = DisplayShader.GetLocation("fubo.iScreenSize");
+        noiseSizeLocation = DisplayShader.GetLocation("fubo.iNoiseScale");
+        offsetLocation = DisplayShader.GetLocation("fubo.iSample");
     }
 
     public static void Render(Matrix4 DisplayProjectionMatrix, Vector2 DisplayPosition, Vector2 DisplaySize, float NoiseSize, Vector2 Offset, Vector4 color)
     {
-        /*
-        GL.Enable(EnableCap.Blend);
-        GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-        GL.Enable(EnableCap.CullFace);
-        GL.Enable(EnableCap.DepthTest);
+        Matrix4 model = Matrix4.CreateTranslation((DisplayPosition.X, DisplayPosition.Y, UIController.CumulativeDepth));
 
-        Matrix4 model = Matrix4.CreateTranslation((DisplayPosition.X, DisplayPosition.Y, 2.2f));
+        DisplayShader.Bind();
+        Descriptor.Bind();
 
-        DisplayShaderProgram.Bind();
+        Descriptor.UniformMatrix4(modelLocation, model);
+        Descriptor.UniformMatrix4(projectionLocation, Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -2, 2));
+        Descriptor.Uniform2(sizeLocation, DisplaySize);
+        Descriptor.Uniform2(ScreenSizeLocation, DisplaySize);
+        Descriptor.Uniform1(noiseSizeLocation, NoiseSize);
+        Descriptor.Uniform2(offsetLocation, Offset);
 
-        GL.UniformMatrix4(modelLocation, true, ref model);
-        GL.UniformMatrix4(projectionLocation, true, ref DisplayProjectionMatrix);
-        GL.Uniform2(sizeLocation, ref DisplaySize);
-        GL.Uniform2(ScreenSizeLocation, ref DisplaySize);
-        GL.Uniform1(noiseSizeLocation, NoiseSize);
-        GL.Uniform2(offsetLocation, ref Offset);
-
-        _displayVAO.Bind(); 
-        _valueSSBO.Bind(0);
-
-        GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
-
-        Shader.Error("Error rendering noise shader 1: ");
-
-        _valueSSBO.Unbind();
-        _displayVAO.Unbind();
-
-        DisplayShaderProgram.Unbind();
-        */
+        GFX.Draw(6, 1, 0, 0);
     }
 }

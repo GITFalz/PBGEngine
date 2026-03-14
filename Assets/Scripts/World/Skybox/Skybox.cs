@@ -5,59 +5,76 @@ using PBG.Graphics;
 
 public class Skybox : ScriptingNode
 {
-    //private static ShaderProgram _skyboxShader = new ShaderProgram("skybox/skybox.vert", "skybox/skybox.frag");
+    private static Shader _skyboxShader;
     private static SkyboxMesh _skyboxMesh = new SkyboxMesh();
+    private static bool _started = false;
 
     private static int sml = -1;
     private static int svl = -1;
     private static int spl = -1;
-    private static int sc = -1;
+    private static int sd = -1;
+    private static int sn = -1;
     private static int ld = -1;
+    private static int tl = -1;
 
-    public Vector3 Color = new Vector3(0.2f, 0.2f, 0.2f);
+    private Descriptor _descriptor;
+    public Vector3 Day = new Vector3(0.2f, 0.2f, 0.2f);
+    public Vector3 Night = new Vector3(0.2f, 0.2f, 0.2f);
     public Vector3 LightDirection = new Vector3(0, -1, 0);
+    public float Time = 0f;
 
     static Skybox()
     {
-        /*
-        _skyboxShader.Bind();
 
-        sml = _skyboxShader.GetLocation("model");
-        svl = _skyboxShader.GetLocation("view");
-        spl = _skyboxShader.GetLocation("projection");
-        sc = _skyboxShader.GetLocation("uColor");
-        ld = _skyboxShader.GetLocation("uLightDirection");
+    }
 
-        _skyboxShader.Unbind();
-        */
+    void Start()
+    {
+        if (!_started)
+        {
+            ShaderInfo info = new()
+            {
+                VertexShaderPath = Game.ShaderPath / "skybox_vulkan/skybox.vert", 
+                FragmentShaderPath = Game.ShaderPath / "skybox_vulkan/skybox.frag"
+            };
+            info.DepthStencil.DepthWriteEnable = false;
+            info.DepthStencil.DepthCompareOp = Silk.NET.Vulkan.CompareOp.LessOrEqual;
+
+            _skyboxShader = new(info);
+            _skyboxShader.BindVertexBuffer<Vector3>(0);
+            _skyboxShader.BindVertexBuffer<Vector2>(1);
+            _skyboxShader.BindVertexBuffer<int>(2);
+            _skyboxShader.Compile();
+
+            sml = _skyboxShader.GetLocation("ubo.model");
+            svl = _skyboxShader.GetLocation("ubo.view");
+            spl = _skyboxShader.GetLocation("ubo.projection");
+            sd = _skyboxShader.GetLocation("fubo.uDay");
+            sn = _skyboxShader.GetLocation("fubo.uNight");
+            ld = _skyboxShader.GetLocation("fubo.uLightDirection");
+            tl = _skyboxShader.GetLocation("fubo.time");
+        }
+
+        _descriptor = _skyboxShader.GetDescriptorSet();
     }
 
     void Render()
     {
-        /*
-        GL.Enable(EnableCap.CullFace);
-        GL.DepthFunc(DepthFunction.Lequal);
-        GL.DepthMask(false);
-
         _skyboxShader.Bind();
+        _descriptor.Bind();
 
-        Matrix4 model = Matrix4.CreateTranslation(Scene.DefaultCamera.Position);
-        Matrix4 view = Scene.DefaultCamera.ViewMatrix;
-        Matrix4 projection = Scene.DefaultCamera.ProjectionMatrix;
+        Matrix4 model = Matrix4.CreateTranslation(Camera.Position);
+        Matrix4 view = Camera.GetViewMatrix();
+        Matrix4 projection = Camera.ProjectionMatrix;
 
-        GL.UniformMatrix4(sml, false, ref model);
-        GL.UniformMatrix4(svl, false, ref view);
-        GL.UniformMatrix4(spl, false, ref projection);
-        GL.Uniform3(sc, Color);
-        GL.Uniform3(ld, LightDirection);
+        _descriptor.UniformMatrix4(sml, model);
+        _descriptor.UniformMatrix4(svl, view);
+        _descriptor.UniformMatrix4(spl, projection);
+        _descriptor.Uniform3(sd, Day);
+        _descriptor.Uniform3(sn, Night);
+        _descriptor.Uniform3(ld, LightDirection);
+        _descriptor.Uniform1(tl, Time);
 
         _skyboxMesh.Render();
-        Shader.Error("Skybox rendering error: ");
-        
-        _skyboxShader.Unbind();
-
-        GL.DepthMask(true);
-        GL.DepthFunc(DepthFunction.Less);
-        */
     }
 }

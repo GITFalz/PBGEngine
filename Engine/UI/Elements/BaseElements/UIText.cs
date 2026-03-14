@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
+using PBG.Rendering.Meshes;
 using PBG.UI.Creator;
 
 
@@ -24,6 +25,8 @@ namespace PBG.UI
         UIElementBase UpdateCharacters();
         Vector2 GetCenter();
         TextAlign GetTextAlign();
+        TextMesh GetTextMesh();
+        UIElementBase GetElement();
     }
 
     public class UIText : UIText<UIText>
@@ -91,6 +94,8 @@ namespace PBG.UI
 
         public Vector2 GetCenter() => Center;
         public TextAlign GetTextAlign() => TextAlign;
+        public TextMesh GetTextMesh() => UIController!.TextMesh;
+        public UIElementBase GetElement() => this;
 
         public string GetText() => _text;
         public float GetFloat(float replacement = 0) => Parse.Float.Parse(_text, replacement);

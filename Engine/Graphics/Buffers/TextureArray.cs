@@ -4,13 +4,10 @@ using Silk.NET.Vulkan;
 using StbImageSharp;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-public unsafe class TextureArray : BufferBase
+public unsafe class TextureArray : ImageBuffer
 {
-    private Image textureImage;
-    private DeviceMemory textureImageMemory;
-
-    public ImageView textureImageView;
-    public Sampler textureSampler;
+    public Image TextureImage;
+    public DeviceMemory TextureImageMemory;
 
     public uint LayerCount { get; private set; }
 
@@ -37,17 +34,17 @@ public unsafe class TextureArray : BufferBase
         }
         GFX.UnmapMemory(stagingBufferMemory);
 
-        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out TextureImage, out TextureImageMemory);
     
-        GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
-        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)info.Width, (uint)info.Height, LayerCount);
+        GFX.TransitionImageArrayLayout(TextureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
+        GFX.CopyBufferToImageArray(stagingBuffer, TextureImage, (uint)info.Width, (uint)info.Height, LayerCount);
 
-        GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
+        GFX.TransitionImageArrayLayout(TextureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
 
         GFX.DestroyBuffer(stagingBuffer);
         GFX.FreeMemory(stagingBufferMemory);
 
-        CreateTextureImageView();
+        CreateTextureImageView(Format.R8G8B8A8Srgb);
         CreateTextureSampler(info);
     }
 
@@ -72,23 +69,36 @@ public unsafe class TextureArray : BufferBase
         }
         GFX.UnmapMemory(stagingBufferMemory);
 
-        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out textureImage, out textureImageMemory);
+        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, out TextureImage, out TextureImageMemory);
     
-        GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
-        GFX.CopyBufferToImageArray(stagingBuffer, textureImage, (uint)info.Width, (uint)info.Height, LayerCount);
+        GFX.TransitionImageArrayLayout(TextureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, LayerCount);
+        GFX.CopyBufferToImageArray(stagingBuffer, TextureImage, (uint)info.Width, (uint)info.Height, LayerCount);
 
-        GFX.TransitionImageArrayLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
+        GFX.TransitionImageArrayLayout(TextureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, LayerCount);
 
         GFX.DestroyBuffer(stagingBuffer);
         GFX.FreeMemory(stagingBufferMemory);
 
-        CreateTextureImageView();
+        CreateTextureImageView(Format.R8G8B8A8Srgb);
         CreateTextureSampler(info);
     }
-
-    public void CreateTextureImageView() 
+    
+    public TextureArray(uint layerCount, TextureInfo info)
     {
-        textureImageView = GFX.CreateImageView(textureImage, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit, LayerCount);
+        StbImage.stbi_set_flip_vertically_on_load(1);
+
+        LayerCount = (uint)layerCount;
+
+        GFX.CreateImageArray((uint)info.Width, (uint)info.Height, LayerCount, Format.R8G8B8A8Unorm, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit | ImageUsageFlags.StorageBit, MemoryPropertyFlags.DeviceLocalBit, out TextureImage, out TextureImageMemory);
+
+        CreateTextureImageView(Format.R8G8B8A8Unorm);
+        CreateTextureSampler(info);
+    }
+    
+
+    public void CreateTextureImageView(Format format) 
+    {
+        ImageView = GFX.CreateImageView(TextureImage, format, ImageAspectFlags.ColorBit, LayerCount);
     }
 
     public void CreateTextureSampler(TextureInfo info)
@@ -122,7 +132,7 @@ public unsafe class TextureArray : BufferBase
         samplerInfo.MinLod = 0.0f;
         samplerInfo.MaxLod = 0.0f;
 
-        if (GFX.CreateSampler(&samplerInfo, null, out textureSampler) != Result.Success) {
+        if (GFX.CreateSampler(&samplerInfo, null, out Sampler) != Result.Success) {
             throw new InvalidOperationException("failed to create texture sampler!");
         }
     }
@@ -136,7 +146,7 @@ public unsafe class TextureArray : BufferBase
             DstAccessMask = AccessFlags.ShaderReadBit,
             OldLayout     = ImageLayout.General,
             NewLayout     = ImageLayout.General,
-            Image         = textureImage,
+            Image         = TextureImage,
             SubresourceRange = new ImageSubresourceRange
             {
                 AspectMask = ImageAspectFlags.ColorBit,
@@ -148,10 +158,13 @@ public unsafe class TextureArray : BufferBase
 
     protected override void Destroy()
     {
-        GFX.DestroySampler(textureSampler);
-        GFX.DestroyImageView(textureImageView);
+        OnDispose?.Invoke(this);
+        OnDispose = null;
+        
+        GFX.DestroySampler(Sampler);
+        GFX.DestroyImageView(ImageView);
 
-        GFX.DestroyImage(textureImage);
-        GFX.FreeMemory(textureImageMemory);
+        GFX.DestroyImage(TextureImage);
+        GFX.FreeMemory(TextureImageMemory);
     }
 }

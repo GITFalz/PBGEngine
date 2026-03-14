@@ -1,4 +1,5 @@
 using PBG.Core;
+using PBG.Graphics;
 using PBG.MathLibrary;
 
 namespace PBG.Rendering;
@@ -33,8 +34,8 @@ public class Viewport : ScriptingNode
 
     public void ApplyViewport()
     {
-        //Camera.Viewport(_left, _right, _bottom, _top);
-        //GL.Viewport(_left, _bottom, _width, _height);
+        Camera.Viewport(_left, _right, _bottom, _top);
+        GFX.Viewport(_left, _top, _width, _height);
     }
 
     void Resize()

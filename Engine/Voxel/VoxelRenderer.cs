@@ -29,7 +29,7 @@ namespace PBG.Voxel
         public int SlotIndex;
     };
 
-    public class VoxelRenderer : ScriptingNode
+    public class VoxelRenderer : ScriptingNode, IVoxelRenderer
     {
         private static bool _started = false;
 
@@ -39,26 +39,47 @@ namespace PBG.Voxel
         public static int PrePassProjection = -1;
 
 
-        public static Shader TestShader = null!;
+        public static Shader WorldShader = null!;
 
-        public static int View = -1;
-        public static int Projection = -1;
+        public static int WorldViewLocation = -1;
+        public static int WorldProjectionLocation = -1;
 
-        public static int LightDirectionLocation = -1;
-        public static int DoAmbientOcclusion = -1;
-        public static int CameraPosition = -1;
+        public static int WorldCloseLightSpaceMatrixLocation = -1;
+        public static int WorldMiddleLightSpaceMatrixLocation = -1;
+        public static int WorldFarLightSpaceMatrixLocation = -1;
+
+        public static int WorldLightDirectionLocation = -1;
+        
+        public static int WorldCloseLightDirectionLocation = -1;
+        public static int WorldMiddleLightDirectionLocation = -1;
+        public static int WorldFarLightDirectionLocation = -1;
+
+        public static int WorldDoRealtimeShadowsLocation = -1;
+        public static int WorldDoAmbientOcclusionLocation = -1;
+        public static int WorldPlayerPositionLocation = -1;
+        public static int WorldTimeLocation = -1;
+
+        float dayLengthSeconds = 60f; // 10 minutes per full day
 
 
-        public static ComputeShader IndirectCompute;
+        public static Shader BlankWorldShader = null!;
 
-        public static int uPlanesLocation = -1;
-        public static int uMaxSlotsLocation = -1;
+        public static int BlankWorldViewLocation = -1;
+        public static int BlankWorldProjectionLocation = -1;
 
+        public Skybox? skybox;
+
+
+        private static Shader? _uiPlaneShader;
+        private static Descriptor _uiPlaneDescriptor;
+
+        public ChunkDataPool DataPool;
+        
 
         /*
         public readonly static ShaderProgram WorldShader = new ShaderProgram("world/world.vert", "world/world.frag");
         public readonly static ShaderProgram BaseShader = new ShaderProgram("world/world_base.vert", "world/world_base.frag");
-        public readonly static ShaderProgram BlankShader = new ShaderProgram("world/world_blank.vert", "world/world_blank.frag");
+        
         public readonly static ShaderProgram TestShader = new ShaderProgram("world/indirect-word.vert", "world/indirect-world.frag");
 
         
@@ -72,26 +93,7 @@ namespace PBG.Voxel
         public static readonly int DoAmbientOcclusion = TestShader.GetLocation("uDoAmbientOcclusion");
         public static readonly int CameraPosition = TestShader.GetLocation("uCameraPosition");
 
-        public static class WorldShaderLocation
-        {
-            public static readonly int View = WorldShader.GetLocation("uView");
-            public static readonly int Projection = WorldShader.GetLocation("uProjection");
-            public static readonly int Model = WorldShader.GetLocation("uModel");
-
-            public static readonly int Texture = WorldShader.GetLocation("textureArray");
-            public static readonly int LightDirection = WorldShader.GetLocation("lightDirection");
-
-            public static readonly int CameraPosition = WorldShader.GetLocation("uCameraPosition");
-            public static readonly int PlayerPosition = WorldShader.GetLocation("uPlayerPosition");
-            public static readonly int AmbientOcclusionTexture = WorldShader.GetLocation("ambientOcclusionTexture");
-            public static readonly int DoAmbientOcclusion = WorldShader.GetLocation("uDoAmbientOcclusion");
-
-            public static readonly int CloseLightSpaceMatrix = WorldShader.GetLocation("uCloseLightSpaceMatrix");
-            public static readonly int MiddleLightSpaceMatrix = WorldShader.GetLocation("uMiddleLightSpaceMatrix");
-            public static readonly int CloseShadowMap = WorldShader.GetLocation("uCloseShadowMap");
-            public static readonly int MiddleShadowMap = WorldShader.GetLocation("uMiddleShadowMap");
-            public static readonly int DoRealtimeShadows = WorldShader.GetLocation("uDoRealtimeShadows");
-        }
+        
 
         public static class BaseShaderLocation
         {
@@ -150,20 +152,30 @@ namespace PBG.Voxel
         public bool GenerateChunks = true;
 
         public bool AmbientOcclusion = true;
-        public bool RealtimeShadows = false;
+        public bool RealtimeShadows = true;
         public bool NeedsNeighborsToRender = true;
 
         private Vector3 _lightUp;
         public Vector3 LightDirection;
+        public float Time = 0;
+        public Matrix4 ProjectionMatrix;
 
-        //private FBO _closeFBO = new FBO(2000, 2000, FBOType.Depth);
-        //private FBO _middleFBO = new FBO(2000, 2000, FBOType.Depth);
+        public static FBO CloseFBO;
+        public static FBO MiddleFBO;
+        public static FBO FarFBO;
 
         private Matrix4 _closeLightSpaceMatrix;
         private Matrix4 _middleLightSpaceMatrix;
+        private Matrix4 _farLightSpaceMatrix;
 
         private float _closeLightTimer = 0.1f;
-        private float _middleLightTimer = 0.5f;
+        private float _middleLightTimer = 0.25f;
+        private float _farLightTimer = 0.5f;
+
+
+        public float closeTimer = 0.05f;
+        public float middleTimer = 0.2f;
+        public float farTimer = 0.5f;
 
 
         public int RenderedChunks = 0;
@@ -174,52 +186,20 @@ namespace PBG.Voxel
 
         public VoxelRenderer()
         {
-            if (!_started)
-            {
-                TestPrePassShader = new(new()
-                {
-                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert"
-                });
-                TestPrePassShader.Compile();
-
-                PrePassView = TestPrePassShader.GetLocation("ubo.view");
-                PrePassProjection = TestPrePassShader.GetLocation("ubo.proj");
-
-                TestShader = new(new()
-                {
-                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert", 
-                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.frag",
-                });
-                TestShader.Compile();
-
-                View = TestShader.GetLocation("ubo.view");
-                Projection = TestShader.GetLocation("ubo.proj");
-
-                LightDirectionLocation = TestShader.GetLocation("data.lightDirection");
-                DoAmbientOcclusion = TestShader.GetLocation("data.uDoAmbientOcclusion");
-                CameraPosition = TestShader.GetLocation("data.uCameraPosition");
-
-                IndirectCompute = new(new()
-                {
-                    ComputeShaderPath = Game.ShaderPath / "computeShaders/world_vulkan/renderLoop.comp"
-                });
-                IndirectCompute.Compile();
-
-                uPlanesLocation = IndirectCompute.GetLocation("ubo.planes");
-                uMaxSlotsLocation = IndirectCompute.GetLocation("ubo.uMaxSlots");
-
-                _started = true;
-            }
-
+            Init();
             _chunkOffsetAction = GenerateDistanceBasedChunkOffsets;
-            _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
             _viewport = (0, 0, 0, 0);
             _width = Game.Width;
             _height = Game.Height;
+            _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
+            ProjectionMatrix = _camera.GetProjectionMatrix();
+
+            DataPool = new(this);
         }
 
         public VoxelRenderer(VoxelRendererSettings settings)
         {
+            Init();
             _chunkOffsetAction = settings.GenerationType switch
             {
                 VoxelRendererGenerationType.Distance => GenerateDistanceBasedChunkOffsets,
@@ -237,8 +217,81 @@ namespace PBG.Voxel
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.GetProjectionMatrix();
+
+            DataPool = new(this);
         }
+
+        private void Init()
+        {
+            if (!_started)
+            {
+                TestPrePassShader = new(new()
+                {
+                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert"
+                });
+                TestPrePassShader.Compile();
+
+                PrePassView = TestPrePassShader.GetLocation("ubo.view");
+                PrePassProjection = TestPrePassShader.GetLocation("ubo.proj");
+
+                WorldShader = new(new()
+                {
+                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert", 
+                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.frag",
+                });
+                WorldShader.Compile();
+
+                WorldViewLocation = WorldShader.GetLocation("ubo.view");
+                WorldProjectionLocation = WorldShader.GetLocation("ubo.proj");
+
+                WorldCloseLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uCloseLightSpaceMatrix");
+                WorldMiddleLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uMiddleLightSpaceMatrix");
+                WorldFarLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uFarLightSpaceMatrix");
+
+                WorldLightDirectionLocation = WorldShader.GetLocation("data.lightDirection");
+
+                WorldCloseLightDirectionLocation = WorldShader.GetLocation("data.closeLightDirection");
+                WorldMiddleLightDirectionLocation = WorldShader.GetLocation("data.middleLightDirection");
+                WorldFarLightDirectionLocation = WorldShader.GetLocation("data.farLightDirection");
+
+                WorldDoRealtimeShadowsLocation = WorldShader.GetLocation("data.uDoRealtimeShadows");
+                WorldDoAmbientOcclusionLocation = WorldShader.GetLocation("data.uDoAmbientOcclusion");
+                WorldPlayerPositionLocation = WorldShader.GetLocation("data.uPlayerPosition");
+                WorldTimeLocation = WorldShader.GetLocation("data.time");
+
+
+                ShaderInfo blankInfo = new()
+                {
+                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world-blank.vert", 
+                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world-blank.frag",
+                };
+                blankInfo.Rasterizer.CullMode = CullModeFlags.FrontBit;
+                BlankWorldShader = new(blankInfo);
+                BlankWorldShader.Compile();
+
+                BlankWorldViewLocation = BlankWorldShader.GetLocation("ubo.view");
+                BlankWorldProjectionLocation = BlankWorldShader.GetLocation("ubo.proj");
+
+                CloseFBO = new FBO(4000, 4000);
+                MiddleFBO = new FBO(3000, 3000);
+                FarFBO = new FBO(2000, 2000);
+
+                _uiPlaneShader = new(new()
+                {
+                    VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
+                    FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
+                });
+                _uiPlaneShader.Compile();
+
+                _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
+                _uiPlaneDescriptor.BindFramebufferColor(MiddleFBO, 0);
+
+                _started = true;
+            }
+        }
+
+        public Camera GetCamera() => Camera;
 
         public void GenerateDistanceBasedChunkOffsets()
         {
@@ -455,7 +508,7 @@ namespace PBG.Voxel
 
         void Start()
         {
-            
+            skybox = Transform.TryGetComponent<Skybox>();
         }
 
         void Awake()
@@ -469,7 +522,7 @@ namespace PBG.Voxel
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.GetProjectionMatrix();
         }
 
         public void Restart()
@@ -483,7 +536,7 @@ namespace PBG.Voxel
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.GetProjectionMatrix();
         }
 
         private float _oldGameTime = 0f;
@@ -602,51 +655,41 @@ namespace PBG.Voxel
                 }
             }
 
-            float dayLengthSeconds = 600f; // 10 minutes per full day
-            float angle = (float)(GameTime.TotalTime / dayLengthSeconds) * MathF.Tau;
+            Time = Mathf.Fraction(GameTime.TotalTime / dayLengthSeconds);
+            float angle = Time * 360f;
+            LightDirection = Mathf.RotatePoint((0, 1, 0), (0, 0, 0), (0, 0, 1), angle);
+            var right = Vector3.Normalize(Vector3.Cross(LightDirection, Vector3.UnitY));
+            _lightUp = Vector3.Normalize(Vector3.Cross(right, LightDirection));
 
-            // Horizontal rotation (east → west)
-            Vector3 horizontal = new Vector3(
-                MathF.Cos(angle),
-                0.0f,
-                MathF.Sin(angle)
-            );
-
-            // Elevation (sun arc)
-            float maxElevation = MathF.PI * 0.35f;
-            float elevation = MathF.Sin(angle) * maxElevation;
-
-            // Combine horizontal direction with elevation
-            Vector3 front = Vector3.Normalize(new Vector3(
-                horizontal.X,
-                -MathF.Sin(elevation),   // negative = light points downward
-                horizontal.Z
-            ));
-            
-            var right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            _lightUp = Vector3.Normalize(Vector3.Cross(right, front));
-
-            LightDirection = front;
+            if (skybox != null)
+            {
+                skybox.LightDirection = LightDirection;
+                skybox.Time = Time;
+            }
         }
 
         void LateUpdate()
         {
-            /*
             if (!Run) return;
 
-            while (_closeLightTimer >= 0.1f)
+            while (_closeLightTimer >= closeTimer)
             {
-                _closeLightTimer -= 0.1f;
+                _closeLightTimer -= closeTimer;
             }
 
-            while (_middleLightTimer >= 0.5f)
+            while (_middleLightTimer >= middleTimer)
             {
-                _middleLightTimer -= 0.5f;
+                _middleLightTimer -= middleTimer;
+            }
+
+            while (_farLightTimer >= farTimer)
+            {
+                _farLightTimer -= farTimer;
             }
 
             _closeLightTimer += GameTime.DeltaTime;
             _middleLightTimer += GameTime.DeltaTime;
-            */
+            _farLightTimer += GameTime.DeltaTime;
 
             //Info.SetChunkTotalCount(VoxelChunkInstances.Count);
         }
@@ -658,66 +701,55 @@ namespace PBG.Voxel
         void Render()
         {
             if (!Run) return;
-
-            /*
+            
+            DataPool.Reset();
             if (RealtimeShadows)
             {
-                if (_closeLightTimer >= 0.1f)
+                if (_closeLightTimer >= 0.01f)
                 {
-                    RenderShadowMap(_closeFBO, 80, 80, 80, 64, 2000, ref _closeLightSpaceMatrix);
+                    RenderShadowMap(CloseFBO, 140, 140, 140, 1, out _closeLightSpaceMatrix);
                 }
 
-                if (_middleLightTimer >= 0.5f)
+                if (_middleLightTimer >= 0.1f)
                 {
-                    RenderShadowMap(_middleFBO, 320, 320, 400, 256, 2000, ref _middleLightSpaceMatrix);
+                    RenderShadowMap(MiddleFBO, 640, 500, 500, 2, out _middleLightSpaceMatrix);
+                }
+
+                if (_farLightTimer >= 0.5f)
+                {
+                    RenderShadowMap(FarFBO, 2560, 2500, 1600, 3, out _farLightSpaceMatrix);
                 }
             }
-            */  
+
+            GFX.Viewport(_viewport.left, _viewport.top, _width, _height);
 
             /*
-            GL.UniformMatrix4(WorldShaderLocation.View, false, ref view);
-            GL.UniformMatrix4(WorldShaderLocation.Projection, false, ref projection);
+            _uiPlaneShader.Bind();
+            _uiPlaneDescriptor.Bind();
 
-            GL.Uniform1(WorldShaderLocation.Texture, 0);
-            GL.Uniform3(WorldShaderLocation.LightDirection, LightDirection);
-            GL.Uniform3(WorldShaderLocation.CameraPosition, Camera.Position);
-            GL.Uniform3(WorldShaderLocation.PlayerPosition, Transform.Position);
-            GL.Uniform1(WorldShaderLocation.AmbientOcclusionTexture, 1);
-            GL.Uniform1(WorldShaderLocation.DoAmbientOcclusion, 1);
-
-            GL.UniformMatrix4(WorldShaderLocation.CloseLightSpaceMatrix, false, ref _closeLightSpaceMatrix);
-            GL.Uniform1(WorldShaderLocation.CloseShadowMap, 2);
-            GL.UniformMatrix4(WorldShaderLocation.MiddleLightSpaceMatrix, false, ref _middleLightSpaceMatrix);
-            GL.Uniform1(WorldShaderLocation.MiddleShadowMap, 3);
-            GL.Uniform1(WorldShaderLocation.DoRealtimeShadows, RealtimeShadows ? 1 : 0);
+            GFX.Draw(3, 1, 0, 0);
             */
-
-            GFX.Viewport(_viewport.left, _viewport.bottom, _width, _height);
             
-            if (Input.MouseDelta != Vector2.Zero || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
+            if (DataPool.Updated || Input.MouseDelta != Vector2.Zero || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
             {
-                bool update = false;
+                DataPool.Updated = false;
+
                 _chunkCount = 0;
                 for (int i = 0; i < VisibleChunks.Count; i++)
                 {
                     var chunk = VisibleChunks[i];
                     if (chunk.ForceDisabled || !Camera.FrustumIntersectsSphere(chunk.Center, 28))
                     {
-                        update = update || chunk.Visible == true;
                         chunk.Visible = false;
                         continue;
                     }
 
-                    update = update || chunk.Visible == false;
                     chunk.Visible = true;
                     chunk.Allocation.DataPool.UpdateDrawCommand(chunk, chunk.Allocation);
                     _chunkCount++;
                 }
 
-                if (update)
-                {
-                    ChunkDataPool.UpdateDrawCommands(this);
-                }
+                DataPool.UpdateDrawCommands();
                     
                 Info.SetChunkRenderCount(_chunkCount);
             }
@@ -727,102 +759,54 @@ namespace PBG.Voxel
 
             RenderedChunks = _chunkCount;
 
-            TestShader.Bind();
+            WorldShader.Bind();
 
-            ChunkDataPool.Render(this);
+            DataPool.Render();
 
             GFX.Viewport(0, 0, Game.Width, Game.Height);
         }
 
-        private void RenderOrtho()
+        public void UpdateUniforms(Descriptor descriptor)
         {
-            /*
-            {
-                float width  = 80f;
-                float height = 80f;
-                float depth = 80f;
+            descriptor.Uniform(WorldViewLocation, Camera.ViewMatrix);
+            descriptor.Uniform(WorldProjectionLocation, ProjectionMatrix);
+            descriptor.Uniform(WorldCloseLightSpaceMatrixLocation, _closeLightSpaceMatrix);
+            descriptor.Uniform(WorldMiddleLightSpaceMatrixLocation, _middleLightSpaceMatrix);
+            descriptor.Uniform(WorldFarLightSpaceMatrixLocation, _farLightSpaceMatrix);
 
-                _closeFBO.Bind();
-
-                GL.Viewport(0, 0, 2000, 2000);
-
-                GL.Clear(ClearBufferMask.DepthBufferBit);
-
-                Matrix4 view = Matrix4.LookAt(Transform.Position, Transform.Position + LightDirection, _lightUp);
-                Matrix4 projection = Matrix4.CreateOrthographicOffCenter(-width / 2, width / 2, -height / 2, height / 2, -depth, depth);
-
-                _closeLightSpaceMatrix = view * projection;
-
-                GL.Enable(EnableCap.DepthTest);
-                GL.DepthFunc(DepthFunction.Less);
-                GL.Enable(EnableCap.CullFace);
-
-                BlankShader.Bind();
-
-                GL.UniformMatrix4(BlankShaderLocation.View, false, ref view);
-                GL.UniformMatrix4(BlankShaderLocation.Projection, false, ref projection);
-
-                float distance = 64f;
-
-                for (int i = 0; i < VisibleChunks.Count; i++)
-                {
-                    var chunk = VisibleChunks[i];
-                    if (!chunk.HasBlocks || Vector3.DistanceSquared(Transform.Position, chunk.Center) > distance * distance)
-                        continue;
-
-                    GL.UniformMatrix4(BlankShaderLocation.Model, false, ref chunk.ModelMatrix);
-                    chunk.Render();
-                }
-
-                BlankShader.Unbind();
-
-                _closeFBO.Unbind();
-            }
-            */
+            descriptor.Uniform(WorldLightDirectionLocation, LightDirection);
+            descriptor.Uniform(WorldDoRealtimeShadowsLocation, RealtimeShadows ? 1 : 0);
+            descriptor.Uniform(WorldDoAmbientOcclusionLocation, AmbientOcclusion ? 1 : 0);
+            descriptor.Uniform(WorldPlayerPositionLocation, Camera.Position);
+            descriptor.Uniform(WorldTimeLocation, Time);
         }
 
-        /*
-        private void RenderShadowMap(FBO fbo, float width, float height, float depth, float distance, int size, ref Matrix4 lightSpaceMatrix)
+        public void RenderShadowMap(FBO fbo, float halfSize, float depth, float distance, int passIndex, out Matrix4 matrix)
         {
             fbo.Bind();
 
-            GL.Viewport(0, 0, size, size);
+            Matrix4 view = Matrix4.CreateLookAt(Camera.Position, Camera.Position + LightDirection, _lightUp);
+            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(-halfSize / 2, halfSize / 2, halfSize / 2, -halfSize / 2, -depth, depth);
 
-            GL.Clear(ClearBufferMask.DepthBufferBit);
-
-            Matrix4 view = Matrix4.LookAt(Transform.Position, Transform.Position + LightDirection, _lightUp);
-            Matrix4 projection = Matrix4.CreateOrthographicOffCenter(-width / 2, width / 2, -height / 2, height / 2, -depth, depth);
-
-            lightSpaceMatrix = view * projection;
-
-            GL.Enable(EnableCap.DepthTest);
-            GL.DepthFunc(DepthFunction.Less);
-            GL.Disable(EnableCap.CullFace);
-
-            BlankShader.Bind();
-
-            GL.UniformMatrix4(BlankShaderLocation.View, false, ref view);
-            GL.UniformMatrix4(BlankShaderLocation.Projection, false, ref projection);
-
-            for (int i = 0; i < Chunks.Count; i++)
+            for (int i = 0; i < VisibleChunks.Count; i++)
             {
-                var chunk = Chunks[i];
-                if (!chunk.HasBlocks || Vector3.DistanceSquared(Transform.Position, chunk.Center) > distance * distance)
+                var chunk = VisibleChunks[i];
+                if (!chunk.HasBlocks || Vector3.DistanceSquared(Camera.Position, chunk.Center) > distance * distance)
                     continue;
 
-                GL.UniformMatrix4(BlankShaderLocation.Model, false, ref chunk.ModelMatrix);
-                chunk.Render();
+                chunk.Allocation.DataPool.UpdateDrawCommand(chunk, chunk.Allocation, passIndex);
             }
 
-            BlankShader.Unbind();
+            BlankWorldShader.Bind();
 
-            GL.Enable(EnableCap.CullFace);
-
-            GL.Viewport(0, 0, Game.Width, Game.Height);
+            matrix = projection * view;
+            DataPool.UpdateDescriptorUniform(descriptor => descriptor.Uniform3(WorldCloseLightDirectionLocation, LightDirection), passIndex);
+            DataPool.UpdateDrawCommands(passIndex);  
+            
+            DataPool.RenderBlank(view, projection, passIndex);
 
             fbo.Unbind();
         }
-        */
 
         void Exit()
         {
@@ -861,7 +845,7 @@ namespace PBG.Voxel
             FreedMap = [];
 
             CacheManager.Clear();
-            ChunkDataPool.Dispose();
+            DataPool.Dispose();
 
             Console.WriteLine("--- After ---");
             //BufferBase.PrintBufferCount();

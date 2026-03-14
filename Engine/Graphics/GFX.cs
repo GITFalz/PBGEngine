@@ -28,6 +28,11 @@ public unsafe class GFX
     {
         _graphicsContext ??= graphicsContext;
     }
+
+
+    #region Device
+    public static void DeviceWaitIdle() => Vk.DeviceWaitIdle(Device);
+    #endregion
        
 
     #region Physical device
@@ -103,9 +108,6 @@ public unsafe class GFX
     
     public static void CreateBuffer<T>(T[] array, BufferUsageFlags bufferType, MemoryPropertyFlags properties, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
     => _graphicsContext.CreateBuffer(array, bufferType, properties, out buffer, out bufferMemory);
-        
-    public static void CreateBuffer<T>(BufferUsageFlags bufferType, T[] array, out Buffer buffer, out DeviceMemory bufferMemory) where T : unmanaged
-    => _graphicsContext.CreateBuffer(bufferType, array, out buffer, out bufferMemory);
     
     public static void UpdateBuffer<T>(T[] array, Buffer buffer) where T : unmanaged
     => _graphicsContext.UpdateBuffer(array, buffer);
@@ -114,7 +116,7 @@ public unsafe class GFX
     => _graphicsContext.UpdateBuffer(array, buffer, offsetBytes, sizeBytes);
 
     public static void UpdateBufferRange<T>(T[] array, Buffer buffer, ulong offsetBytes, ulong sizeBytes) where T : unmanaged
-    => _graphicsContext.UpdateBufferFull(array, buffer, offsetBytes, sizeBytes);
+    => _graphicsContext.UpdateBufferRange(array, buffer, offsetBytes, sizeBytes);
     
 
     #region Clean up
@@ -154,11 +156,20 @@ public unsafe class GFX
     #endregion
 
 
-    #region Rendering
-    public static void Viewport(int x, int y, int width, int height)
-    => Viewport(x, y, (uint)width, (uint)height);
+    #region Command buffer
+    public static CommandBuffer BeginSingleTimeCommands() => GraphicsContext.graphicsContext.BeginSingleTimeCommands();
+    public static void EndSingleTimeCommands(CommandBuffer commandBuffer) => GraphicsContext.graphicsContext.EndSingleTimeCommands(commandBuffer);
+    #endregion
 
-    public static void Viewport(int x, int y, uint width, uint height)
+
+    #region Rendering
+    /// <summary>
+    /// Default Viewport that is the size of the screen
+    /// </summary>
+    public static void Viewport() => Viewport(CommandBuffer, 0, 0, (uint)Game.Width, (uint)Game.Height);
+    public static void Viewport(int x, int y, int width, int height) => Viewport(CommandBuffer, x, y, (uint)width, (uint)height);
+    public static void Viewport(int x, int y, uint width, uint height) => Viewport(CommandBuffer, x, y, width, height);
+    public static void Viewport(CommandBuffer commandBuffer, int x, int y, uint width, uint height)
     {
         _viewport = (x, y, width, height);
         Viewport viewport = new()
@@ -170,17 +181,35 @@ public unsafe class GFX
             MinDepth = 0.0f,
             MaxDepth = 1.0f
         };
-        Vk.CmdSetViewport(_graphicsContext.commandBuffer, 0, 1, &viewport);
+        Vk.CmdSetViewport(commandBuffer, 0, 1, &viewport);
     }
 
     public static (int x, int y, uint width, uint height) GetViewport() => _viewport;
 
-
+    
     public static void Draw(uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
     => Vk.CmdDraw(CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
+    public static void Draw(CommandBuffer commandBuffer, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+    => Vk.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+
     public static void DrawIndexed(uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
     => Vk.CmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+
+    public static void DrawIndexed(CommandBuffer commandBuffer, uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
+    => Vk.CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+
+    public static void DrawIndirect(Buffer buffer, ulong offset, uint drawCount, uint stride)
+    => Vk.CmdDrawIndirect(CommandBuffer, buffer, offset, drawCount, stride);
+
+    public static void DrawIndirect(CommandBuffer commandBuffer, Buffer buffer, ulong offset, uint drawCount, uint stride)
+    => Vk.CmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
+
+    public static void DrawIndirectCount(Buffer buffer, ulong offset, Buffer countBuffer, ulong countOffset, uint maxDrawCount, uint stride)
+    => Vk.CmdDrawIndirectCount(CommandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
+
+    public static void DrawIndirectCount(CommandBuffer commandBuffer, Buffer buffer, ulong offset, Buffer countBuffer, ulong countOffset, uint maxDrawCount, uint stride)
+    => Vk.CmdDrawIndirectCount(commandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
     #endregion
 
 }

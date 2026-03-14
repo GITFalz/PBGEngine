@@ -9,28 +9,22 @@ using PBG.UI.Creator;
 using PBG.Voxel;
 using static PBG.UI.Styles;
 using Silk.NET.Input;
+using Silk.NET.Vulkan;
 
 public partial class StructureEditor : BaseStructureEditor
 {
-    /*
-    public static ShaderProgram BoundingBoxShader = new ShaderProgram("StructureEditor/structure/boundingBox.vert","StructureEditor/structure/boundingBox.frag");
-    public static ShaderProgram PlacementHelperShader = new ShaderProgram("world/placementHelper.vert","world/placementHelper.frag");
-    public static SSBO<BoundingBoxData> SSBO;
-    public static SSBO<BoundingBoxData> BlockSSBO = new(new List<BoundingBoxData>() { new()});
-    public static VAO VAO = new();
+    public static Shader PlacementHelperShader;
+    public static Descriptor PlacementDescriptor;
 
-    private static int _modelLocation = BoundingBoxShader.GetLocation("model");
-    private static int _viewLocation = BoundingBoxShader.GetLocation("view");
-    private static int _projectionLocation = BoundingBoxShader.GetLocation("projection");
+    private static int _placementModelLocation;
+    private static int _placementViewLocation;
+    private static int _placementProjectionLocation;
+    private static int _placementSideLocation;
+    private static int _placementBlockPosLocation;
+    private static int _placementCameraPosLocation;
+    private static int _placementRegionLocation;
 
-    private static int _placementModelLocation = PlacementHelperShader.GetLocation("model");
-    private static int _placementViewLocation = PlacementHelperShader.GetLocation("view");
-    private static int _placementProjectionLocation = PlacementHelperShader.GetLocation("projection");
-    private static int _placementSideLocation = PlacementHelperShader.GetLocation("uSide");
-    private static int _placementBlockPosLocation = PlacementHelperShader.GetLocation("uBlockPos");
-    private static int _placementCameraPosLocation = PlacementHelperShader.GetLocation("uCamPosition");
-    private static int _placementRegionLocation = PlacementHelperShader.GetLocation("uRegion");
-    */
+    private static bool _started = false;
 
 
     public UIController ScriptController = new();
@@ -58,7 +52,7 @@ public partial class StructureEditor : BaseStructureEditor
         set {
             if (_blockPlacementPosition != value)
             {
-                UpdateBlockData = true;
+                Editor.BlockBoundingBox.Transform.Position = value;
                 _blockPlacementPosition = value;
             }
         }
@@ -80,8 +74,27 @@ public partial class StructureEditor : BaseStructureEditor
 
     public StructureEditor(StructureNodeManager editor)
     {
+        if (!_started)
+        {
+            PlacementHelperShader = new Shader(new() { 
+                VertexShaderPath = Game.ShaderPath / "world_vulkan/placementHelper.vert",
+                FragmentShaderPath = Game.ShaderPath / "world_vulkan/placementHelper.frag" 
+            });
+            PlacementHelperShader.Compile();
+            PlacementDescriptor = PlacementHelperShader.GetDescriptorSet();
+
+            _placementModelLocation = PlacementHelperShader.GetLocation("ubo.model");
+            _placementViewLocation = PlacementHelperShader.GetLocation("ubo.view");
+            _placementProjectionLocation = PlacementHelperShader.GetLocation("ubo.projection");
+            _placementSideLocation = PlacementHelperShader.GetLocation("ubo.uSide");
+            _placementBlockPosLocation = PlacementHelperShader.GetLocation("fubo.uBlockPos");
+            _placementCameraPosLocation = PlacementHelperShader.GetLocation("fubo.uCamPosition");
+            _placementRegionLocation = PlacementHelperShader.GetLocation("fubo.uRegion");
+
+            _started = true;
+        }
+
         Editor = editor;
-        //SSBO = new(new List<BoundingBoxData>());
         BoundingBoxCount = 0;
         SelectedBoundingBox = new()
         {
@@ -95,14 +108,16 @@ public partial class StructureEditor : BaseStructureEditor
 
         ScriptController.AddElement(ScriptUI);
         ScriptController.RemoveInputfieldOnEnter = false;
-        
-        //ScriptController.Update(); // Init once before
 
         StructureHeightShader.GenerateHeight(0, 0, 200);
     }
 
     public void Start()
     {
+        ScriptController = Editor.Transform.ParentNode!.GetNode("StructureUI").GetComponent<UIController>();
+        ScriptController.AddElement(ScriptUI);
+        ScriptController.Show = false;
+
         foreach (var chunk in StructureTreeGenerationProcess.OldAffectedChunks)
         {
             chunk.Blocks?.Clear();
@@ -110,18 +125,20 @@ public partial class StructureEditor : BaseStructureEditor
         }
         StructureTreeGenerationProcess.OldAffectedChunks = [];
         CloseScript();
-    }
 
-    public void Rezise()
-    {
-        //ScriptController.Resize();
+        Editor.BlockBoundingBox.UpdateBoundingBoxes([
+            new() {
+                Position = (0, 0, 0),
+                Size = (1, 1, 1),
+                Color = (0.4f, 0.4f, 0.4f, 0.4f)
+            }
+        ]);
     }
 
     public void Update()
     {
         if (!Editor.Parent.MeshRenderer.Rendering && ShowScript)
         {
-            //ScriptController.Update();
             ScriptUI.Update();
             return;
         }
@@ -139,6 +156,7 @@ public partial class StructureEditor : BaseStructureEditor
         SelectedRegion = -1;
         RenderPlacementHelper = false;
         RenderEmptyBlock = false;
+        Editor.BlockBoundingBox.Transform.Disabled = !RenderEmptyBlock;
         if (_oldState != CursorMode.Normal && Game.IsCursorState(CursorMode.Disabled))
         {
             bool raycast = VoxelData.Raycast(Renderer, Camera.Position, Camera.front, 100, out Hit hit);
@@ -180,6 +198,7 @@ public partial class StructureEditor : BaseStructureEditor
                 }
                 BlockPlacementPosition = position;
                 RenderEmptyBlock = true;
+                Editor.BlockBoundingBox.Transform.Disabled = !RenderEmptyBlock;
             }
 
             if (Input.IsMousePressed(MouseButton.Left))
@@ -275,22 +294,11 @@ public partial class StructureEditor : BaseStructureEditor
                     Color = RightUIPanel.SelectedRuleset == rule ? (0.9f, 0.55f, 1.0f, 0.25f) : (0.8f, 0.3f, 1.0f, 0.25f)
                 });
             }
-            //SSBO.Renew(boxes);
+
+            Editor.BuildBoundingBox.UpdateBoundingBoxes([..boxes]);
+            
             BoundingBoxCount = boxes.Count;
             UpdateBoundingBox = false;
-        }
-
-
-        if (UpdateBlockData && RenderEmptyBlock)
-        {
-            /*
-            BlockSSBO.Update(new List<BoundingBoxData>() { new()
-            {
-                Position = BlockPlacementPosition,
-                Size = (1, 1, 1),
-                Color = (0.4f, 0.4f, 0.4f, 0.4f)
-            }}, 0);
-            */
         }
 
         StructureHeightShader.Update(Camera);
@@ -300,55 +308,21 @@ public partial class StructureEditor : BaseStructureEditor
 
     public void Render()
     {
-        /*
-        GL.Viewport(240, 0, Game.Width - 480, Game.Height - 60);
+        GFX.Viewport(240, 60, Game.Width - 480, Game.Height - 60);
 
         Matrix4 orthoProjection = Matrix4.CreateOrthographicOffCenter(240, Game.Width - 240, Game.Height, 60, -2, 2);
 
-        if (!Editor.Parent.MeshRenderer.Rendering && ShowScript)
+        if (Editor.Parent.MeshRenderer.Rendering && !ShowScript && ShowBoundingBoxes)
         {
-            //ScriptController.RenderDepthTest(orthoProjection);
-        }
-        else if (ShowBoundingBoxes)
-        {
+            /*
             GL.DepthMask(false);
             GL.Enable(EnableCap.Blend);
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            */
 
             StructureHeightShader.Render(Camera);
 
-            BoundingBoxShader.Bind();
-
-            Matrix4 model = Matrix4.Identity;
-            Matrix4 view = Camera.ViewMatrix;
-            Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(Camera.FOV), (float)(Game.Width - 480) / (float)(Game.Height - 60), 0.1f, 10000f);
-
-            GL.UniformMatrix4(_modelLocation, true, ref model);
-            GL.UniformMatrix4(_viewLocation, true, ref view);
-            GL.UniformMatrix4(_projectionLocation, true, ref projection);
-
-            VAO.Bind();
-            SSBO.Bind(0);
-
-            GL.DrawArrays(PrimitiveType.Triangles, 0, BoundingBoxCount * 36);
-            Shader.Error("Structure editor render error: ");
-
-            SSBO.Unbind();
-            
-            if (RenderEmptyBlock)
-            {
-                BlockSSBO.Bind(0);
-
-                GL.DrawArrays(PrimitiveType.Triangles, 0, 36);
-                Shader.Error("Structure editor render error: ");
-
-                BlockSSBO.Unbind();
-            }
-
-            VAO.Unbind();
-
-            BoundingBoxShader.Unbind();
-
+            /*
             GL.DepthMask(true);
 
             if (RenderPlacementHelper)
@@ -377,10 +351,10 @@ public partial class StructureEditor : BaseStructureEditor
     
             GL.Disable(EnableCap.Blend);
             GL.Clear(ClearBufferMask.DepthBufferBit);
+            */
         }
 
-        GL.Viewport(0, 0, Game.Width, Game.Height);
-        */
+        GFX.Viewport(0, 0, Game.Width, Game.Height);
     }
 
     public void Dispose()
@@ -498,23 +472,25 @@ public partial class StructureEditor : BaseStructureEditor
 
     public void OpenScript()
     {
+        ScriptController.Show = true;
         if (SelectedBoundingBox == null)
             return;
 
         ShowScript = true;
         Editor.Parent.MeshRenderer.Rendering = false;
         Editor.Parent.MeshRenderer.Renderer.Run = false;
-        Editor.structureNodeUI.CenterPanel.SetVisible(false);
+        Editor.structureNodeUI._centerPanel.SetVisible(false);
         RightUIPanel.BlockSelectionPanel.SetVisible(false);
         ScriptUI.SetLines(SelectedBoundingBox.Lines);
     }
 
     public void CloseScript()
     {
+        ScriptController.Show = false;
         ShowScript = false;
         Editor.Parent.MeshRenderer.Rendering = true;
         Editor.Parent.MeshRenderer.Renderer.Run = true;
-        Editor.structureNodeUI.CenterPanel.SetVisible(true);
+        Editor.structureNodeUI._centerPanel.SetVisible(true);
         RightUIPanel.BlockSelectionPanel.SetVisible(true);
     }
 

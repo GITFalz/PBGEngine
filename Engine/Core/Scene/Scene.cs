@@ -52,6 +52,7 @@ namespace PBG.Core
         {
             if (_sceneToBeLoaded != null)
             {
+                UIController.ClearFrameBuffer();
                 Console.WriteLine("Loading scene");
                 CurrentScene?.Exit();
                 CurrentScene = _sceneToBeLoaded;
@@ -63,11 +64,7 @@ namespace PBG.Core
                     _sceneToBeLoaded.Started = true;
                 }
                 _sceneToBeLoaded.Awake();
-                if (_sceneToBeLoaded.ShouldResize)
-                {
-                    _sceneToBeLoaded.Resize();
-                    _sceneToBeLoaded.ShouldResize = false;
-                }
+                _sceneToBeLoaded.Resize();
 
                 _sceneToBeLoaded = null;
             }
@@ -143,6 +140,7 @@ namespace PBG.Core
         public void Render()
         {
             RootNode.Render();
+            GFX.Viewport();
         }
 
         public void Exit() => RootNode.Exit();
