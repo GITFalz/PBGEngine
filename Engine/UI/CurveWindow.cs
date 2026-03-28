@@ -4,8 +4,8 @@ using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
-using Silk.NET.Input;
-using static PBG.UI.Styles;
+
+using static PBG.UI2.Styles;
 
 public class CurveWindow
 {
@@ -350,7 +350,7 @@ public class CurveWindow
 
     public UIButton AddButton(Vector4 offset)
     {
-        UIButton button = new UIButton(light_sharp_g_[70]);
+        UIButton button = new UIButton().Class(light_sharp_g_[70]);
         int index = 1;
         //while (Buttons.Count - 1 > index && Buttons[index].Offset.X < button.Offset.X)
         //{

@@ -2,7 +2,7 @@ using PBG.Graphics;
 using PBG.UI;
 using PBG.MathLibrary;
 using PBG.UI.Creator;
-using static PBG.UI.Styles;
+using static PBG.UI2.Styles;
 using PBG.Data;
 using PBG.Core;
 using PBG;
@@ -86,93 +86,94 @@ public class ColorPicker : ScriptingNode
     public bool IsHovering() => Hovering && !Transform.Disabled;
     
     public class UI(ColorPicker Picker, Vector2i Position) : UIScript { public UIImg ColorBarSlider = null!; public UIImg ColorPickSlider = null!; public override UIElementBase Script() =>
-    new UICol(Class(left_[Position.X - 5], top_[Position.Y - 30], w_[Picker.Width + 10], h_[Picker.Height + 35]),
-    OnHover<UICol>(_ => Picker.Hovering = true),
-    Sub(
-        new UICol(Class(w_full, h_[25], blank_full_g_[30]), OnHold<UICol>(_ =>
+    new UICol().Class(left_[Position.X - 5], top_[Position.Y - 30], w_[Picker.Width + 10], h_[Picker.Height + 35])
+    .OnHover(_ => Picker.Hovering = true)
+    [
+        new UICol().Class(w_full, h_[25], blank_full_g_[30]).OnHold(_ =>
         {
             Vector2 mouseDelta = Input.GetMousePosition();
             if (mouseDelta == Vector2.Zero) return;
             Picker.UpdateColorPickerPosition();
-        }),
-        Sub(
-            new UIImg(Class(w_[20], h_[20], icon_[15], middle_right, right_[2], bg_white, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout), OnClick<UIImg>(_ =>
+        }) [
+            new UIImg().Class(w_[20], h_[20], icon_[15], middle_right, right_[2], bg_white, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout).OnClick(_ =>
             {
                 Picker.Hovering = true;
                 Picker.Transform.Disabled = true;
                 Picker.SetColorAction = _ => { };
-            }))
-        )),
-        new UIImg(Class(w_full, h_full_minus_[25], bottom_center, blank_full_g_[20], border_ui_[2, 2, 2, 2], border_color_g_[30])),
-        new UICol(Class(w_[Mathf.Min(Picker.Width, Picker.Height - 20)], h_[Mathf.Min(Picker.Width, Picker.Height - 20)], bottom_left, left_[5], bottom_[25]), 
-        OnHold<UICol>(_ => SetSliderColor(Input.GetMousePosition().X - Picker.ColorPickerPosition.X, Input.GetMousePosition().Y - (Game.Height - Picker.ColorPickerPosition.Y) + Picker.Height)), Sub(
-            newImg(Class(w_[10], h_[10], right_[5], bottom_[5], depth_[10], blank_full_g_[100], border_ui_[3, 3, 3, 3], border_color_g_[40]), ref ColorPickSlider)
-        )),
-        new UIVCol(Class(w_[115], h_[Mathf.Min(Picker.Width, Picker.Height - 20)], top_right, top_[30], right_[5], grow_children, spacing_[5]), Sub(
-            new UICol(Class(w_[115], h_[30]), [
-                new UIText("R", Class(middle_left, left_[5])),
-                ..Run(() =>
+            })
+        ],
+        new UIImg().Class(w_full, h_full_minus_[25], bottom_center, blank_full_g_[20], border_ui_[2, 2, 2, 2], border_color_g_[30]),
+        new UICol().Class(w_[Mathf.Min(Picker.Width, Picker.Height - 20)], h_[Mathf.Min(Picker.Width, Picker.Height - 20)], bottom_left, left_[5], bottom_[25])
+        .OnHold(_ => SetSliderColor(Input.GetMousePosition().X - Picker.ColorPickerPosition.X, Input.GetMousePosition().Y - (Game.Height - Picker.ColorPickerPosition.Y) + Picker.Height))[
+            new UIImg().Ref(ref ColorPickSlider).Class(w_[10], h_[10], right_[5], bottom_[5], depth_[10], blank_full_g_[100], border_ui_[3, 3, 3, 3], border_color_g_[40])
+        ],
+        new UIVCol().Class(w_[115], h_[Mathf.Min(Picker.Width, Picker.Height - 20)], top_right, top_[30], right_[5], grow_children, spacing_[5])[
+            new UICol().Class(w_[115], h_[30])[
+                new UIText("R").Class(middle_left, left_[5]),
+                Run(() =>
                 {
-                    Picker.RedField = new UIField("0", Class(mc_[3], fs_[1], middle_left));
+                    Picker.RedField = new UIField("0").Class(mc_[3], fs_[1], middle_left);
                     return [
-                    new UICol(Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0]), Sub(
-                        Picker.RedField
-                    )),
-                    new UICol(Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(Picker.RedField.GetByte() - 1, null, null)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[2], bg_white, middle_center))
-                    ]),
-                    new UICol(Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(Picker.RedField.GetByte() + 1, null, null)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[0], bg_white, middle_center))
-                    ])];
+                        new UICol().Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0])[
+                            Picker.RedField
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout) 
+                        .OnClick(c => SetRGB(Picker.RedField.GetByte() - 1, null, null))[
+                            new UIImg().Class(w_[20], h_[20], icon_[2], bg_white, middle_center)
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout)
+                        .OnClick(c => SetRGB(Picker.RedField.GetByte() + 1, null, null))[
+                            new UIImg().Class(w_[20], h_[20], icon_[0], bg_white, middle_center)
+                        ]
+                    ];
                 })
-            ]),
-            new UICol(Class(w_[115], h_[30]), [
-                new UIText("G", Class(middle_left, left_[5])),
-                ..Run(() =>
+            ],
+            new UICol().Class(w_[115], h_[30])[
+                new UIText("G").Class(middle_left, left_[5]),
+                Run(() =>
                 {
-                    Picker.GreenField = new UIField("0", Class(mc_[3], fs_[1], middle_left));
+                    Picker.GreenField = new UIField("0").Class(mc_[3], fs_[1], middle_left);
                     return [
-                    new UICol(Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0]), Sub(
-                        Picker.GreenField
-                    )),
-                    new UICol(Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(null, Picker.GreenField.GetByte() - 1, null)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[2], bg_white, middle_center))
-                    ]),
-                    new UICol(Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(null, Picker.GreenField.GetByte() + 1, null)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[0], bg_white, middle_center))
-                    ])];
+                        new UICol().Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0])[
+                            Picker.GreenField
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout)
+                        .OnClick(c => SetRGB(null, Picker.GreenField.GetByte() - 1, null))[
+                            new UIImg().Class(w_[20], h_[20], icon_[2], bg_white, middle_center)
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout)
+                        .OnClick(c => SetRGB(null, Picker.GreenField.GetByte() + 1, null))[
+                            new UIImg().Class(w_[20], h_[20], icon_[0], bg_white, middle_center)
+                        ]
+                    ];
                 })
-            ]),
-            new UICol(Class(w_[115], h_[30]), [
-                new UIText("B", Class(middle_left, left_[5])),
-                ..Run(() =>
+            ],
+            new UICol().Class(w_[115], h_[30])[
+                new UIText("B").Class(middle_left, left_[5]),
+                Run(() =>
                 {
-                    Picker.BlueField = new UIField("0", Class(mc_[3], fs_[1], middle_left));
+                    Picker.BlueField = new UIField("0").Class(mc_[3], fs_[1], middle_left);
                     return [
-                    new UICol(Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0]), Sub(
-                        Picker.BlueField
-                    )),
-                    new UICol(Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(null, null, Picker.BlueField.GetByte() - 1)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[2], bg_white, middle_center))
-                    ]),
-                    new UICol(Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout), 
-                    OnClickCol(c => SetRGB(null, null, Picker.BlueField.GetByte() + 1)), [
-                        new UIImg(Class(w_[20], h_[20], icon_[0], bg_white, middle_center))
-                    ])];
+                        new UICol().Class(w_full_minus_[60], h_[30], blank_full_g_[10], left_[20], border_[5, 0, 0, 0])[
+                            Picker.BlueField
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, right_[20], blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout)
+                        .OnClick(c => SetRGB(null, null, Picker.BlueField.GetByte() - 1))[
+                            new UIImg().Class(w_[20], h_[20], icon_[2], bg_white, middle_center)
+                        ],
+                        new UICol().Class(w_[20], h_full, top_right, blank_full, hover_color_[(0.3f, 0.3f, 0.3f, 0f), (0.3f, 0.3f, 0.3f, 1f)], hover_color_duration_[0.2f], hover_color_easeout)
+                        .OnClick(c => SetRGB(null, null, Picker.BlueField.GetByte() + 1))[
+                            new UIImg().Class(w_[20], h_[20], icon_[0], bg_white, middle_center)
+                        ]
+                    ];
                 })
-            ])
-        )),
-        new UICol(Class(w_[Picker.Width], h_[20], bottom_[5], bottom_center),
-        OnHold<UICol>(_ => SetBarColor(Input.GetMousePosition().X - Picker.ColorPickerPosition.X)),
-        Sub(
-            newImg(Class(w_[10], h_[16], right_[6], bottom_left, top_[4], depth_[10], blank_full, rgb_[1, 0, 0], border_ui_[3, 3, 3, 3], border_color_g_[40]), ref ColorBarSlider)
-        )) 
-    ));
+            ]
+        ],
+        new UICol().Class(w_[Picker.Width], h_[20], bottom_[5], bottom_center)
+        .OnHold(_ => SetBarColor(Input.GetMousePosition().X - Picker.ColorPickerPosition.X))[
+            new UIImg().Ref(ref ColorBarSlider).Class(w_[10], h_[16], right_[6], bottom_left, top_[4], depth_[10], blank_full, rgb_[1, 0, 0], border_ui_[3, 3, 3, 3], border_color_g_[40])
+        ]
+    ];
 
     public void SetRGB(Vector3i rgb, bool updatePicker = true) => SetRGB(rgb.X, rgb.Y, rgb.Z, updatePicker);
     public void SetRGB(int? r, int? g, int? b, bool updatePicker = true)

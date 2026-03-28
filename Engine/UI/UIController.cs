@@ -3,7 +3,8 @@ using PBG.Data;
 using PBG.MathLibrary;
 using TextCopy;
 using PBG.Core;
-using Silk.NET.Input;
+
+using System.Diagnostics;
 
 namespace PBG.UI
 {
@@ -117,7 +118,7 @@ namespace PBG.UI
             }
         }
 
-        public static void HandleInputs(Scene scene)
+        public static void HandleAllInputs()
         {
             for (int i = 0; i < _currentControllers.Count; i++)
             {
@@ -179,7 +180,7 @@ namespace PBG.UI
                 InteractableElementsSet.Add(element);
             }
 
-            if (element is IUICollection uiCollection)
+            if (element is IUICol uiCollection)
             {
                 uiCollection.ForeachChildren(Internal_AddElement);
             }
@@ -197,7 +198,7 @@ namespace PBG.UI
             
             element.Destroy();
 
-            if (element is IUICollection uiCollection)
+            if (element is IUICol uiCollection)
             {
                 uiCollection.ForeachChildren(Internal_RemoveElement);
             }
@@ -301,7 +302,7 @@ namespace PBG.UI
 
             if (key == Key.Enter && (ActiveInputField.UIController?.RemoveInputfieldOnEnter ?? true))
             {
-                ActiveInputField.OnTextEnter?.Invoke(ActiveInputField);
+                ActiveInputField._onTextEnter?.Invoke(ActiveInputField);
                 RemoveInputfield();
                 return;
             }
@@ -496,6 +497,8 @@ namespace PBG.UI
                 {
                     element.FirstPass();
                     element.SecondPass();
+                    if (!AddedElements.Contains(element))
+                        element.ApplyChanges(UIChange.Scale);
                 }
 
                 foreach (var element in AddedElements)
@@ -624,8 +627,6 @@ namespace PBG.UI
 
             GFX.Viewport(viewport.x, viewport.y, viewport.width, viewport.height);
         }
-
-        
 
         public static void GlobalRender()
         {

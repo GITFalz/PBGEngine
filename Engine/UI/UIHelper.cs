@@ -28,6 +28,7 @@ namespace PBG.UI
 
 
         public static UISize Px(this int value) => UISize.Pixels(value);
+        public static UISize Px(this uint value) => UISize.Pixels(value);
 
         public static UISize Pc(this int value) => UISize.Percent(value);
         public static UISize Pc(this float value) => UISize.Percent(value);
