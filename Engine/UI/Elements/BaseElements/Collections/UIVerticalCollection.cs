@@ -38,18 +38,12 @@ namespace PBG.UI
     
     public class UIVCol<TSelf> : UICol<TSelf> where TSelf : UIVCol<TSelf>
     {
+        protected virtual float TotalHeight => Border.Y;
+
         public UIVCol() : base() { Tag = UIElementTag.UIVerticalCollection; }
         
         public override void CollectionFirstPass()
         {
-            float offsetX(UIElementBase child) => child.IsLeftAligned() ? Border.X : (child.IsRightAligned() ? Border.Z : 0);
-
-            float maxWidth = 0;
-            float totalHeight = Border.Y;
-            
-            HashSet<UIElementBase> percentWidthChildren = [];
-            HashSet<UIElementBase> growChildren = [];
-
             if (!GrowFromChildren)
             {
                 CalculateHeight();
@@ -59,57 +53,149 @@ namespace PBG.UI
             {
                 CalculateWidth();
             }
-            
-            ForeachChildren(child =>
+
+            if (FitChildren)
+                HandleFitChildren();
+            else if (GrowFromChildren)
+                HandleGrowFromChildren();
+            else
+                HandleBasicFirstPass();
+        }
+
+        private void HandleBasicFirstPass()
+        {
+            float totalHeight = TotalHeight;
+
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
+                child.PercentAlignement = PercentAlignementType.None;
                 child.FirstPass();
                 if (!child.Visible && IgnoreInvisibleElements)
-                    return;
+                    continue;
 
-                float xOffset = offsetX(child);
-
+                float xOffset = OffsetX(child);
                 child.CollectionOffset = (xOffset, totalHeight);
+
+                totalHeight += child.BaseOffset.Y + child.Size.Y + Spacing;
+            };
+        }
+
+        /// <summary>
+        /// Calculates the width and horizontal offsets of child elements when using
+        /// a fit-children layout. Fixed-width children are allocated space first,
+        /// then remaining space is distributed between percentage-width children.
+        /// 
+        /// Percentage widths are normalized so that if multiple children use 100%,
+        /// they share the available space equally instead of overflowing.
+        /// </summary>
+        private void HandleFitChildren()
+        {
+            float availableHeight = Size.Y;
+            float totalHeight = TotalHeight;
+            float totalPercent = 0;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.FirstPass();
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+                    
+                if (child.Height.IsPercent())
+                {
+                    totalPercent += child.Height.Value;
+                }
+                else
+                {
+                    availableHeight -= child.Size.Y;
+                }
+            };
+
+            availableHeight -= (Spacing * (ChildElements.Count - 1)) + Border.Y + Border.W;
+            availableHeight = availableHeight.Max(0);
+
+            availableHeight *= 1 / totalPercent;
+
+            var sizeY = SizeY;
+            SizeY = availableHeight;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+
+                float xOffset = OffsetX(child);
+                child.CollectionOffset = (xOffset, totalHeight);
+
+                if (child.Height.IsPercent())
+                {
+                    child.CalculateHeight();
+                }
                 
-                if (GrowFromChildren && Width.IsNone())
+                totalHeight += child.BaseOffset.Y + child.Size.Y + Spacing;
+            }
+
+            SizeY = sizeY;
+        }
+
+        private void HandleGrowFromChildren()
+        {
+            float totalHeight = TotalHeight;
+            float maxWidth = 0;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.PercentAlignement = PercentAlignementType.None;
+                child.FirstPass();
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+
+                float xOffset = OffsetX(child);
+                child.CollectionOffset = (xOffset, totalHeight);
+
+                if (Width.IsNone())
                 {
                     if (child.Width.IsPercent())
-                    {
-                        percentWidthChildren.Add(child);
-                    }
+                        child.PercentAlignement = PercentAlignementType.Horizontal;
                     else
-                    {
                         maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
-                    }
                 }
 
                 totalHeight += child.BaseOffset.Y + child.Size.Y + Spacing;
-            });
-            if (GrowFromChildren)
-            {   
-                if (Width.IsNone())
-                    Width = UISize.None(maxWidth);
+            };
 
-                Height = UISize.Pixels(totalHeight - Spacing + Border.W);
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentWidthChildren, child =>
+            Height = UISize.Pixels(totalHeight - Spacing + Border.W);
+            if (Width.IsNone())
+                Width = UISize.None(maxWidth);
+
+            CalculateWidth();
+            CalculateHeight();
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                if (child.PercentAlignement.HasFlag(PercentAlignementType.Horizontal))
                 {
                     child.Width.AddedOffset = -(Border.X + Border.Z);
                     child.CalculateWidth();
-                });
-            }
+                }
+            };
         }
         
         public float GetTotalYSize()
         {
             float totalOffset = Border.Y;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Visible || !IgnoreInvisibleElements)
                 {
                     totalOffset += child.BaseOffset.Y + child.Size.Y + Spacing;
                 }
-            });
+            };
             return totalOffset - Spacing + Border.W;
         }
     }

@@ -52,68 +52,10 @@ namespace PBG.UI
     }   
     public class UIHScroll<TSelf> : UIHCol<TSelf> where TSelf : UIHScroll<TSelf>
     {
-        public UIHScroll() : base() { Tag = UIElementTag.UIHorizontalScrollView; }
-        
         public float ScrollPosition = 0;
+        protected override float TotalWidth => Border.X - ScrollPosition;
 
-        public override void CollectionFirstPass()
-        {
-            float offsetY(UIElementBase child) => child.IsTopAligned() ? Border.Y : (child.IsBottomAligned() ? Border.W : 0);
-
-            float totalWidth = Border.X - ScrollPosition;
-            float maxHeight = 0;
-            
-            HashSet<UIElementBase> percentHeightChildren = [];
-
-            if (!GrowFromChildren)
-            {
-                CalculateHeight();
-                CalculateWidth();
-            }
-            else if (!Height.IsNone())
-            {
-                CalculateWidth();
-            }
-            
-            ForeachChildren(child =>
-            {
-                child.FirstPass();
-                if (!child.Visible && IgnoreInvisibleElements)
-                    return;
-
-                float yOffset = offsetY(child);
-
-                child.CollectionOffset = (totalWidth, yOffset);
-
-                if (GrowFromChildren)
-                {
-                    if (child.Height.IsPercent() && Height.IsNone())
-                    {
-                        percentHeightChildren.Add(child);
-                    }
-                    else
-                    {
-                        maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
-                    }
-                }    
-                
-                totalWidth += child.BaseOffset.X + child.Size.X + Spacing;
-            });
-            if (GrowFromChildren)
-            {
-                Width = UISize.Pixels(totalWidth - Spacing + Border.Z);
-                if (Height.IsNone())
-                    Height = UISize.None(maxHeight);
-                    
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentHeightChildren, child =>
-                {
-                    child.Height.AddedOffset = -(Border.Y + Border.W);
-                    child.CalculateHeight();
-                });
-            }
-        }
+        public UIHScroll() : base() { Tag = UIElementTag.UIHorizontalScrollView; }
 
         public static void Scroll(UIHScroll scrollView)
         {
@@ -128,10 +70,11 @@ namespace PBG.UI
             float oldScrollPosition = scrollView.ScrollPosition;
             scrollView.ScrollPosition = Mathf.Clampy(newScroll, 0, max);
             float delta = scrollView.ScrollPosition - oldScrollPosition;
-            scrollView.ForeachChildren(child =>
+            for (int i = 0; i < scrollView.ChildElements.Count; i++)
             {
+                var child = scrollView.ChildElements[i];
                 child.CollectionOffset.X -= delta;
-            });
+            };
         
             scrollView.SecondPass();
             scrollView.UpdateTransform();

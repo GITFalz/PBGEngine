@@ -52,69 +52,10 @@ namespace PBG.UI
     }
     public class UIVScroll<TSelf> : UIVCol<TSelf> where TSelf : UIVScroll<TSelf>
     {
+        protected override float TotalHeight => Border.Y - ScrollPosition;
         public float ScrollPosition = 0;
 
         public UIVScroll() : base() { Tag = UIElementTag.UIVerticalScrollView; }
-
-        public override void CollectionFirstPass()
-        {
-            float offsetX(UIElementBase child) => child.IsLeftAligned() ? Border.X : (child.IsRightAligned() ? Border.Z : 0);
-
-            float maxWidth = 0;
-            float totalHeight = Border.Y - ScrollPosition;
-            
-            HashSet<UIElementBase> percentWidthChildren = [];
-            HashSet<UIElementBase> growChildren = [];
-
-            if (!GrowFromChildren)
-            {
-                CalculateHeight();
-                CalculateWidth();
-            }
-            else if (!Width.IsNone())
-            {
-                CalculateWidth();
-            }
-            
-            ForeachChildren(child =>
-            {
-                child.FirstPass();
-                if (!child.Visible && IgnoreInvisibleElements)
-                    return;
-
-                float xOffset = offsetX(child);
-
-                child.CollectionOffset = (xOffset, totalHeight);
-
-                if (GrowFromChildren && Width.IsNone())
-                {
-                    if (child.Width.IsPercent())
-                    {
-                        percentWidthChildren.Add(child);
-                    }
-                    else
-                    {
-                        maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
-                    }
-                }
-
-                totalHeight += child.BaseOffset.Y + child.Size.Y + Spacing;
-            });
-            if (GrowFromChildren)
-            {   
-                if (Width.IsNone())
-                    Width = UISize.None(maxWidth);
-
-                Height = UISize.Pixels(totalHeight - Spacing + Border.W);
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentWidthChildren, child =>
-                {
-                    child.Width.AddedOffset = -(Border.X + Border.Z);
-                    child.CalculateWidth();
-                });
-            }
-        }
 
         public static void Scroll(UIVScroll scrollView)
         {
@@ -129,10 +70,11 @@ namespace PBG.UI
             float oldScrollPosition = scrollView.ScrollPosition;
             scrollView.ScrollPosition = Mathf.Clampy(newScroll, 0, max);
             float delta = scrollView.ScrollPosition - oldScrollPosition;
-            scrollView.ForeachChildren(child =>
+            for (int i = 0; i < scrollView.ChildElements.Count; i++)
             {
+                var child = scrollView.ChildElements[i];
                 child.CollectionOffset.Y -= delta;
-            });
+            };
 
             scrollView.SecondPass();
             scrollView.UpdateTransform();

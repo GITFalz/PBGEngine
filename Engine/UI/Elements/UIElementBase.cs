@@ -11,6 +11,7 @@ namespace PBG.UI
     {
         public UIController? UIController = null;
         public UIElementBase? ParentElement = null;
+        public PercentAlignementType PercentAlignement = PercentAlignementType.None;
 
         public UIElementTag Tag = UIElementTag.Any;
 
@@ -170,13 +171,18 @@ namespace PBG.UI
             float depth = (ParentElement?.Transform.Z + 0.00001f ?? 0) + (Depth * 0.00001f);
             Transform = (Transform.X, Transform.Y, depth, Transform.W);
     
-            Vector2 offset = BaseOffset + CollectionOffset +AddedOffset + (ParentElement?.Origin ?? Vector2.Zero);
+            Vector2 offset = BaseOffset + CollectionOffset + AddedOffset + (ParentElement?.Origin ?? Vector2.Zero);
             Origin = _computeBaseOrigin[Alignement](width, height, Size.X, Size.Y) + offset;
 
             if (UIController != null)
             {
                 UIController.MaxDepth = Mathf.Max(UIController.MaxDepth, depth);
                 UIController?.CalculateBoundaries();
+            }
+
+            if (ParentElement is IUICol col && col.FitChildren)
+            {
+                Console.WriteLine(width + " " + height + " " + offset + " " + Origin + " " + Size);
             }
         }
 
@@ -403,5 +409,13 @@ namespace PBG.UI
         {
             return $"UIElement(Name: {Name}, Tag: {Tag}, Position: {Origin}, Size: {Size})";
         }
+    }
+
+    [Flags]
+    public enum PercentAlignementType
+    {
+        None,
+        Vertical,
+        Horizontal
     }
 }

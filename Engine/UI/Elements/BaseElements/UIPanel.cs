@@ -35,11 +35,6 @@ namespace PBG.UI
 
         public string GetName() => Name;
 
-        public override void FirstPass()
-        {
-            base.FirstPass();
-        }
-
         public override void UpdateChildMaskIndex(int index) => UIController?.UIMesh.UpdateMaskIndex(this, index);
         public override void UpdateTextureIndex(int textureIndex)
         {

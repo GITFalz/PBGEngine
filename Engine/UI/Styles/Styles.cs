@@ -193,6 +193,7 @@ namespace PBG.UI2
 
         public readonly static ValueStyle grow_children = new(e => { if (e is IUICol col) col.GrowFromChildren = true; });
         public readonly static ValueStyle fixed_size = new(e => { if (e is IUICol col) col.GrowFromChildren = false; });
+        public readonly static ValueStyle fit_children = new(e => { if (e is IUICol col) col.FitChildren = true; });
 
         public readonly static ValueStyle mask_children = new(e => { if (e is IUICol col) col.SetMaskChildren(true); });
         public readonly static ValueStyle no_mask = new(e => { if (e is IUICol col) col.SetMaskChildren(false); });

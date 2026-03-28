@@ -11,6 +11,7 @@ namespace PBG.UI
         int MaskIndex { get; set; }
         bool GrowFromChildren { get; set; }
         bool WasVisible { get; set; }
+        bool FitChildren { get; set; }
         void SetSpacing(float spacing);
         void SetBorder(Vector4 border);
         void SetBorderX(float x);
@@ -24,9 +25,8 @@ namespace PBG.UI
         void SetForceToggleVisible(bool force);
         void SetMaskChildren(bool mask);
         bool ContainsHoveringScrollView();
-
         void UpdateMaskIndices();
-        void ForeachChildren(Action<UIElementBase> action);
+        List<UIElementBase> GetChildren();
         public UIElementBase AddElement(UIElementBase element);
     }
     public class UICol : UICol<UICol>
@@ -76,6 +76,7 @@ namespace PBG.UI
         public bool MaskChildren = false;
         public bool ForceToggleVisible = true;
         public bool WasVisible { get; set; } = true;
+        public bool FitChildren { get; set; } = false;
 
         public List<UIElementBase> ChildElements = [];
 
@@ -95,103 +96,118 @@ namespace PBG.UI
         public void SetGrowFromChildren(bool grow) => GrowFromChildren = grow;
         public void SetForceToggleVisible(bool force) => ForceToggleVisible = force;
         public void SetMaskChildren(bool mask) => MaskChildren = mask;
+        public List<UIElementBase> GetChildren() => ChildElements;
 
         public override void FirstPass()
         {
             CollectionFirstPass();
-            base.FirstPass();
         }
+
+        protected float OffsetX(UIElementBase child) => child.IsLeftAligned() ? Border.X : (child.IsRightAligned() ? Border.Z : 0);
+        protected float OffsetY(UIElementBase child) => child.IsTopAligned() ? Border.Y : (child.IsBottomAligned() ? Border.W : 0);
 
         public virtual void CollectionFirstPass()
         {
-            float offsetX(UIElementBase child) => child.IsLeftAligned() ? Border.X : (child.IsRightAligned() ? Border.Z : 0);
-            float offsetY(UIElementBase child) => child.IsTopAligned() ? Border.Y : (child.IsBottomAligned() ? Border.W : 0);
+            bool notGrowOrFit = !GrowFromChildren || FitChildren;
+            if (notGrowOrFit || !Width.IsNone())
+                CalculateWidth();
 
+            if (notGrowOrFit || !Height.IsNone())
+                CalculateHeight();
+            
+            if (GrowFromChildren && !FitChildren)
+                HandleGrowFromChildren();
+            else
+                HandleBasicFirstPass();
+        }
+
+        private void HandleBasicFirstPass()
+        {
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.PercentAlignement = PercentAlignementType.None;
+                child.FirstPass();
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+
+                float xOffset = OffsetX(child);
+                float yOffset = OffsetY(child);
+
+                child.CollectionOffset = (xOffset, yOffset);
+            }
+        }
+
+        private void HandleGrowFromChildren()
+        {
             float maxWidth = 0;
             float maxHeight = 0;
 
-            HashSet<UIElementBase> percentWidthChildren = [];
-            HashSet<UIElementBase> percentHeightChildren = [];
-
-            if (!GrowFromChildren || !Width.IsNone())
+            for (int i = 0; i < ChildElements.Count; i++)
             {
-                CalculateWidth();
-            }
-
-            if (!GrowFromChildren || !Height.IsNone())
-            {
-                CalculateHeight();
-            }
-
-            ForeachChildren(child =>
-            {
+                var child = ChildElements[i];
+                child.PercentAlignement = PercentAlignementType.None;
                 child.FirstPass();
                 if (!child.Visible && IgnoreInvisibleElements)
-                    return;
+                    continue;
 
-                float xOffset = offsetX(child);
-                float yOffset = offsetY(child);
+                float xOffset = OffsetX(child);
+                float yOffset = OffsetY(child);
 
                 child.CollectionOffset = (xOffset, yOffset);
 
-                if (GrowFromChildren)
-                {
-                    if (child.Width.IsPercent())
-                    {
-                        percentWidthChildren.Add(child);
-                    }
-                    else
-                    {
-                        maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
-                    }
+                if (child.Width.IsPercent())
+                    child.PercentAlignement |= PercentAlignementType.Horizontal;
+                else
+                    maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
 
-                    if (child.Height.IsPercent())
-                    {
-                        percentHeightChildren.Add(child);
-                    }
-                    else
-                    {
-                        maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
-                    }
-                }
-            });
-            if (GrowFromChildren)
+                if (child.Height.IsPercent())
+                    child.PercentAlignement |= PercentAlignementType.Vertical;
+                else
+                    maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
+            }
+            
+            if (!Width.IsPercent())
+                Width = UISize.Pixels(maxWidth);
+            if (!Height.IsPercent())
+                Height = UISize.Pixels(maxHeight);
+
+            CalculateWidth();
+            CalculateHeight();
+
+            for (int i = 0; i < ChildElements.Count; i++)
             {
-                if (!Width.IsPercent())
-                    Width = UISize.Pixels(maxWidth);
-                if (!Height.IsPercent())
-                    Height = UISize.Pixels(maxHeight);
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentWidthChildren, child =>
+                var child = ChildElements[i];
+                if (child.PercentAlignement.HasFlag(PercentAlignementType.Horizontal))
                 {
                     child.Width.AddedOffset = -(Border.X + Border.Z);
                     child.CalculateWidth();
-                });
-                ForeachChildren(percentHeightChildren, child =>
+                }
+
+                if (child.PercentAlignement.HasFlag(PercentAlignementType.Vertical))
                 {
                     child.Height.AddedOffset = -(Border.Y + Border.W);
                     child.CalculateHeight();
-                    child.CalculateHeight();
-                });
+                }
             }
         }
 
         public override void SecondPass()
         {
-            CalculateHeight();
-            CalculateWidth();
             base.SecondPass();
+
             if (MaskChildren)
             {
                 (Vector2 topLeft, Vector2 bottomRight) = GetMaskCorners();
                 ControllerCheck().MaskData.AddElement(this, topLeft, bottomRight);
             }
-            ForeachChildren(child =>
+
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.MaskIndex = MaskChildren ? MaskIndex : (child.ParentElement?.MaskIndex ?? -1);
                 child.SecondPass();
-            });
+            }
         }
 
         public (Vector2 topLeft, Vector2 bottomRight) GetMaskCorners()
@@ -210,10 +226,11 @@ namespace PBG.UI
         public override void UpdateChildMaskIndex(int index)
         {
             base.UpdateChildMaskIndex(index);
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.UpdateChildMaskIndex(index);
-            });
+            }
         }
 
         public override bool GetMaskPanel([NotNullWhen(true)] out Rendering.Mask.UIMaskStruct? mask) => ControllerCheck().MaskData.GetMask(MaskIndex, out mask);
@@ -222,7 +239,11 @@ namespace PBG.UI
             (Vector2 topLeft, Vector2 bottomRight) = GetMaskCorners();
             UIController?.MaskData.UpdateTransform(this, topLeft, bottomRight);
             base.UpdateTransform();
-            ForeachChildren(child => child.UpdateTransform());
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.UpdateTransform();
+            }
             return this;
         }
         public override UIElementBase UpdateScale()
@@ -230,40 +251,47 @@ namespace PBG.UI
             (Vector2 topLeft, Vector2 bottomRight) = GetMaskCorners();
             UIController?.MaskData.UpdateScale(this, topLeft, bottomRight);
             base.UpdateScale();
-            ForeachChildren(child => child.UpdateScale());
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.UpdateScale();
+            }
             return this;
         }
 
         public override UIElementBase UpdateAnimationTranslation()
         {
             base.UpdateAnimationTranslation();
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.AnimationTranslation = AnimationTranslation;
                 child.UpdateAnimationTranslation();
-            });
+            }
             return this;
         }
 
         public override UIElementBase UpdateAnimationScale()
         {
             base.UpdateAnimationScale();
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.AnimationScale = AnimationScale;
                 child.UpdateAnimationScale();
-            });
+            }
             return this;
         }
 
         public override UIElementBase UpdateAnimationRotation()
         {
             base.UpdateAnimationRotation();
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.AnimationRotation = AnimationRotation;
                 child.UpdateAnimationRotation();
-            });
+            }
             return this;
         }
 
@@ -281,7 +309,11 @@ namespace PBG.UI
                 return this;
             
             base.SetVisible(visible);
-            ForeachChildren(child => child.SetVisible(visible));
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.SetVisible(visible);
+            }
             SetVisibleBefore = false;
             return this;
         }
@@ -307,15 +339,15 @@ namespace PBG.UI
         public override T? GetElement<T>() where T : class
         {
             T? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child is T typed)
                 {
                     element = typed;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -323,34 +355,34 @@ namespace PBG.UI
         {
             int count = 0;
             T? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child is T typed)
                 {
                     if (count == number || number <= 0)
                     {
                         element = typed;
-                        return false;
+                        break;
                     }
                     count++;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
         public override UIElementBase? GetElement(UIElementTag tag)
         {
             UIElementBase? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Tag == tag)
                 {
                     element = child;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -358,49 +390,49 @@ namespace PBG.UI
         {
             int count = 0;
             UIElementBase? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Tag == tag)
                 {
                     if (count == number || number <= 0)
                     {
                         element = child;
-                        return false;
+                        break;
                     }
                     count++;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
         public override UIElementBase? GetElement(string name)
         {
             UIElementBase? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Name == name)
                 {
                     element = child;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
         public override T? GetElement<T>(string name) where T : class
         {
             T? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Name == name && child is T t)
                 {
                     element = t;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -408,19 +440,19 @@ namespace PBG.UI
         {
             int count = 1;
             UIElementBase? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Name == name)
                 {
                     if (count == number || number <= 0)
                     {
                         element = child;
-                        return false;
+                        break;
                     }
                     count++;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -430,16 +462,16 @@ namespace PBG.UI
                 return typed;
 
             T? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 var e = child.QueryElement<T>();
                 if (e != null)
                 {
                     element = e;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -449,28 +481,32 @@ namespace PBG.UI
             if (this is T typed)
                 elements.Add(typed);
                 
-            ForeachChildren(child => elements.AddRange(child.QueryElements<T>()));
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                elements.AddRange(child.QueryElements<T>());
+            }
             return elements;
         }
 
         public override UIElementBase? QueryElement(string name)
         {
             UIElementBase? element = null;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Name == name)
                 {
                     element = child;
-                    return false;
+                    break;
                 }
                 var e = child.QueryElement(name);
                 if (e != null)
                 {
                     element = e;
-                    return false;
+                    break;
                 }
-                return true;
-            });
+            }
             return element;
         }
 
@@ -536,52 +572,11 @@ namespace PBG.UI
 
         public virtual void DeleteChildren()
         {
-            ForeachChildren(child => child.Delete());
-        }
-
-        public void ForeachChildren(Action<UIElementBase> action)
-        {
-            List<UIElementBase> copy = [.. ChildElements];
-            for (int i = 0; i < copy.Count; i++)
+            UIElementBase[] copy = [..ChildElements];
+            for (int i = 0; i < copy.Length; i++)
             {
-                action(copy[i]);
-            }
-        }
-
-        public void ForeachChildren(Func<UIElementBase, bool> action)
-        {
-            List<UIElementBase> copy = [.. ChildElements];
-            for (int i = 0; i < copy.Count; i++)
-            {
-                if (!action(copy[i]))
-                    return;
-            }
-        }
-
-        public void ForeachChildren(Action<UIElementBase, int> action)
-        {
-            List<UIElementBase> copy = [.. ChildElements];
-            for (int i = 0; i < copy.Count; i++)
-            {
-                action(copy[i], i);
-            }
-        }
-
-        public static void ForeachChildren(List<UIElementBase> children, Action<UIElementBase> action)
-        {
-            List<UIElementBase> copy = [.. children];
-            for (int i = 0; i < copy.Count; i++)
-            {
-                action(copy[i]);
-            }
-        }
-        
-        public static void ForeachChildren(HashSet<UIElementBase> children, Action<UIElementBase> action)
-        {
-            List<UIElementBase> copy = [..children];
-            for (int i = 0; i < copy.Count; i++)
-            {
-                action(copy[i]);
+                var child = copy[i];
+                child.Delete();
             }
         }
     }
