@@ -16,6 +16,7 @@ public unsafe class GraphicsContext
 {
     public const int MAX_FRAMES_IN_FLIGHT = 2;
     public static GraphicsContext graphicsContext;
+    public static bool IsFocused { get; private set; }
 
     public int Width;
     public int Height;
@@ -96,6 +97,10 @@ public unsafe class GraphicsContext
         options.VSync  = VSync;
 
         window = Window.Create(options);
+        window.FocusChanged += focus =>
+        {
+            IsFocused = focus;
+        };
 
         shaderCompiler = new();
         shaderBuffer = new(this);

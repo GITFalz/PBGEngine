@@ -4,7 +4,9 @@ namespace PBG.Core;
 
 public abstract class Node
 {
+    public string Name = "";
     public Scene Scene = null!;
+    public Node ParentNode = null!;
     public List<TransformNode> Children = [];
 
     public TransformNode GetNode(string path)
@@ -34,6 +36,24 @@ public abstract class Node
 
         // If no child matches
         throw new Exception($"Node not found: {path}");
+    }
+
+    public TransformNode AddChild(string name)
+    {
+        name = GetUniqueName(name);
+        TransformNode node = new(name, Scene);
+        Children.Add(node);
+        node.ParentNode = this;
+        Scene.SetAsPending(node);
+        return node;
+    }
+
+    public TransformNode[] AddChild(params string[] children)
+    {
+        TransformNode[] nodes = new TransformNode[children.Length];
+        for (int i = 0; i < children.Length; i++)
+            nodes[i] = AddChild(children[i]);
+        return nodes;
     }
 
     public bool GetNode(string path, [NotNullWhen(true)] out TransformNode? node)

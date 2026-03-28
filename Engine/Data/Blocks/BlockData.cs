@@ -168,6 +168,9 @@ namespace PBG.Voxel
             uint i = 0;
             foreach (var (name, id) in Palette.Ids)
             {
+                if (BlockNames.ContainsKey(name))
+                    continue;
+                    
                 var definition = new BlockDefinition();
                 if (BlockJsonDictionary.TryGetValue(name, out var blockJson))
                 {

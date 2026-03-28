@@ -3,25 +3,45 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using PBG.MathLibrary;
 
+
 namespace PBG.Core
 {
     public unsafe class TransformNode : Node
     {
-        public string Name;
         public Vector3 Position = Vector3.Zero;
         public Vector3 Scale = Vector3.One;
-        public Quaternion Rotation = Quaternion.Identity;
 
-        private List<ScriptingNode> _pendingComponents = [];
+        public Quaternion Rotation
+        {
+            get => _rotation;
+            set
+            {
+                _rotation = value;
+                _eulerRotation = Mathf.RadiansToDegrees(_rotation.ToEuler());
+            }
+        }
+        private Quaternion _rotation = Quaternion.Identity;
+
+        public Vector3 EulerRotation
+        {
+            get => _eulerRotation;
+            set
+            {
+                _eulerRotation = value;
+                _rotation = Quaternion.FromEuler(Mathf.DegreesToRadians(_eulerRotation));
+            }
+        }
+        private Vector3 _eulerRotation = Vector3.Zero;
+
+        private HashSet<ScriptingNode> _scriptHash = [];
         public List<ScriptingNode> Components = new();
+        private List<ScriptingNode> _addedNodes = [];
 
         public bool Disabled = false;
 
-        public TransformNode ParentNode = null!;
-
-        private unsafe struct ScriptCall(ScriptingNode node)
+        private unsafe struct ScriptCall(ScriptingNode node, MethodInfo mi)
         {
-            public delegate*<ScriptingNode, void> Ptr;
+            public delegate*<ScriptingNode, void> Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer();
             public ScriptingNode Instance = node;
             public void Invoke() => Ptr(Instance);
         }
@@ -42,106 +62,99 @@ namespace PBG.Core
             Scene = scene;
         }
 
+        internal TransformNode()
+        {
+            Name = "";
+        }
+
         public void AddComponent(ScriptingNode component)
         {
             component.Transform = this;
             component.Scene = Scene;
 
-            if (!_pendingComponents.Contains(component) && !Components.Contains(component))
+            if (_scriptHash.Add(component))
             {
-                // Add the component to the main list.
-                // Note: Its logic/code shouldn't execute immediately. This ensures that
-                // the node tree updates instantly, while scripts with dependencies on other
-                // components are added together to maintain synchronization.
                 Components.Add(component); 
-
-                _pendingComponents.Add(component);
+                _addedNodes.Add(component);
+                Scene.SetAsPending(this);
             }
         }
 
+        public void RemoveScript(ScriptingNode script)
+        {
+            if (_scriptHash.Remove(script))
+            {
+                Components.Remove(script); 
+                if (script.GetMethod("Exit", out var mi)) new ScriptCall(script, mi).Invoke();
+                if (script.GetMethod("Dispose", out mi)) new ScriptCall(script, mi).Invoke();
+                Scene.SetAsPending(this);
+            }
+        }
+
+        public Matrix4 GetModelMatrix() => Matrix4.CreateTranslation(Position) * Matrix4.CreateFromQuaternion(Rotation) * Matrix4.CreateScale(Scale);
+
+        // Awake is called when a script is loaded, Start is only called once when the script is created
         public override void InitAwake()
         {
-            int awakeCount = 0;
+            if (Scene.IsPending(this))
+                return;
+
+            List<ScriptCall> onAwake = [];
 
             for (int i = 0; i < Components.Count; i++)
             {
                 var component = Components[i];
-                if (!_pendingComponents.Contains(component) && component.GetMethod("Awake", out _)) awakeCount++;
+                if (component.GetMethod("Awake", out var mi)) onAwake.Add(new(component, mi));
             }
-
-            OnAwake = new ScriptCall[awakeCount];
-            int a = 0;
-
-            for (int i = 0; i < Components.Count; i++)
-            {
-                var component = Components[i];
-                if (!_pendingComponents.Contains(component) && component.GetMethod("Awake", out MethodInfo? mi)) OnAwake[a++] = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer() };
-            }
+            
+            OnAwake = [..onAwake];
 
             base.InitAwake();
         }
 
-        public void InitPendingComponents()
+        internal void InitPendingComponents()
         {
-            int startCount = 0, awakeCount = 0, resizeCount = 0, fixedUpdateCount = 0;
-            int updateCount = 0, lateUpdateCount = 0, renderCount = 0, exitCount = 0, disposeCount = 0;
+            List<ScriptCall> onStart = [];
+            List<ScriptCall> onAwake = [];
+            List<ScriptCall> onResize = [];
+            List<ScriptCall> onFixedUpdate = [];
+            List<ScriptCall> onUpdate = [];
+            List<ScriptCall> onLateUpdate = [];
+            List<ScriptCall> onRender = [];
+            List<ScriptCall> onExit = [];
+            List<ScriptCall> onDispose = [];
 
-            for (int i = 0; i < _pendingComponents.Count; i++)
+            for (int i = 0; i < Components.Count; i++)
             {
-                var component = _pendingComponents[i];
-                if (component.GetMethod("Start", out _)) startCount++;
-                if (component.GetMethod("Awake", out _)) awakeCount++;
-                if (component.GetMethod("Resize", out _)) resizeCount++;
-                if (component.GetMethod("FixedUpdate", out _)) fixedUpdateCount++;
-                if (component.GetMethod("Update", out _)) updateCount++;
-                if (component.GetMethod("LateUpdate", out _)) lateUpdateCount++;
-                if (component.GetMethod("Render", out _)) renderCount++;
-                if (component.GetMethod("Exit", out _)) exitCount++;
-                if (component.GetMethod("Dispose", out _)) disposeCount++;
+                var component = Components[i];
+                if (component.GetMethod("Resize", out var mi))  onResize.Add(new(component, mi));
+                if (component.GetMethod("FixedUpdate", out mi)) onFixedUpdate.Add(new(component, mi));
+                if (component.GetMethod("Update", out mi))      onUpdate.Add(new(component, mi));
+                if (component.GetMethod("LateUpdate", out mi))  onLateUpdate.Add(new(component, mi));
+                if (component.GetMethod("Render", out mi))      onRender.Add(new(component, mi));
+                if (component.GetMethod("Exit", out mi))        onExit.Add(new(component, mi));
+                if (component.GetMethod("Dispose", out mi))     onDispose.Add(new(component, mi));
             }
 
-            OnStart      = ResizeAndCopy(OnStart, startCount);
-            OnAwake      = ResizeAndCopy(OnAwake, awakeCount);
-            OnResize     = ResizeAndCopy(OnResize, resizeCount);
-            OnFixedUpdate= ResizeAndCopy(OnFixedUpdate, fixedUpdateCount);
-            OnUpdate     = ResizeAndCopy(OnUpdate, updateCount);
-            OnLateUpdate = ResizeAndCopy(OnLateUpdate, lateUpdateCount);
-            OnRender     = ResizeAndCopy(OnRender, renderCount);
-            OnExit       = ResizeAndCopy(OnExit, exitCount);
-            OnDispose    = ResizeAndCopy(OnDispose, disposeCount);
-
-            int s = OnStart.Length - startCount;
-            int a = OnAwake.Length - awakeCount;
-            int r = OnResize.Length - resizeCount;
-            int f = OnFixedUpdate.Length - fixedUpdateCount;
-            int u = OnUpdate.Length - updateCount;
-            int l = OnLateUpdate.Length - lateUpdateCount;
-            int re= OnRender.Length - renderCount;
-            int e = OnExit.Length - exitCount;
-            int d = OnDispose.Length - disposeCount;
-
-            for (int i = 0; i < _pendingComponents.Count; i++)
+            // only newly added components can have Start and Awake called
+            for (int i = 0; i < _addedNodes.Count; i++)
             {
-                var component = _pendingComponents[i];
-                if (component.GetMethod("Start", out var mi))   OnStart[s++]       = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Awake", out mi))       OnAwake[a++]       = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Resize", out mi))      OnResize[r++]      = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("FixedUpdate", out mi)) OnFixedUpdate[f++] = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Update", out mi))      OnUpdate[u++]      = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("LateUpdate", out mi))  OnLateUpdate[l++]  = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Render", out mi))      OnRender[re++]     = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Exit", out mi))        OnExit[e++]        = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
-                if (component.GetMethod("Dispose", out mi))     OnDispose[d++]     = new(component) { Ptr = (delegate*<ScriptingNode, void>)mi.MethodHandle.GetFunctionPointer()};
+                var component = _addedNodes[i];
+                if (component.GetMethod("Start", out var mi))   onStart.Add(new(component, mi));
+                if (component.GetMethod("Awake", out mi))       onAwake.Add(new(component, mi));
             }
+            
+            OnStart =       [..onStart];
+            OnAwake =       [..onAwake];
+            OnResize =      [..onResize];
+            OnFixedUpdate = [..onFixedUpdate];
+            OnUpdate =      [..onUpdate];
+            OnLateUpdate =  [..onLateUpdate];
+            OnRender =      [..onRender];
+            OnExit =        [..onExit];
+            OnDispose =     [..onDispose];
 
-            _pendingComponents.Clear();
-        }
-
-        private ScriptCall[] ResizeAndCopy(ScriptCall[] existing, int additional)
-        {
-            var newArr = new ScriptCall[existing.Length + additional];
-            Array.Copy(existing, newArr, existing.Length);
-            return newArr;
+            _addedNodes = [];
         }
 
         public T? TryGetComponent<T>() where T : ScriptingNode
@@ -193,28 +206,6 @@ namespace PBG.Core
         {
             for (int i = 0; i < components.Length; i++)
                 AddComponent(components[i]);
-        }
-
-
-        public TransformNode AddChild(string name)
-        {
-            name = GetUniqueName(name);
-            TransformNode node = new(name, Scene);
-            Children.Add(node);
-            node.ParentNode = this;
-            
-            if (!Scene.PendingList.Contains(node))
-                Scene.PendingList.Add(node);
-
-            return node;
-        }
-
-        public TransformNode[] AddChild(params string[] children)
-        {
-            TransformNode[] nodes = new TransformNode[children.Length];
-            for (int i = 0; i < children.Length; i++)
-                nodes[i] = AddChild(children[i]);
-            return nodes;
         }
 
         public void Start()

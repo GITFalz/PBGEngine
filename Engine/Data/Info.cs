@@ -6,7 +6,7 @@ using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
 using PBG.UI.Creator;
-using static PBG.UI.Styles;
+using static PBG.UI2.Styles;
 
 namespace PBG.Data;
 
@@ -97,29 +97,29 @@ public class Info : ScriptingNode
     private class InfoUI : UIScript
     {
         public override UIElementBase Script() =>
-        new UIVCol(Class(top_[5], left_[5]), Sub([
-            new UIVCol(Class(spacing_[5]), Sub([
-                new UIText("--General--", Class(mc_[11], fs_[1])),
-                newText("Fps: 9999", Class(mc_[11], fs_[1]), ref FpsText),
-                //newText($"GPU: {GL.GetString(StringName.Renderer)}", Class(mc_[100], fs_[1]), ref GPUText),
-                newText("0", Class(mc_[15], fs_[1]), ref RamUsageText),
-                new UIText("--Chunks--", Class(mc_[11], fs_[1])),
-                newText("0", Class(mc_[50], fs_[1]), ref RenderedChunks),
-                newText("0", Class(mc_[50], fs_[1]), ref TotalChunks),
-                newText("0", Class(mc_[50], fs_[1]), ref GenerationQueueText),
-                newText("0", Class(mc_[50], fs_[1]), ref RenderingQueueText),
-                newText("0", Class(mc_[50], fs_[1]), ref GlobalChunkVertexCount),
-                newText("0", Class(mc_[50], fs_[1]), ref AverageChunkRenderingText),
-                newText("0", Class(mc_[50], fs_[1]), ref AverageChunkGenerationText),
-                new UIText("--VRam--", Class(mc_[8], fs_[1])),
-                newText("0", Class(mc_[100], fs_[1]), ref VramTotalText),
-                newText("0", Class(mc_[100], fs_[1]), ref VramFreeText),
-                newText("0", Class(mc_[100], fs_[1]), ref VramUsedText),
-                newText("0%", Class(mc_[100], fs_[1]), ref VramPrecentText),
-                new UIText("--Player--", Class(mc_[8], fs_[1])),
-                newText("x y z:  0  0  0", Class(mc_[100], fs_[1]) , ref PositionText)
-            ])),
-        ]));
+        new UIVCol().Class(top_[5], left_[5])[
+            new UIVCol().Class(spacing_[5])[
+                new UIText("--General--").Class(mc_[11], fs_[1]),
+                new UIText("Fps: 9999").Class(mc_[11], fs_[1]).Ref(ref FpsText),
+                //new UIText($"GPU: {GL.GetString(StringName.Renderer)}").Class(mc_[100], fs_[1]).Ref(ref GPUText),
+                new UIText("0").Class(mc_[15], fs_[1]).Ref(ref RamUsageText),
+                new UIText("--Chunks--").Class(mc_[11], fs_[1]),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref RenderedChunks),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref TotalChunks),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref GenerationQueueText),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref RenderingQueueText),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref GlobalChunkVertexCount),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref AverageChunkRenderingText),
+                new UIText("0").Class(mc_[50], fs_[1]).Ref(ref AverageChunkGenerationText),
+                new UIText("--VRam--").Class(mc_[8], fs_[1]),
+                new UIText("0").Class(mc_[100], fs_[1]).Ref(ref VramTotalText),
+                new UIText("0").Class(mc_[100], fs_[1]).Ref(ref VramFreeText),
+                new UIText("0").Class(mc_[100], fs_[1]).Ref(ref VramUsedText),
+                new UIText("0%").Class(mc_[100], fs_[1]).Ref(ref VramPrecentText),
+                new UIText("--Player--").Class(mc_[8], fs_[1]),
+                new UIText("x y z:  0  0  0").Class(mc_[100], fs_[1]) .Ref(ref PositionText)
+            ]
+        ];
     }
 
     void Update()

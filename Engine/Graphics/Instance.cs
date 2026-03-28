@@ -1,7 +1,12 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PBG.Core;
 using PBG.Data;
+using PBG.Editor;
 using PBG.MathLibrary;
+using PBG.Threads;
+using PBG.UI;
+using PBG.Voxel;
 using Silk.NET.Core;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -45,6 +50,9 @@ public unsafe class VulkanInstance
     private IInputContext? input = null;
 
     private bool _isLoading = true;
+    
+    private Scene EditorScene;
+    private UIController EditorController;
 
     public VulkanInstance(GameWindow gameWindow, int width, int height)
     {
@@ -113,8 +121,44 @@ public unsafe class VulkanInstance
 
         gameWindow.Keyboard = input.Keyboards[0];
         gameWindow.Mouse = input.Mice[0];
-         
+        
         InitVulkan();
+
+        Input.Start(input.Mice[0]);
+
+        Material.Init();
+
+        BlockData.Init();
+        ItemDataManager.Init();
+        ItemDataManager.GenerateIcons();
+        UIData.Init();
+
+        VoxelChunkGenerator.InitCache();
+        SceneBlueprint.Init();
+
+        string outputPath = Game.CurrentProjectPath / (Path.GetFileName(Game.CurrentProjectPath) + ".dll");
+        if (!HotReloadManager.Compile(Game.CurrentProjectPath, outputPath))
+            Console.WriteLine("[Error] : Failed to create project dll, this should not happen");
+        
+        HotReloadManager.Load(outputPath);
+
+        EditorScene = new();
+
+        var editorNode = EditorScene.NewNode("Editor");
+
+        EditorController = new UIController();
+        var editorUI = new EditorUI();
+        var folderMenu = new FolderMenu();
+        var fileMover = new FileMover();
+        EditorController.AddElements([editorUI, folderMenu, fileMover]);
+
+        var editorManager = new EditorManager(editorUI);
+
+        editorNode.AddComponent(EditorController, editorManager);
+        editorNode.InitPendingComponents();
+
+        editorNode.Start();
+
         gameWindow.OnLoad();
     }
 
@@ -129,6 +173,7 @@ public unsafe class VulkanInstance
         RecreateSwapChain();
         
         gameWindow.OnResize(context.Width, context.Height);
+        EditorScene.Resize();
         BufferBase.ResizeAll((uint)context.Width, (uint)context.Height);
     }
 
@@ -136,9 +181,24 @@ public unsafe class VulkanInstance
     {
         if (_isLoading)
             return;
-            
+
+        Input.Update(gameWindow.Mouse);
+        GameTime.Update((float)deltaSeconds);
         BufferBase.DisposeCached();
+
+        EditorController.HandleInputs();
+
+        Scene.LoadSceneFinal();
+        UIController.HandleAllInputs();
+        Scene.CurrentScene?.UpdatePending();
+        
         gameWindow.OnUpdate(deltaSeconds);
+        
+        TaskPool.Update();
+        EditorWatcher.UpdateAll();
+
+        EditorScene.UpdatePending();
+        EditorScene.Update();
     }
 
     #region Instance
@@ -990,6 +1050,9 @@ public unsafe class VulkanInstance
         else
         {
             gameWindow.OnRender();
+            UIController.ClearFrameBuffer();
+            EditorScene.Render();
+            UIController.GlobalRender();
         }
 
         context.vk.CmdEndRenderPass(commandBuffer);
@@ -1009,6 +1072,7 @@ public unsafe class VulkanInstance
         ShaderBuffer.Dispose();
 
         gameWindow.OnUnload();
+        EditorScene.Dispose();
 
         Dispose();
     }

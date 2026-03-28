@@ -1,18 +1,14 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using PBG.Core;
 using PBG.Data;
+using PBG.Editor;
 using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Rendering;
 using PBG.Threads;
 using PBG.UI;
-using PBG.Voxel;
 using Silk.NET.Input;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-
 namespace PBG;
 
 public class Game : GameWindow
@@ -36,6 +32,8 @@ public class Game : GameWindow
     public static PString CustomPath = FileManager.CreatePath(MainPath, "custom");
     public static PString CustomTempPath = FileManager.CreatePath(CustomPath, "temp");
 
+    public static PString ProjectsPath = FileManager.CreatePath(MainPath, "Projects");
+    public static PString CurrentProjectPath = FileManager.CreatePath(ProjectsPath, "project_1");
 
     double accumulator = 0.0;
     double accumulator2 = 0.0;
@@ -67,106 +65,51 @@ public class Game : GameWindow
         //GraphicsContext.graphicsContext.window.FramesPerSecond = 20;
     }
 
-    public override void OnKeyDown(IKeyboard keyboard, Key key, int scanCode)
+    public override void OnKeyDown(Silk.NET.Input.IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        Input.OnKeyDown(key);
-        UIController.InputField(key);
+        Data.Input.OnKeyDown((Data.Key)key);
+        UIController.InputField((Data.Key)key);
     }
 
-    public override void OnKeyUp(IKeyboard keyboard, Key key, int scanCode)
+    public override void OnKeyUp(Silk.NET.Input.IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        Input.OnKeyUp(key);
+        Data.Input.OnKeyUp((Data.Key)key);
     }
     
-    public override void OnKeyChar(IKeyboard keyboard, char c)
+    public override void OnKeyChar(Silk.NET.Input.IKeyboard keyboard, char c)
     {
         
     }
     
-    public override void OnMouseMove(IMouse mouse, Vector2 position)
+    public override void OnMouseMove(Silk.NET.Input.IMouse mouse, Vector2 position)
     {
         
     }
     
-    public override void OnMouseDown(IMouse mouse, MouseButton button)
+    public override void OnMouseDown(Silk.NET.Input.IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        Input.OnMouseDown(button);
+        Data.Input.OnMouseDown((Data.MouseButton)button);
     }
     
-    public override void OnMouseUp(IMouse mouse, MouseButton button)
+    public override void OnMouseUp(Silk.NET.Input.IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        Input.OnMouseUp(button);
+        Data.Input.OnMouseUp((Data.MouseButton)button);
     }
     
-    public override void OnScroll(IMouse mouse, ScrollWheel scroll)
+    public override void OnScroll(Silk.NET.Input.IMouse mouse, Silk.NET.Input.ScrollWheel scroll)
     {
-        Input.OnMouseWheel((scroll.X, scroll.Y));
+        Data.Input.OnMouseWheel((scroll.X, scroll.Y));
     }
     
 
     public override void OnLoad()
     {
-        Input.Start(Mouse);
-
-        BlockData.Init();
-        //WeaponData.Init();
-        ItemDataManager.Init();
-
-        VoxelChunkGenerator.InitCache();
-
-        Type[] subClasses;
-        /*
-        var subClasses = ASettings.GetSubclasses();
-        Console.WriteLine("There are " + subClasses.Length + " settings");
-        for (int i = 0; i < subClasses.Length; i++)
-        {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " settings");
-            var instance = Activator.CreateInstance(subClass);
-            if (instance != null)
-                SettingsManager.Register((ASettings)instance);
-        }
-        SettingsManager.InitializeUI();
-        */
-
-        subClasses = Scene.GetSubclasses();
-        Console.WriteLine("There are " + subClasses.Length + " scenes");
-        for (int i = 0; i < subClasses.Length; i++)
-        {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " scene");
-            Activator.CreateInstance(subClass);
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Preload();
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Load();
-
-            for (int i = 0; i < scene.PendingList.Count; i++)
-            {
-                var pending = scene.PendingList[i];
-                pending.InitPendingComponents();
-            }
-            scene.PendingList = [];
-        }
-        Scene.CurrentlyLoadingScene = null;
-        // Load mods
         
-
-        Scene.LoadScene("MainMenu");
     }
 
     public override void OnRenderLoad()
     {
-        ItemDataManager.GenerateIcons();
-        UIData.Init();
+
     }
 
     public override void OnResize(int width, int height)
@@ -179,8 +122,7 @@ public class Game : GameWindow
 
     public override void OnUpdate(double delta)
     {
-        Scene.LoadSceneFinal();
-
+        // -- Rendering timer --
         shouldRender = false;
         double dt = frameTimer.Elapsed.TotalSeconds;
         if (dt >= TargetRenderingFrameTime)
@@ -190,7 +132,10 @@ public class Game : GameWindow
             frameTimer.Restart();
         }
 
-        // -- Physics update --
+        if (ExecutionMode == GameExecutionMode.Paused)
+            return;
+
+        // -- Fixed update --
         accumulator += delta;
         while (accumulator >= GameTime.FixedDeltaTime)
         {
@@ -200,31 +145,11 @@ public class Game : GameWindow
         }
         GameTime.PhysicsInterpolationT = accumulator / GameTime.FixedDeltaTime;
 
-        double now = stopwatch.Elapsed.TotalSeconds;
-        accumulator2 += now - lastAccumulator2Update;
-        lastAccumulator2Update = now;
-        
-        if (accumulator2 >= TargetFrameTime)
-        {
-            accumulator2 -= TargetFrameTime;
-
-            float deltaTime = (float)(now - lastUpdateTime);
-            lastUpdateTime = now;
-
-            Input.Update(Mouse);
-            GameTime.Update(deltaTime);
-
-            Scene.CurrentScene?.Update();
-            Scene.CurrentScene?.LateUpdate();
-            
-            if (ForceSyncedRendering)
-                shouldRender = true;
-        }
-
-        TaskPool.Update();
-
-        if (GameTime.FpsUpdated)
-            Console.WriteLine(GameTime.Fps);
+        // -- Update --
+        Scene.CurrentScene?.Update();
+        Scene.CurrentScene?.LateUpdate();
+        if (ForceSyncedRendering)
+            shouldRender = true;
     }
 
     public override void OnRender()
@@ -244,17 +169,17 @@ public class Game : GameWindow
         
     }
 
-    public static void SetCursorState(CursorMode cursorMode)
+    public static void SetCursorState(Data.CursorMode cursorMode)
     {
         Instance.CursorMode = cursorMode;
     }
 
-    public static CursorMode GetCursorState()
+    public static Data.CursorMode GetCursorState()
     {
         return Instance.CursorMode;
     }
 
-    public static bool IsCursorState(CursorMode cursorMode)
+    public static bool IsCursorState(Data.CursorMode cursorMode)
     {
         return Instance.CursorMode == cursorMode;
     }

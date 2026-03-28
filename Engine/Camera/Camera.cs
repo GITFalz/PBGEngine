@@ -3,7 +3,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using Silk.NET.Input;
+
 using Plane = System.Numerics.Plane;
 
 namespace PBG.Rendering
@@ -405,7 +405,7 @@ namespace PBG.Rendering
             Position.X = Center.X - Distance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad);
             Position.Y = Center.Y - Distance * Mathf.Sin(pitchRad);
             Position.Z = Center.Z - Distance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad);
-
+                
             front = Vector3.Normalize(Center - Position);
             right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
             up = Vector3.Normalize(Vector3.Cross(right, front));

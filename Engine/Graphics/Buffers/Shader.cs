@@ -53,6 +53,13 @@ public struct ShaderInfo
         Front = new(), // Optional
         Back = new() // Optional
     };
+
+    public PipelineInputAssemblyStateCreateInfo InputAssembly = new()
+    {
+        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
+        Topology = PrimitiveTopology.TriangleList,
+        PrimitiveRestartEnable = false
+    };
     
     public ShaderInfo(string vertShader, string fragShader)
     {
@@ -352,13 +359,7 @@ public unsafe class Shader : BufferBase, IShader
             vertexInputInfo.PVertexAttributeDescriptions = pAttributeDescriptions;
         }
 
-        PipelineInputAssemblyStateCreateInfo inputAssembly = new()
-        {
-            SType = StructureType.PipelineInputAssemblyStateCreateInfo,
-            Topology = PrimitiveTopology.TriangleList,
-            PrimitiveRestartEnable = false
-        };
-
+        var inputAssembly = _shaderInfo.InputAssembly;
 
         // == Viewport Settings ==
         Viewport viewport = new()

@@ -85,5 +85,11 @@ namespace PBG.Data
 
             return false;
         }
+
+        internal static void Reset()
+        {
+            TotalTime = 0;
+            FixedTotalTime = 0;
+        }
     }
 }

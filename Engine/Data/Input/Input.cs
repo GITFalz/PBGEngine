@@ -1,6 +1,7 @@
 using PBG.MathLibrary;
 using Silk.NET.Input;
 
+
 namespace PBG.Data
 {
     public static class Input

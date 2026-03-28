@@ -67,7 +67,7 @@ namespace PBG.Voxel
         public static int BlankWorldViewLocation = -1;
         public static int BlankWorldProjectionLocation = -1;
 
-        public Skybox? skybox;
+        //public Skybox? skybox;
 
 
         private static Shader? _uiPlaneShader;
@@ -508,7 +508,7 @@ namespace PBG.Voxel
 
         void Start()
         {
-            skybox = Transform.TryGetComponent<Skybox>();
+            //skybox = Transform.TryGetComponent<Skybox>();
         }
 
         void Awake()
@@ -661,11 +661,11 @@ namespace PBG.Voxel
             var right = Vector3.Normalize(Vector3.Cross(LightDirection, Vector3.UnitY));
             _lightUp = Vector3.Normalize(Vector3.Cross(right, LightDirection));
 
-            if (skybox != null)
-            {
-                skybox.LightDirection = LightDirection;
-                skybox.Time = Time;
-            }
+            //if (skybox != null)
+            //{
+            //    skybox.LightDirection = LightDirection;
+            //    skybox.Time = Time;
+            //}
         }
 
         void LateUpdate()

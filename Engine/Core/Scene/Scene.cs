@@ -1,19 +1,23 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using PBG.Editor;
 using PBG.Graphics;
 using PBG.Rendering;
 using PBG.UI;
 
 namespace PBG.Core
 {
-    public abstract class Scene
+    public class Scene
     {
+        public readonly Guid ID = new();
         public static Dictionary<string, Scene> Scenes = [];
-        public static Scene CurrentScene { get; private set; } = null!;
+        public static Scene? CurrentScene { get; private set; } = null;
         public static Scene? CurrentlyLoadingScene = null;
         private static Scene? _sceneToBeLoaded = null;
 
-        public List<TransformNode> PendingList = [];
+        private HashSet<TransformNode> _pendingHash = [];
+        private List<TransformNode> _pendingList = [];
+        private bool _updateStart = false;
 
         public string Name;
 
@@ -23,8 +27,10 @@ namespace PBG.Core
 
         public RootNode RootNode;
 
-        public Camera DefaultCamera { get; private set; }
-        public Camera ActiveCamera { get; private set; }
+        private Camera _gameCamera;
+        public Camera Camera;
+
+        private TransformNode _cameraNode;
 
         public Scene(string name)
         {
@@ -34,18 +40,50 @@ namespace PBG.Core
 
             Scenes.Add(Name, this);
             
-            DefaultCamera = new Camera();
+            _gameCamera = new Camera();
 
-            var cameraNode = RootNode.AddNode("Camera");
-            cameraNode.AddComponent(DefaultCamera);
+            _cameraNode = RootNode.AddNode("Camera");
+            _cameraNode.AddComponent(_gameCamera);
+
+            Camera = _gameCamera;
+
+            CurrentScene = null;
+        }
+
+        internal Scene()
+        {
+            CurrentScene = this;
+
+            Name = "";
+            RootNode = new RootNode(this);
+            _gameCamera = new Camera();
+
+            _cameraNode = RootNode.AddNode("Camera");
+            _cameraNode.AddComponent(_gameCamera);
+
+            Camera = _gameCamera;
 
             CurrentScene = null!;
         }
 
-        public static void LoadScene(string name)
+        internal void SetGameCamera() => Camera = _gameCamera;
+        internal void SetCamera(Camera camera) => Camera = camera;
+
+        public static bool LoadScene(string name)
         {
             if (_sceneToBeLoaded == null && Scenes.TryGetValue(name, out Scene? scene) && CurrentScene != scene)
+            {
                 _sceneToBeLoaded = scene;
+                return true;
+            }
+            return false;
+        }
+
+        public static void UnloadScene()
+        {
+            CurrentScene?.Exit();
+            CurrentScene?.Dispose();
+            CurrentScene = null;
         }
 
         public static void LoadSceneFinal()
@@ -53,7 +91,6 @@ namespace PBG.Core
             if (_sceneToBeLoaded != null)
             {
                 UIController.ClearFrameBuffer();
-                Console.WriteLine("Loading scene");
                 CurrentScene?.Exit();
                 CurrentScene = _sceneToBeLoaded;
                 _sceneToBeLoaded.InitComponents();
@@ -70,12 +107,7 @@ namespace PBG.Core
             }
         }
 
-        public virtual void Preload() {}
-        public abstract void Load();
-
-        public void SetCameraAsActive(Camera camera) => ActiveCamera = camera;
-
-        public TransformNode[] AddNode(params string[] names)
+        public TransformNode[] NewNodes(params string[] names)
         {
             return RootNode.AddNode(names);
         }
@@ -86,9 +118,9 @@ namespace PBG.Core
         public T QueryComponent<T>() where T : ScriptingNode => RootNode.QueryComponent<T>();
         public bool QueryComponent<T>([NotNullWhen(true)] out T? component) where T : ScriptingNode => RootNode.QueryComponent(out component);
 
-        public TransformNode NewInternalNode(string name)
+        public TransformNode NewNode(string name)
         {
-            return AddNode(name)[0];
+            return NewNodes(name)[0];
         }
 
         public void InitComponents()
@@ -112,24 +144,37 @@ namespace PBG.Core
             RootNode.Resize();
             ShouldResize = false;
         }
-        public void FixedUpdate() => RootNode.FixedUpdate();
-        public void Update()
+        public void FixedUpdate()
         {
-            if (PendingList.Count > 0)
+            RootNode.FixedUpdate();
+        }
+
+        public void UpdatePending()
+        {
+            if (_pendingList.Count > 0)
             {
-                for (int i = 0; i < PendingList.Count; i++)
+                for (int i = 0; i < _pendingList.Count; i++)
                 {
-                    var pending = PendingList[i];
+                    var pending = _pendingList[i];
                     pending.InitPendingComponents();
                 }
 
+                _pendingList = [];
+                _pendingHash = [];
+
+                _updateStart = true;
+            }
+        }
+
+        public void Update()
+        {
+            if (_updateStart)
+            {
                 Start();
                 Awake();
 
-                PendingList = [];
+                _updateStart = false;
             }
-
-            UIController.HandleInputs(this);
             
             RootNode.Update();
         }
@@ -142,6 +187,29 @@ namespace PBG.Core
             RootNode.Render();
             GFX.Viewport();
         }
+
+        public void SmallAwake()
+        {
+            _cameraNode.Awake();
+        }
+
+        public void SmallResize()
+        {
+            _cameraNode.Resize();
+        }
+
+        public void SmallUpdate()
+        {
+            _cameraNode.Update();
+        }
+
+        public void SetAsPending(TransformNode node)
+        {
+            if (_pendingHash.Add(node))
+                _pendingList.Add(node);
+        }
+
+        public bool IsPending(TransformNode node) => _pendingHash.Contains(node);
 
         public void Exit() => RootNode.Exit();
         public void Dispose() => RootNode.Dispose();

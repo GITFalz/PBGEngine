@@ -189,8 +189,6 @@ public static class ItemDataManager
         }
 
         GFX.TransitionImageArrayLayout(Image.TextureImage, GFX.SwapChainFormat, ImageLayout.General, ImageLayout.ShaderReadOnlyOptimal, Image.LayerCount);
-        
-        GFX.Viewport(0, 0, Game.Width, Game.Height);
     }
 
     public static void ForeachBlockItems(Action<BlockItemData> action)

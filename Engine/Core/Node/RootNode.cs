@@ -6,6 +6,7 @@ namespace PBG.Core
     {
         public RootNode(Scene scene)
         {
+            Name = "RootNode";
             Scene = scene;
         }
 
@@ -14,8 +15,7 @@ namespace PBG.Core
             name = GetUniqueName(name);
             var node = new TransformNode(name, Scene);
             Children.Add(node);
-            if (!Scene.PendingList.Contains(node))
-                Scene.PendingList.Add(node);
+            Scene.SetAsPending(node);
             return node;
         }
 
