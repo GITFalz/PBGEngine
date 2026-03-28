@@ -76,6 +76,8 @@ namespace PBG
             }
         }
 
+        public static string S(this float v) => v+"";
+
         public static class Parse
         {
             public static Vector4 Vec4(string str)

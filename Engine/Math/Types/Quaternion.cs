@@ -1,6 +1,9 @@
+using PBG.Core;
+using PBG.Parse;
+
 namespace PBG.MathLibrary
 {
-    public struct Quaternion
+    public struct Quaternion : ISceneSerializable
     {
         public float X, Y, Z, W;
         public Vector3 Xyz => (X, Y, Z);
@@ -18,6 +21,32 @@ namespace PBG.MathLibrary
             Y = vectorPart.Y;
             Z = vectorPart.Z;
             W = scalarPart;
+        }
+
+        public float this[int index]
+        {
+            readonly get 
+            {
+                return index switch
+                {
+                    0 => X,
+                    1 => Y,
+                    2 => Z,
+                    3 => W,
+                    _ => throw new IndexOutOfRangeException($"[Error:({GetType().Name})] : Unknown index '{index}'")
+                };
+            }
+            set
+            {
+                switch (index)
+                {
+                    case 0: X = value; break;
+                    case 1: Y = value; break;
+                    case 2: Z = value; break;
+                    case 3: W = value; break;
+                    default: throw new IndexOutOfRangeException($"[Error:({GetType().Name})] : Unknown index '{index}'");
+                }
+            }
         }
 
         public float LengthSquared() => X * X + Y * Y + Z * Z + W * W;
@@ -83,7 +112,7 @@ namespace PBG.MathLibrary
             return new Quaternion(cross.X, cross.Y, cross.Z, 1f + dot).Normalized();
         }
 
-        public (float pitch, float yaw, float roll) ToEuler()
+        public Vector3 ToEuler()
         {
             float pitch = MathF.Asin(Math.Clamp(2f * (W * X - Y * Z), -1f, 1f));
             float yaw   = MathF.Atan2(2f * (W * Y + X * Z), 1f - 2f * (X * X + Y * Y));
@@ -157,9 +186,23 @@ namespace PBG.MathLibrary
             return obj is Quaternion q && q == this;
         }
 
-        public override int GetHashCode()
+        public override int GetHashCode() => HashCode.Combine(X, Y, Z, W);
+        public List<string> ToStringList() => [X+"", Y+"", Z+"", W+""];
+        public Quaternion Set(List<string> list)
         {
-            return HashCode.Combine(X, Y, Z, W);
+            for (int i = 0; i < 4.Min(list.Count); i++)
+                this[i] = Float.Parse(list[i], this[i]);
+            return this;
         }
+
+        public void Deserialize(List<SceneFieldJson> data)
+        {
+            if (data.Count > 0 && data[0].TryParse(out float x)) X = x;
+            if (data.Count > 1 && data[1].TryParse(out float y)) Y = y;
+            if (data.Count > 2 && data[2].TryParse(out float z)) Z = z;
+            if (data.Count > 3 && data[3].TryParse(out float w)) W = w;
+        }
+
+        public List<SceneFieldJson> Serialize() => [ new(X), new(Y), new(Z), new(W) ];
     }
 }

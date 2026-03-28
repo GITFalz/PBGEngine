@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
+using PBG.Core;
+using PBG.Parse;
 
 namespace PBG.MathLibrary
 {
-    public struct Matrix4
+    public struct Matrix4 : ISceneSerializable
     {
         public float M11, M21, M31, M41;
 
@@ -356,9 +358,55 @@ namespace PBG.MathLibrary
         }
 
         public override string ToString() =>
-            $"[{M11:F3} {M12:F3} {M13:F3} {M14:F3}]\n" +
-            $"[{M21:F3} {M22:F3} {M23:F3} {M24:F3}]\n" +
-            $"[{M31:F3} {M32:F3} {M33:F3} {M34:F3}]\n" +
-            $"[{M41:F3} {M42:F3} {M43:F3} {M44:F3}]";
+            $"[{M11:F3} {M21:F3} {M31:F3} {M41:F3}]\n" +
+            $"[{M12:F3} {M22:F3} {M32:F3} {M42:F3}]\n" +
+            $"[{M13:F3} {M23:F3} {M33:F3} {M43:F3}]\n" +
+            $"[{M14:F3} {M24:F3} {M34:F3} {M44:F3}]";
+
+        public List<string> ToStringList() => 
+        [
+            M11+"", M21+"", M31+"", M41+"",
+            M12+"", M22+"", M32+"", M42+"",
+            M13+"", M23+"", M33+"", M43+"",
+            M14+"", M24+"", M34+"", M44+""
+        ];
+
+        public Matrix4 Set(List<string> list)
+        {
+            try
+            {
+                int i = 0;
+                float P() => Float.Parse(list[i++]);
+                M11 = P(); M21 = P(); M31 = P(); M41 = P();
+                M12 = P(); M22 = P(); M32 = P(); M42 = P();
+                M13 = P(); M23 = P(); M33 = P(); M43 = P();
+                M14 = P(); M24 = P(); M34 = P(); M44 = P();
+            }
+            catch (IndexOutOfRangeException)
+            {
+                Console.WriteLine("Matrix4 string list was the wrong size, " + list.Count + " instead of 16");
+            }
+            return this;
+        }
+        
+        public void Deserialize(List<SceneFieldJson> data)
+        {
+            Set(data, 0, ref M11); Set(data, 1, ref M21); Set(data, 2, ref M31); Set(data, 3, ref M41);
+            Set(data, 4, ref M12); Set(data, 5, ref M22); Set(data, 6, ref M32); Set(data, 7, ref M42);
+            Set(data, 8, ref M13); Set(data, 9, ref M23); Set(data,10, ref M33); Set(data,11, ref M43);
+            Set(data,12, ref M14); Set(data,13, ref M24); Set(data,14, ref M34); Set(data,15, ref M44);
+        }
+        
+        private void Set(List<SceneFieldJson> data, int index, ref float value)
+        {
+            if (data.Count > index && data[index].TryParse(out float v)) value = v;
+        }
+
+        public List<SceneFieldJson> Serialize() => [ 
+            new(M11), new(M21), new(M31), new(M41),
+            new(M12), new(M22), new(M32), new(M42),
+            new(M13), new(M23), new(M33), new(M43),
+            new(M14), new(M24), new(M34), new(M44) 
+        ];
     }
 }

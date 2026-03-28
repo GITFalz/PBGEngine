@@ -198,13 +198,12 @@ namespace PBG.MathLibrary
             return diff < -180f ? diff + 360f : diff;
         }
 
-        public static System.Numerics.Matrix4x4 Num(Matrix4 m) =>
-            new System.Numerics.Matrix4x4(
-                m.M11, m.M21, m.M31, m.M41,
-                m.M12, m.M22, m.M32, m.M42,
-                m.M13, m.M23, m.M33, m.M43,
-                m.M14, m.M24, m.M34, m.M44
-            );
+        public static System.Numerics.Matrix4x4 Num(Matrix4 m) => new System.Numerics.Matrix4x4( 
+            m.M11, m.M21, m.M31, m.M41, 
+            m.M12, m.M22, m.M32, m.M42, 
+            m.M13, m.M23, m.M33, m.M43, 
+            m.M14, m.M24, m.M34, m.M44 
+        );
         public static System.Numerics.Matrix4x4 num(this Matrix4 matrix) => Num(matrix);
 
         public static Vec4 Num(Vector4 vector) => new Vec4(vector.X, vector.Y, vector.Z, vector.W);
@@ -335,7 +334,7 @@ namespace PBG.MathLibrary
 
             Vector2 screenPos = new Vector2(
                 (ndcX + 1.0f) * width * 0.5f,
-                (1.0f - ndcY) * height * 0.5f
+                (ndcY + 1.0f) * height * 0.5f
             );
 
             return screenPos;
@@ -416,107 +415,6 @@ namespace PBG.MathLibrary
 
         public static Vector3 Vec3(Vector2 v, float z) => (v.X, v.Y, z);
 
-        public static void GetSmallestBoundingBox(IEnumerable<Vertex> vertices, out Vector3 min, out Vector3 max)
-        {
-            if (!vertices.Any())
-            {
-                min = Vector3.Zero;
-                max = Vector3.Zero;
-                return;
-            }
-
-            List<Vector3> positions = [];
-            foreach (var vertex in vertices)
-            {
-                positions.Add(vertex.Position);
-            }
-
-            Vector3 center = Vector3.Zero;
-            Vector3 rotationAxis = (0, 1, 0);
-            foreach (var vertex in vertices)
-            {
-                center += vertex.Position;
-            }
-            center /= vertices.Count();
-
-            Vector3 axisX = (1, 0, 0);
-
-            List<Edge> edges = Edge.GetEdges(vertices);
-            List<Vector3> copy = [.. positions];
-
-            if (edges.Count == 0)
-            {
-                min = Vector3.Zero;
-                max = Vector3.Zero;
-                return;
-            }
-
-            Vector3 direction = edges[0].GetDirection();
-            float angle = RadToDeg(Vector3.CalculateAngle(axisX, direction));
-
-            for (int i = 0; i < copy.Count; i++)
-            {
-                copy[i] = RotateAround(copy[i], center, rotationAxis, angle);
-            }
-
-            Vector3 minC = copy[0];
-            Vector3 maxC = copy[0];
-
-            for (int i = 1; i < copy.Count; i++)
-            {
-                minC = Min(minC, copy[i]);
-                maxC = Max(maxC, copy[i]);
-            }
-
-            Vector3 size = maxC - minC;
-            min = minC;
-            max = maxC;
-
-            for (int i = 1; i < edges.Count; i++)
-            {
-                copy = [.. positions];
-
-                direction = edges[i].GetDirection();
-                float a = RadToDeg(Vector3.CalculateAngle(axisX, direction));
-
-                for (int j = 0; j < copy.Count; j++)
-                {
-                    copy[j] = RotateAround(copy[j], center, rotationAxis, a);
-                }
-
-                minC = copy[0];
-                maxC = copy[0];
-
-                for (int j = 1; j < copy.Count; j++)
-                {
-                    minC = Min(minC, copy[j]);
-                    maxC = Max(maxC, copy[j]);
-                }
-
-                Vector3 sizeC = maxC - minC;
-
-                //Console.WriteLine("Size original: " + size + " Volume: " + size.X * size.Y * size.Z);
-                //Console.WriteLine("Size rotated: " + sizeC + " Volume: " + sizeC.X * sizeC.Y * sizeC.Z);
-
-                if (sizeC.X * sizeC.Z < size.X * size.Z)
-                {
-                    min = minC;
-                    max = maxC;
-                    size = sizeC;
-                    angle = a;
-                }
-            }
-
-            foreach (var vertex in vertices)
-            {
-                Vector3 rotatedPoint = RotateAround(vertex, center, rotationAxis, angle);
-                rotatedPoint.Y = 0;
-                vertex.SetPosition(rotatedPoint);
-            }
-
-            min.Y = 0;
-            max.Y = 0;
-        }
 
         /// <summary>
         /// Converts a point in barycentric coordinates to UV coordinates based on the triangle's vertices and their UVs.

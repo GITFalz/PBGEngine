@@ -1,6 +1,9 @@
+using PBG.Core;
+using PBG.Parse;
+
 namespace PBG.MathLibrary;
 
-public struct Vector2
+public struct Vector2 : ISceneSerializable
 {
     public float X;
     public float Y;
@@ -111,4 +114,20 @@ public struct Vector2
     {
         return HashCode.Combine(X, Y);
     }
+
+    public List<string> ToStringList() => [X+"", Y+""];
+    public Vector2 Set(List<string> list)
+    {
+        for (int i = 0; i < 2.Min(list.Count); i++)
+            this[i] = Float.Parse(list[i], this[i]);
+        return this;
+    }
+
+    public void Deserialize(List<SceneFieldJson> data)
+    {
+        if (data.Count > 0 && data[0].TryParse(out float x)) X = x;
+        if (data.Count > 1 && data[1].TryParse(out float y)) Y = y;
+    }
+
+    public List<SceneFieldJson> Serialize() => [ new(X), new(Y) ];
 }
