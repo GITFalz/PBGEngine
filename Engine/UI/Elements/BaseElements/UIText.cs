@@ -15,6 +15,7 @@ namespace PBG.UI
         float FontSize { get; set; }
         bool Visible { get; }
         int MaskIndex { get; set; }
+        public TextAlign TextAlign { get; set; }
 
         Vector2 AnimationTranslation { get; set; }
         float AnimationScale { get; set; }
@@ -31,33 +32,34 @@ namespace PBG.UI
 
     public class UIText : UIText<UIText>
     {
-        private UIText(string text, string name, Class classes, params IEvent[] events) : base(text, classes.Styles, events)
+        public UIText() : base("") { Name = "UIText"; }
+        public UIText(string text) : base(text) { Name = "UIText"; }
+        
+        public UIText Ref(ref UIText text)
         {
-            Name = name;
-            Tag = UIElementTag.UIImage;
+            text = this;
+            return text;
         }
 
-        // ORIGINAL PUBLIC CONSTRUCTORS
-        public UIText(params UIStyleData[] classes) : this("", "UIText", new Class(classes), []) { }
-        public UIText(Class classes) : this("", "UIText", classes, []) { }
-        public UIText(string text, params UIStyleData[] classes) : this(text, "UIText", new Class(classes), []) { }
-        public UIText(string text, Class classes) : this(text, "UIText", classes, []) { }
-        public UIText(string text, string name, params UIStyleData[] classes) : this(text, name, new Class(classes), []) { }
-        public UIText(string text, string name, Class classes) : this(text, name, classes, []) { }
-        
-        public UIText(string text, Class classes, Event<UIText> e1) : this(text, "UIText", classes, e1) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2) : this(text, "UIText", classes, e1, e2) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3) : this(text, "UIText", classes, e1, e2, e3) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3, Event<UIText> e4) : this(text, "UIText", classes, e1, e2, e3, e4) { }
-        
-        public UIText(string text, string name, Class classes, Event<UIText> e1) : this(text, name, classes, [e1]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2) : this(text, name, classes, [e1, e2]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3) : this(text, name, classes, [e1, e2, e3]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3, Event<UIText> e4) : this(text, name, classes, [e1, e2, e3, e4]) { }
+        public UIText Out(out UIText text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIText Class(params IStyleData[] styles) => InternalClass(this, styles);
+
+        public UIText OnHoverEnter(Action<UIText>? action)    { SetOnHoverEnter(action); return this; }
+        public UIText OnHover(Action<UIText>? action)         { SetOnHover(action); return this; }
+        public UIText OnClick(Action<UIText>? action)         { SetOnClick(action); return this; }
+        public UIText OnHold(Action<UIText>? action)          { SetOnHold(action); return this; }
+        public UIText OnRelease(Action<UIText>? action)       { SetOnRelease(action); return this; }
+        public UIText OnHoverExit(Action<UIText>? action)     { SetOnHoverExit(action); return this; }
     }
+
     public class UIText<TSelf> : UIElement<TSelf>, IUIText where TSelf : UIText<TSelf>
     {
-        public UIText(string text, UIStyleData[] classes, IEvent[] events) : base((1, 1, 1, 1), classes, events) 
+        public UIText(string text) : base((1, 1, 1, 1)) 
         { 
             Tag = UIElementTag.UIText; 
 
@@ -65,7 +67,7 @@ namespace PBG.UI
             SetText(text);
         }
 
-        public TextAlign TextAlign = TextAlign.Left;
+        public TextAlign TextAlign { get; set; } = TextAlign.Left;
         public int? MaxCharCount { get; set; } = null;
         public float FontSize { get; set; } = 1f;
         protected string _text = "";

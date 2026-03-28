@@ -7,43 +7,33 @@ namespace PBG.UI
 {
     public class UIVScroll : UIVScroll<UIVScroll>
     {
-        private UIVScroll(string name, Class classes, UIElementBase[] subs, params Event<UIVScroll>[] events) : base(classes.Styles, events)
+        public UIVScroll() : base() { Name = "UIVScroll"; }
+        
+        public UIVScroll Ref(ref UIVScroll text)
         {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            text = this;
+            return text;
         }
 
+        public UIVScroll Out(out UIVScroll text)
+        {
+            text = this;
+            return text;
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
+        public UIVScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIVScroll(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIVScroll(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
-        
-        public UIVScroll(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1) : this("UICollection", classes, [], e1) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIVScroll(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1) : this(name, classes, [], e1) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2) : this(name, classes, [], e1, e2) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIVScroll(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIVScroll OnHoverEnter(Action<UIVScroll>? action)    { SetOnHoverEnter(action); return this; }
+        public UIVScroll OnHover(Action<UIVScroll>? action)         { SetOnHover(action); return this; }
+        public UIVScroll OnClick(Action<UIVScroll>? action)         { SetOnClick(action); return this; }
+        public UIVScroll OnHold(Action<UIVScroll>? action)          { SetOnHold(action); return this; }
+        public UIVScroll OnRelease(Action<UIVScroll>? action)       { SetOnRelease(action); return this; }
+        public UIVScroll OnHoverExit(Action<UIVScroll>? action)     { SetOnHoverExit(action); return this; }
 
-        public UIVScroll(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UIVScroll this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
 
         public Action<UIVScroll>? ScrollAction = null;
 
@@ -64,7 +54,7 @@ namespace PBG.UI
     {
         public float ScrollPosition = 0;
 
-        public UIVScroll(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIVerticalScrollView; }
+        public UIVScroll() : base() { Tag = UIElementTag.UIVerticalScrollView; }
 
         public override void CollectionFirstPass()
         {

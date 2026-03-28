@@ -31,7 +31,7 @@ namespace PBG.UI
         public Vector4 BorderColor { get; set; } = Vector4.Zero;
         public Vector4 BorderUI { get; set;} = Vector4.Zero;
 
-        public UIPanel(UIStyleData[] classes, IEvent[] events) : base((0, 0, 0, 0), classes, events) { }
+        public UIPanel() : base((0, 0, 0, 0)) { }
 
         public string GetName() => Name;
 

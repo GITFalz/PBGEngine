@@ -13,51 +13,51 @@ namespace PBG.UI.Animation
         public bool IgnoreWhenSelected = false;
 
         // Translation
-        public void SetTranslation(Vector2 value) => (AnimationTranslationData ??= new()).Translation = value;
+        public UIAnimation SetTranslation(Vector2 value) { (AnimationTranslationData ??= new()).Translation = value; return this; }
 
-        public void SetTranslationDurationIn(float value) => (AnimationTranslationData ??= new()).DurationIn = value;
-        public void SetTranslationDurationOut(float value) => (AnimationTranslationData ??= new()).DurationOut = value;
-        public void SetTranslationDuration(float value) { SetTranslationDurationIn(value); SetTranslationDurationOut(value); }
+        public UIAnimation SetTranslationDurationIn(float value) { (AnimationTranslationData ??= new()).DurationIn = value; return this; }
+        public UIAnimation SetTranslationDurationOut(float value) { (AnimationTranslationData ??= new()).DurationOut = value; return this; }
+        public UIAnimation SetTranslationDuration(float value) { SetTranslationDurationIn(value); SetTranslationDurationOut(value);  return this; }
 
-        public void SetTranslationEaseIn(EaseEffect effect) => (AnimationTranslationData ??= new()).EaseInEffect = effect;
-        public void SetTranslationEaseOut(EaseEffect effect) => (AnimationTranslationData ??= new()).EaseOutEffect = effect;
-        public void SetTranslationEase(EaseEffect effect) { SetTranslationEaseIn(effect); SetTranslationEaseOut(effect); }
+        public UIAnimation SetTranslationEaseIn(EaseEffect effect) { (AnimationTranslationData ??= new()).EaseInEffect = effect; return this; }
+        public UIAnimation SetTranslationEaseOut(EaseEffect effect) { (AnimationTranslationData ??= new()).EaseOutEffect = effect; return this; }
+        public UIAnimation SetTranslationEase(EaseEffect effect) { SetTranslationEaseIn(effect); SetTranslationEaseOut(effect); return this; }
 
         // Rotation
-        public void SetRotation(float value) => (AnimationRotationData ??= new()).Rotation = value;
+        public UIAnimation SetRotation(float value) { (AnimationRotationData ??= new()).Rotation = value; return this; }
 
-        public void SetRotationDurationIn(float value) => (AnimationRotationData ??= new()).DurationIn = value;
-        public void SetRotationDurationOut(float value) => (AnimationRotationData ??= new()).DurationOut = value;
-        public void SetRotationDuration(float value) { SetRotationDurationIn(value); SetRotationDurationOut(value); }
+        public UIAnimation SetRotationDurationIn(float value) { (AnimationRotationData ??= new()).DurationIn = value; return this; }
+        public UIAnimation SetRotationDurationOut(float value) { (AnimationRotationData ??= new()).DurationOut = value; return this; }
+        public UIAnimation SetRotationDuration(float value) { SetRotationDurationIn(value); SetRotationDurationOut(value); return this; }
 
-        public void SetRotationEaseIn(EaseEffect effect) => (AnimationRotationData ??= new()).EaseInEffect = effect;
-        public void SetRotationEaseOut(EaseEffect effect) => (AnimationRotationData ??= new()).EaseOutEffect = effect;
-        public void SetRotationEase(EaseEffect effect) { SetRotationEaseIn(effect); SetRotationEaseOut(effect); }
+        public UIAnimation SetRotationEaseIn(EaseEffect effect) { (AnimationRotationData ??= new()).EaseInEffect = effect; return this; }
+        public UIAnimation SetRotationEaseOut(EaseEffect effect) { (AnimationRotationData ??= new()).EaseOutEffect = effect; return this; }
+        public UIAnimation SetRotationEase(EaseEffect effect) { SetRotationEaseIn(effect); SetRotationEaseOut(effect); return this; }
 
-        public void LoopRotation() => (AnimationRotationData ??= new()).Loop = true;
+        public UIAnimation LoopRotation() { (AnimationRotationData ??= new()).Loop = true; return this; }
 
         // Scale
-        public void SetScale(float value) => (AnimationScaleData ??= new()).Scale = value;
+        public UIAnimation SetScale(float value) { (AnimationScaleData ??= new()).Scale = value; return this; }
 
-        public void SetScaleDurationIn(float value) => (AnimationScaleData ??= new()).DurationIn = value;
-        public void SetScaleDurationOut(float value) => (AnimationScaleData ??= new()).DurationOut = value;
-        public void SetScaleDuration(float value) { SetScaleDurationIn(value); SetScaleDurationOut(value); }
+        public UIAnimation SetScaleDurationIn(float value) { (AnimationScaleData ??= new()).DurationIn = value; return this; }
+        public UIAnimation SetScaleDurationOut(float value) { (AnimationScaleData ??= new()).DurationOut = value; return this; }
+        public UIAnimation SetScaleDuration(float value) { SetScaleDurationIn(value); SetScaleDurationOut(value); return this; }
 
-        public void SetScaleEaseIn(EaseEffect effect) => (AnimationScaleData ??= new()).EaseInEffect = effect;
-        public void SetScaleEaseOut(EaseEffect effect) => (AnimationScaleData ??= new()).EaseOutEffect = effect;
-        public void SetScaleEase(EaseEffect effect) { SetScaleEaseIn(effect); SetScaleEaseOut(effect); }
+        public UIAnimation SetScaleEaseIn(EaseEffect effect) { (AnimationScaleData ??= new()).EaseInEffect = effect; return this; }
+        public UIAnimation SetScaleEaseOut(EaseEffect effect) { (AnimationScaleData ??= new()).EaseOutEffect = effect; return this; }
+        public UIAnimation SetScaleEase(EaseEffect effect) { SetScaleEaseIn(effect); SetScaleEaseOut(effect); return this; }
 
         // Color
-        public void SetBaseColor(Vector4 color) => (AnimationColorData ??= new()).BaseColor = color;
-        public void SetEndColor(Vector4 color) => (AnimationColorData ??= new()).EndColor = color;
+        public UIAnimation SetBaseColor(Vector4 color) { (AnimationColorData ??= new()).BaseColor = color; return this; }
+        public UIAnimation SetEndColor(Vector4 color) { (AnimationColorData ??= new()).EndColor = color; return this; }
 
-        public void SetColorDurationIn(float value) => (AnimationColorData ??= new()).DurationIn = value;
-        public void SetColorDurationOut(float value) => (AnimationColorData ??= new()).DurationOut = value;
-        public void SetColorDuration(float value) { SetColorDurationIn(value); SetColorDurationOut(value); }
+        public UIAnimation SetColorDurationIn(float value) { (AnimationColorData ??= new()).DurationIn = value; return this; }
+        public UIAnimation SetColorDurationOut(float value) { (AnimationColorData ??= new()).DurationOut = value; return this; }
+        public UIAnimation SetColorDuration(float value) { SetColorDurationIn(value); SetColorDurationOut(value); return this; }
 
-        public void SetColorEaseIn(EaseEffect effect) => (AnimationColorData ??= new()).EaseInEffect = effect;
-        public void SetColorEaseOut(EaseEffect effect) => (AnimationColorData ??= new()).EaseOutEffect = effect;
-        public void SetColorEase(EaseEffect effect) { SetColorEaseIn(effect); SetColorEaseOut(effect); }
+        public UIAnimation SetColorEaseIn(EaseEffect effect) { (AnimationColorData ??= new()).EaseInEffect = effect; return this; }
+        public UIAnimation SetColorEaseOut(EaseEffect effect) { (AnimationColorData ??= new()).EaseOutEffect = effect; return this; }
+        public UIAnimation SetColorEase(EaseEffect effect) { SetColorEaseIn(effect); SetColorEaseOut(effect); return this; }
         
         public void Enter(UIController controller, UIElementBase element, ref Action deleteAction)
         {

@@ -25,7 +25,7 @@ namespace PBG.Rendering.Meshes
         public HashSet<IUIText> TextsToBeRemoved = [];
         public HashSet<IUIText> TextsToBeAdded = [];
 
-        private SSBO<UILineStruct> _lineSSBO = new([]);
+        private SSBO<UILineStruct> _lineSSBO = new([], true);
         private SSBO<UIGlyphStruct> _glyphSSBO = new([]);
 
         private bool _updateVisibility = false;
@@ -349,6 +349,7 @@ namespace PBG.Rendering.Meshes
                             if (existed)
                             {
                                 glyph = GlyphStructs[oldMetaData.StartGlyphIndex + i];
+                                glyph.Data.Y = LineCount;
                             }
                             else
                             {

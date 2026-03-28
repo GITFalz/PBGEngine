@@ -8,7 +8,7 @@ namespace PBG.Rendering.Mask
     public class MaskData
     {
         public List<UIMaskStruct> MaskStructs = [];
-        public Dictionary<UI.IUICollection, int> Collections = [];
+        public Dictionary<UI.IUICol, int> Collections = [];
 
         public SSBO<UIMaskStruct> MaskSSBO = new([]);
 
@@ -21,7 +21,7 @@ namespace PBG.Rendering.Mask
             _controller = controller;
         }
 
-        public UIMaskStruct AddElement(UI.IUICollection collection, Vector2 topLeft, Vector2 bottomRight)
+        public UIMaskStruct AddElement(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             if (Collections.TryGetValue(collection, out int value))
             {
@@ -48,7 +48,7 @@ namespace PBG.Rendering.Mask
             return maskStruct;
         }
 
-        public void RemoveElement(UI.IUICollection collectionToRemove)
+        public void RemoveElement(UI.IUICol collectionToRemove)
         {
             if (!Collections.TryGetValue(collectionToRemove, out int index))
                 return;
@@ -80,7 +80,7 @@ namespace PBG.Rendering.Mask
             return true;
         }
 
-        public void UpdateTransform(UI.IUICollection collection, Vector2 topLeft, Vector2 bottomRight)
+        public void UpdateTransform(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             if (!Collections.TryGetValue(collection, out int index))
                 return;
@@ -93,7 +93,7 @@ namespace PBG.Rendering.Mask
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateScale(UI.IUICollection collection, Vector2 topLeft, Vector2 bottomRight)
+        public void UpdateScale(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             UpdateTransform(collection, topLeft, bottomRight);
         }

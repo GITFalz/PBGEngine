@@ -16,7 +16,7 @@ namespace PBG.Rendering.Meshes
         public Dictionary<UI.IUIPanel, int> Panels = [];
 
         //private Graphics.VAO _vao = new();
-        private SSBO<UIPanelStruct> _uiSSBO = new([]);
+        private SSBO<UIPanelStruct> _uiSSBO = new([], true);
 
         private bool _updateVisibility = false;
         private BufferEnum _bufferUpdateState = BufferEnum.None;

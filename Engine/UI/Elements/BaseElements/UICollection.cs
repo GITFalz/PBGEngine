@@ -2,11 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
 using PBG.UI.Creator;
 
-using static PBG.UI.Styles;
+using static PBG.UI2.Styles;
 
 namespace PBG.UI
 {
-    public interface IUICollection
+    public interface IUICol
     {
         int MaskIndex { get; set; }
         bool GrowFromChildren { get; set; }
@@ -27,49 +27,40 @@ namespace PBG.UI
 
         void UpdateMaskIndices();
         void ForeachChildren(Action<UIElementBase> action);
+        public UIElementBase AddElement(UIElementBase element);
     }
     public class UICol : UICol<UICol>
     {
-        private UICol(string name, Class classes, UIElementBase[] subs, params Event<UICol>[] events) : base(classes.Styles, events)
+        public UICol() : base() { Name = "UICol"; }
+        
+        public UICol Ref(ref UICol text)
         {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            text = this;
+            return text;
         }
 
+        public UICol Out(out UICol text)
+        {
+            text = this;
+            return text;
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
+        public UICol Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UICol(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UICol(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
-        
-        public UICol(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UICol(Class classes, Event<UICol> e1) : this("UICollection", classes, [], e1) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, Event<UICol> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UICol(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UICol(string name, Class classes, Event<UICol> e1) : this(name, classes, [], e1) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2) : this(name, classes, [], e1, e2) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, Event<UICol> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UICol(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UICol(Class classes, Event<UICol> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UICol(Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, Event<UICol> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UICol OnHoverEnter(Action<UICol>? action)    { SetOnHoverEnter(action); return this; }
+        public UICol OnHover(Action<UICol>? action)         { SetOnHover(action); return this; }
+        public UICol OnClick(Action<UICol>? action)         { SetOnClick(action); return this; }
+        public UICol OnHold(Action<UICol>? action)          { SetOnHold(action); return this; }
+        public UICol OnRelease(Action<UICol>? action)       { SetOnRelease(action); return this; }
+        public UICol OnHoverExit(Action<UICol>? action)     { SetOnHoverExit(action); return this; }
 
-        public UICol(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UICol(string name, Class classes, Event<UICol> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UICol(string name, Class classes, Event<UICol> e1, Event<UICol> e2, Event<UICol> e3, Event<UICol> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UICol this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
     }
 
-    public class UICol<TSelf> : UIPanel<TSelf>, IUICollection where TSelf : UICol<TSelf>
+    public class UICol<TSelf> : UIPanel<TSelf>, IUICol where TSelf : UICol<TSelf>
     {
         public float Spacing = 0;
         public Vector4 Border = (0, 0, 0, 0);
@@ -88,7 +79,7 @@ namespace PBG.UI
 
         public List<UIElementBase> ChildElements = [];
 
-        public UICol(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UICollection; }
+        public UICol() : base() { Tag = UIElementTag.UICollection; }
 
         public bool Has(UIElementBase element) => ChildElements.Contains(element);
 
@@ -300,9 +291,9 @@ namespace PBG.UI
             for (int i = 0; i < ChildElements.Count; i++)
             {
                 var child = ChildElements[i];
-                if (child is IUICollection col)
+                if (child is IUICol col)
                 {
-                    if (col is UIHScroll && child.Hovering)
+                    if (col is UICol && child.Hovering)
                         return true;
                     if (col is UIVScroll && child.Hovering)
                         return true;
@@ -509,11 +500,11 @@ namespace PBG.UI
             return this;
         }
 
-        public UIElementBase AddElements(IEnumerable<UIElementBase> elements)
+        public UIElementBase AddElements(IEnumerable<IUIChild> elements)
         {
             foreach (var element in elements)
             {
-                AddElement(element);
+                element.AddTo(this);
             }
             return this;
         }

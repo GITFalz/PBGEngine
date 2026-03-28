@@ -1,8 +1,8 @@
 using PBG.Data;
 using PBG.MathLibrary;
 using PBG.UI.Creator;
-using Silk.NET.Input;
-using static PBG.UI.Styles;
+
+using static PBG.UI2.Styles;
 
 namespace PBG.UI.FileManager;
 
@@ -53,59 +53,55 @@ public class FileManagerUI : UIScript
     }
 
     public override UIElementBase Script() =>
-    new UICol(Class(w_[800], h_[640], top_left),
-    OnHoverEnterCol(_ => Manager.IsHovering = true),
-    OnHoverExitCol(_ => Manager.IsHovering = false),
-    Sub(
-        new UICol(Class(w_full, h_[40], blank_full_g_[25], border_ui_[2, 2, 2, 0], border_color_g_[30]), OnHold(Move), Sub(
-            new UIImg(Class(w_[30], h_[30], middle_left, left_[10], icon_[14], gray_[50], top_[1])),
-            new UIText("File Manager", Class(mc_[12], fs_[1.3f], middle_left, left_[45], top_[1])),
-            new UICol(Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full, middle_right, right_[12], top_[1], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-            OnClickCol(_ => Manager.ToggleOff()),
-            OnHoverEnter(HoverEnterIconButton),
-            OnHoverExit(HoverExitIconButton),
-            Sub(
-                new UIImg(Class(icon_[15], w_[20], h_[20], gray_[50], middle_center))
-            ))
-        )),
-        new UIVCol(Class(w_full, h_full_minus_[40], bottom_center, blank_full_g_[20], border_ui_[2, 0, 2, 2], border_color_g_[30]), Sub(
-            new UICol(Class(w_full, h_[40], border_ui_[0, 2, 0, 2], border_color_g_[30]), Sub(
-                new UIText("PATH:", Class(mc_[5], fs_[1f], middle_left, left_[12], gray_[50])),
-                new UIHScroll(Class(w_full_minus_[110], middle_right, right_[42], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full_g_[10], mask_children), Sub(
-                    newField(DefaultPath, Class(mc_[1000], fs_[1f], middle_left, left_[5]),
-                    OnTextEnter(f =>
+    new UICol().Class(w_[800], h_[640], top_left)
+    .OnHoverEnter(_ => Manager.IsHovering = true)
+    .OnHoverExit(_ => Manager.IsHovering = false)[
+        new UICol().Class(w_full, h_[40], blank_full_g_[25], border_ui_[2, 2, 2, 0], border_color_g_[30]).OnHold(Move)[
+            new UIImg().Class(w_[30], h_[30], middle_left, left_[10], icon_[14], gray_[50], top_[1]),
+            new UIText("File Manager").Class(mc_[12], fs_[1.3f], middle_left, left_[45], top_[1]),
+            new UICol().Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full, middle_right, right_[12], top_[1], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+            .OnClick(_ => Manager.ToggleOff())
+            .OnHoverEnter(HoverEnterIconButton)
+            .OnHoverExit(HoverExitIconButton)[
+                new UIImg().Class(icon_[15], w_[20], h_[20], gray_[50], middle_center)
+            ]
+        ],
+        new UIVCol().Class(w_full, h_full_minus_[40], bottom_center, blank_full_g_[20], border_ui_[2, 0, 2, 2], border_color_g_[30])[
+            new UICol().Class(w_full, h_[40], border_ui_[0, 2, 0, 2], border_color_g_[30])[
+                new UIText("PATH:").Class(mc_[5], fs_[1f], middle_left, left_[12], gray_[50]),
+                new UIHScroll().Class(w_full_minus_[110], middle_right, right_[42], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full_g_[10], mask_children)[
+                    new UIField(DefaultPath).Class(mc_[1000], fs_[1f], middle_left, left_[5])
+                    .OnTextEnter(f =>
                     {
                         CurrentPath = Manager.GetPath(f);
                         if (Directory.Exists(CurrentPath))
                             GenerateFiles();
-                    }),
-                    ref PathField)
-                )),
-                new UICol(Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], rgba_[0.3f, 0.3f, 0.3f, 0f], blank_full, middle_right, right_[12], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                OnClickCol(_ =>
+                    })
+                    .Ref(ref PathField)
+                ],
+                new UICol().Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], rgba_[0.3f, 0.3f, 0.3f, 0f], blank_full, middle_right, right_[12], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                .OnClick(_ =>
                 {
                     if (Directory.Exists(CurrentPath)) GenerateFiles();
-                }),
-                OnHoverEnter(HoverEnterIconButton),
-                OnHoverExit(c => { if (_filesAsList) HoverExitIconButton(c); }),
-                Sub(
-                    new UIImg(Class(icon_[39], w_[20], h_[20], gray_[50], middle_center))
-                ))
-            )),
-            new UIHCol(Class(w_full_minus_[4], top_center, h_full_minus_[80]), Sub(
-                newVScroll(Class(w_[150], h_full, border_ui_[0, 0, 2, 0], border_color_g_[30], mask_children, border_[5, 5, 5, 5]), Sub([
-                    ..Foreach(_knownDirectories, section =>
-                        new UIVCol(Class(w_full, grow_children, ignore_invisible), Sub([
-                            new UICol(Class(w_full, h_[20]), Sub(
-                                new UIText(section.Name, Class(mc_[section.Name.Length], fs_[1f], gray_[50], left_[5], middle_left))
-                            )),
-                            new UIVCol(Class(w_full, h_[section.Paths.Length * 26], spacing_[1]), Sub([
-                                ..Foreach(section.Paths, data =>
-                                    new UICol(Class(w_full, h_[25], blank_full, hover_translation_[(-10, 0)], hover_translation_duration_[0.2f], hover_translation_easeout),
-                                    OnHoverEnterCol(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f))),
-                                    OnHoverExitCol(c => c.UpdateColor((0f, 0f, 0f, 0f))),
-                                    OnClickCol(_ => GenerateFiles(data.Path)),
-                                    Sub(Run(() => {
+                })
+                .OnHoverEnter(HoverEnterIconButton)
+                .OnHoverExit(c => { if (_filesAsList) HoverExitIconButton(c); })[
+                    new UIImg().Class(icon_[39], w_[20], h_[20], gray_[50], middle_center)
+                ]
+            ],
+            new UIHCol().Class(w_full_minus_[4], top_center, h_full_minus_[80])[
+                new UIVScroll().Class(w_[150], h_full, border_ui_[0, 0, 2, 0], border_color_g_[30], mask_children, border_[5, 5, 5, 5])[
+                    Foreach(_knownDirectories, section =>
+                        new UIVCol().Class(w_full, grow_children, ignore_invisible)[
+                            new UICol().Class(w_full, h_[20])[
+                                new UIText(section.Name).Class(mc_[section.Name.Length], fs_[1f], gray_[50], left_[5], middle_left)
+                            ],
+                            new UIVCol().Class(w_full, h_[section.Paths.Length * 26], spacing_[1])[
+                                Foreach(section.Paths, data =>
+                                    new UICol().Class(w_full, h_[25], blank_full, hover_translation_[(-10, 0)], hover_translation_duration_[0.2f], hover_translation_easeout)
+                                    .OnHoverEnter(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f)))
+                                    .OnHoverExit(c => c.UpdateColor((0f, 0f, 0f, 0f)))
+                                    .OnClick(_ => GenerateFiles(data.Path))[Run(() => {
                                         string? fileName = Path.GetDirectoryName(data.Path);
                                         if (fileName == null)
                                             return [];
@@ -121,69 +117,66 @@ public class FileManagerUI : UIScript
                                         }
                                         
                                         return [
-                                            new UICol(Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout), [
-                                                new UIImg(Class(h_[22], w_[22], left_[7], middle_left, icon_[data.Icon], slice_null, rgb_[0.45f, 0.60f, 0.75f]))
-                                            ]),
-                                            new UIText(fileName, Class(mc_[fileName.Length], fs_[1.2f], middle_left, left_[40]))
+                                            new UICol().Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)[
+                                                new UIImg().Class(h_[22], w_[22], left_[7], middle_left, icon_[data.Icon], slice_null, rgb_[0.45f, 0.60f, 0.75f])
+                                            ],
+                                            new UIText(fileName).Class(mc_[fileName.Length], fs_[1.2f], middle_left, left_[40])
                                         ];
-                                    })))
+                                    })]
                                 )
-                            ]))
-                        ]))
+                            ]
+                        ]
                     )
-                ]), ref _defaultPaths),
-                new UIVCol(Class(w_full_minus_[150], h_full), Sub(
-                    new UICol(Class(w_full, h_[40], border_ui_[0, 0, 0, 2], border_color_g_[30]), Sub(
-                        newCol(Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], bottom_[1], border_color_g_[!_filesAsList ? 40 : 30], rgba_[0.3f, 0.3f, 0.3f, !_filesAsList ? 1f : 0f], blank_full, middle_right, right_[40], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                        OnClickCol(_ =>
+                ].Ref(ref _defaultPaths),
+                new UIVCol().Class(w_full_minus_[150], h_full)[
+                    new UICol().Class(w_full, h_[40], border_ui_[0, 0, 0, 2], border_color_g_[30])[
+                        new UICol().Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], bottom_[1], border_color_g_[!_filesAsList ? 40 : 30], rgba_[0.3f, 0.3f, 0.3f, !_filesAsList ? 1f : 0f], blank_full, middle_right, right_[40], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                        .OnClick(_ =>
                         {
                             _filesAsList = false;
                             HoverExitIconButton(_listButton);
                             GenerateFiles();
-                        }),
-                        OnHoverEnter(HoverEnterIconButton),
-                        OnHoverExit(c => { if (_filesAsList) HoverExitIconButton(c); }),
-                        Sub(
-                            new UIImg(Class(icon_[38], w_[20], h_[20], gray_[!_filesAsList ? 70 : 50], middle_center))
-                        ), ref _gridButton),
-                        newCol(Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], bottom_[1], border_color_g_[_filesAsList ? 40 : 30], rgba_[0.3f, 0.3f, 0.3f, _filesAsList ? 1f : 0f], blank_full, middle_right, right_[10], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                        OnClickCol(_ =>
+                        })
+                        .OnHoverEnter(HoverEnterIconButton)
+                        .OnHoverExit(c => { if (_filesAsList) HoverExitIconButton(c); })[
+                            new UIImg().Class(icon_[38], w_[20], h_[20], gray_[!_filesAsList ? 70 : 50], middle_center)
+                        ].Ref(ref _gridButton),
+                        new UICol().Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], bottom_[1], border_color_g_[_filesAsList ? 40 : 30], rgba_[0.3f, 0.3f, 0.3f, _filesAsList ? 1f : 0f], blank_full, middle_right, right_[10], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                        .OnClick(_ =>
                         {
                             _filesAsList = true;
                             HoverExitIconButton(_gridButton);
                             GenerateFiles();
-                        }),
-                        OnHoverEnter(HoverEnterIconButton),
-                        OnHoverExit(c => { if (!_filesAsList) HoverExitIconButton(c); }),
-                        Sub(
-                            new UIImg(Class(icon_[14], w_[20], h_[20], gray_[!_filesAsList ? 70 : 50], middle_center))
-                        ), ref _listButton)
-                    )),
-                    newVScroll(Class(w_full, h_full_minus_[40], mask_children, border_[0, 5, 0, 5], spacing_[5]), Sub(), ref _folders)
-                ))
-            )),
-            new UICol(Class(w_full_minus_[4], top_center, h_[40], border_ui_[0, 2, 0, 0], border_color_g_[30]), Sub(
-                newText($"{CurrentPaths.Count} ITEMS", Class(mc_[15], fs_[1f], middle_left, left_[12]), ref _elementCountText),
-                new UIText($"FILE NAME", Class(mc_[9], fs_[1f], middle_right, right_[340])),
-                newCol(Class(w_full, h_full), [
-                    new UIHScroll(Class(w_[300], middle_right, right_[35], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full_g_[10], mask_children), Sub(
-                        newField("name", Class(mc_[100], fs_[1f], middle_left, left_[5]), ref _fileNameField)
-                    )),
-                    new UICol(Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full, middle_right, right_[5], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnClickCol(_ => {
+                        })
+                        .OnHoverEnter(HoverEnterIconButton)
+                        .OnHoverExit(c => { if (!_filesAsList) HoverExitIconButton(c); })[
+                            new UIImg().Class(icon_[14], w_[20], h_[20], gray_[!_filesAsList ? 70 : 50], middle_center)
+                        ].Ref(ref _listButton)
+                    ],
+                    new UIVScroll().Class(w_full, h_full_minus_[40], mask_children, border_[0, 5, 0, 5], spacing_[5]).Ref(ref _folders)
+                ]
+            ],
+            new UICol().Class(w_full_minus_[4], top_center, h_[40], border_ui_[0, 2, 0, 0], border_color_g_[30])[
+                new UIText($"{CurrentPaths.Count} ITEMS").Class(mc_[15], fs_[1f], middle_left, left_[12]).Ref(ref _elementCountText),
+                new UIText($"FILE NAME").Class(mc_[9], fs_[1f], middle_right, right_[340]),
+                new UICol().Class(w_full, h_full)[
+                    new UIHScroll().Class(w_[300], middle_right, right_[35], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full_g_[10], mask_children)[
+                        new UIField("name").Class(mc_[100], fs_[1f], middle_left, left_[5]).Ref(ref _fileNameField)
+                    ],
+                    new UICol().Class(w_[25], h_[25], border_ui_[2, 2, 2, 2], border_color_g_[30], blank_full, middle_right, right_[5], hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnClick(_ => {
                         var path = GetSaveFilePath();
                         if (path != null)
                             Manager.SaveFile(path);
-                    }),
-                    OnHoverEnter(HoverEnterIconButton),
-                    OnHoverExit(HoverExitIconButton),
-                    Sub(
-                        new UIImg(Class(icon_[42], w_[20], h_[20], gray_[50], middle_center))
-                    ))
-                ], ref _fileNameCollection)
-            ))
-        ))
-    ));
+                    })
+                    .OnHoverEnter(HoverEnterIconButton)
+                    .OnHoverExit(HoverExitIconButton)[
+                        new UIImg().Class(icon_[42], w_[20], h_[20], gray_[50], middle_center)
+                    ]
+                ].Ref(ref _fileNameCollection)
+            ]
+        ]
+    ];
     
     public string? GetSaveFilePath()
     {
@@ -287,7 +280,7 @@ public class FileManagerUI : UIScript
 
             for (int y = 0; y < height; y++)
             {
-                UIHCol collection = new(Class(w_full_minus_[5], top_center, h_[70], border_[2.5f, 0, 0, 0], spacing_[5]));
+                UIHCol collection = new UIHCol().Class(w_full_minus_[5], top_center, h_[70], border_[2.5f, 0, 0, 0], spacing_[5]);
 
                 for (int x = 0; x < hCount; x++)
                 {
@@ -302,20 +295,19 @@ public class FileManagerUI : UIScript
                             icon = 20;
                     }
 
-                    var element = new UICol(Class(w_minus_[100f / (float)hCount, 5], h_[70], data_["path", CurrentPaths[current]], blank_sharp),
-                    OnClick(current < directoryCount ? ViewFolder : ClickFile),
-                    OnHoverEnterCol(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f))),
-                    OnHoverExitCol(c => { if (!_selectedButtons.Contains(c)) c.UpdateColor((0f, 0f, 0f, 0f)); }),
-                    Sub([
-                        new UICol(Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout), Sub(
-                            new UIImg(Class(w_[40], h_[40], top_center, top_[5], icon_[icon], bg_white))
-                        )),
-                        new UIText(file, Class(mc_[Mathf.Min(17, file.Length)], fs_[1f], bottom_center, bottom_[15])),
-                        ..If(file.Length > 17, () => {
+                    var element = new UICol().Class(w_minus_[100f / (float)hCount, 5], h_[70], data_["path", CurrentPaths[current]], blank_sharp)
+                    .OnClick(current < directoryCount ? ViewFolder : ClickFile)
+                    .OnHoverEnter(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f)))
+                    .OnHoverExit(c => { if (!_selectedButtons.Contains(c)) c.UpdateColor((0f, 0f, 0f, 0f)); })[
+                        new UICol().Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)[
+                            new UIImg().Class(w_[40], h_[40], top_center, top_[5], icon_[icon], bg_white)
+                        ],
+                        new UIText(file).Class(mc_[Mathf.Min(17, file.Length)], fs_[1f], bottom_center, bottom_[15]),
+                        If(file.Length > 17, () => {
                             string next = file.Substring(17, Mathf.Min(17, file.Length - 17));
-                            return new UIText(next, Class(mc_[next.Length], fs_[1f], bottom_center, bottom_[5]));
+                            return new UIText(next).Class(mc_[next.Length], fs_[1f], bottom_center, bottom_[5]);
                         })
-                    ]));
+                    ];
                     collection.AddElement(element);
 
                     current++;
@@ -341,16 +333,15 @@ public class FileManagerUI : UIScript
                         icon = 20;
                 }
 
-                collections[i] = new UICol(Class(w_full_minus_[10], top_center, h_[30], blank_sharp),
-                OnClick(i < directoryCount ? ViewFolder : ClickFile),
-                OnHoverEnterCol(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f))),
-                OnHoverExitCol(c => { if (!_selectedButtons.Contains(c)) c.UpdateColor((0f, 0f, 0f, 0f)); }),
-                Sub(
-                    new UICol(Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout), Sub(
-                        new UIImg(Class(middle_left, left_[5], icon_[icon], h_[25], w_[25], bg_white))
-                    )),
-                    new UIText(file, Class(mc_[Mathf.Min(83, file.Length)], fs_[1f], middle_left, left_[40]))
-                ));
+                collections[i] = new UICol().Class(w_full_minus_[10], top_center, h_[30], blank_sharp)
+                .OnClick(i < directoryCount ? ViewFolder : ClickFile)
+                .OnHoverEnter(c => c.UpdateColor((0.3f, 0.3f, 0.3f, 1f)))
+                .OnHoverExit(c => { if (!_selectedButtons.Contains(c)) c.UpdateColor((0f, 0f, 0f, 0f)); })[
+                    new UICol().Class(w_full, h_full, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)[
+                        new UIImg().Class(middle_left, left_[5], icon_[icon], h_[25], w_[25], bg_white)
+                    ],
+                    new UIText(file).Class(mc_[Mathf.Min(83, file.Length)], fs_[1f], middle_left, left_[40])
+                ];
             }
         }
 

@@ -6,49 +6,38 @@ namespace PBG.UI
 {
     public class UIHCol : UIHCol<UIHCol>
     {
-        private UIHCol(string name, Class classes, UIElementBase[] subs, params Event<UIHCol>[] events) : base(classes.Styles, events)
+        public UIHCol() : base() { Name = "UIHCol"; }
+        
+        public UIHCol Ref(ref UIHCol text)
         {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            text = this;
+            return text;
         }
 
+        public UIHCol Out(out UIHCol text)
+        {
+            text = this;
+            return text;
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
+        public UIHCol Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIHCol(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIHCol(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
-        
-        public UIHCol(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIHCol(Class classes, Event<UIHCol> e1) : this("UICollection", classes, [], e1) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIHCol(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1) : this(name, classes, [], e1) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2) : this(name, classes, [], e1, e2) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIHCol(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIHCol OnHoverEnter(Action<UIHCol>? action)    { SetOnHoverEnter(action); return this; }
+        public UIHCol OnHover(Action<UIHCol>? action)         { SetOnHover(action); return this; }
+        public UIHCol OnClick(Action<UIHCol>? action)         { SetOnClick(action); return this; }
+        public UIHCol OnHold(Action<UIHCol>? action)          { SetOnHold(action); return this; }
+        public UIHCol OnRelease(Action<UIHCol>? action)       { SetOnRelease(action); return this; }
+        public UIHCol OnHoverExit(Action<UIHCol>? action)     { SetOnHoverExit(action); return this; }
 
-        public UIHCol(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UIHCol this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
     }
     
     public class UIHCol<TSelf> : UICol<TSelf> where TSelf : UIHCol<TSelf>
     {
-        // This function is used when GrowFromChildren is true
-        public UIHCol(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIHorizontalCollection; }
+        public UIHCol() : base() { Tag = UIElementTag.UIHorizontalCollection; }
 
         public override void CollectionFirstPass()
         {

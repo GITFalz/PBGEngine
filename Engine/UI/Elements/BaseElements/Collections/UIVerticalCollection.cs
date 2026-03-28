@@ -7,48 +7,38 @@ namespace PBG.UI
 
     public class UIVCol : UIVCol<UIVCol>
     {
-        private UIVCol(string name, Class classes, UIElementBase[] subs, params Event<UIVCol>[] events) : base(classes.Styles, events)
+        public UIVCol() : base() { Name = "UIVCol"; }
+        
+        public UIVCol Ref(ref UIVCol text)
         {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            text = this;
+            return text;
         }
 
+        public UIVCol Out(out UIVCol text)
+        {
+            text = this;
+            return text;
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
+        public UIVCol Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIVCol(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIVCol(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
-        
-        public UIVCol(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIVCol(Class classes, Event<UIVCol> e1) : this("UICollection", classes, [], e1) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, Event<UIVCol> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIVCol(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1) : this(name, classes, [], e1) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2) : this(name, classes, [], e1, e2) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, Event<UIVCol> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIVCol(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIVCol(Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, Event<UIVCol> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIVCol OnHoverEnter(Action<UIVCol>? action)    { SetOnHoverEnter(action); return this; }
+        public UIVCol OnHover(Action<UIVCol>? action)         { SetOnHover(action); return this; }
+        public UIVCol OnClick(Action<UIVCol>? action)         { SetOnClick(action); return this; }
+        public UIVCol OnHold(Action<UIVCol>? action)          { SetOnHold(action); return this; }
+        public UIVCol OnRelease(Action<UIVCol>? action)       { SetOnRelease(action); return this; }
+        public UIVCol OnHoverExit(Action<UIVCol>? action)     { SetOnHoverExit(action); return this; }
 
-        public UIVCol(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIVCol(string name, Class classes, Event<UIVCol> e1, Event<UIVCol> e2, Event<UIVCol> e3, Event<UIVCol> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UIVCol this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
     }
     
     public class UIVCol<TSelf> : UICol<TSelf> where TSelf : UIVCol<TSelf>
     {
-        public UIVCol(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIVerticalCollection; }
+        public UIVCol() : base() { Tag = UIElementTag.UIVerticalCollection; }
         
         public override void CollectionFirstPass()
         {

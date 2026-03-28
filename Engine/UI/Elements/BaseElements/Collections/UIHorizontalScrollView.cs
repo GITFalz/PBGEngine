@@ -7,43 +7,33 @@ namespace PBG.UI
 {
     public class UIHScroll : UIHScroll<UIHScroll>
     {
-        private UIHScroll(string name, Class classes, UIElementBase[] subs, params Event<UIHScroll>[] events) : base(classes.Styles, events)
+        public UIHScroll() : base() { Name = "UIHScroll"; }
+        
+        public UIHScroll Ref(ref UIHScroll text)
         {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            text = this;
+            return text;
         }
 
+        public UIHScroll Out(out UIHScroll text)
+        {
+            text = this;
+            return text;
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
+        public UIHScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIHScroll(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIHScroll(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
-        
-        public UIHScroll(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1) : this("UICollection", classes, [], e1) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, Event<UIHScroll> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIHScroll(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1) : this(name, classes, [], e1) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2) : this(name, classes, [], e1, e2) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, Event<UIHScroll> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIHScroll(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIHScroll(Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, Event<UIHScroll> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIHScroll OnHoverEnter(Action<UIHScroll>? action)    { SetOnHoverEnter(action); return this; }
+        public UIHScroll OnHover(Action<UIHScroll>? action)         { SetOnHover(action); return this; }
+        public UIHScroll OnClick(Action<UIHScroll>? action)         { SetOnClick(action); return this; }
+        public UIHScroll OnHold(Action<UIHScroll>? action)          { SetOnHold(action); return this; }
+        public UIHScroll OnRelease(Action<UIHScroll>? action)       { SetOnRelease(action); return this; }
+        public UIHScroll OnHoverExit(Action<UIHScroll>? action)     { SetOnHoverExit(action); return this; }
 
-        public UIHScroll(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIHScroll(string name, Class classes, Event<UIHScroll> e1, Event<UIHScroll> e2, Event<UIHScroll> e3, Event<UIHScroll> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UIHScroll this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
 
         public Action<UIHScroll>? ScrollAction = null;
 
@@ -62,7 +52,7 @@ namespace PBG.UI
     }   
     public class UIHScroll<TSelf> : UIHCol<TSelf> where TSelf : UIHScroll<TSelf>
     {
-        public UIHScroll(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIHorizontalScrollView; }
+        public UIHScroll() : base() { Tag = UIElementTag.UIHorizontalScrollView; }
         
         public float ScrollPosition = 0;
 
