@@ -1,5 +1,4 @@
-﻿
-using PBG.MathLibrary;
+﻿using PBG.Mathematics;
 
 namespace PBG.Voxel
 {
@@ -377,12 +376,12 @@ namespace PBG.Voxel
 
                 if (totalDistance > maxDistance) break;
 
-                if (renderer.GetBlock(blockPos, out var block) && block.IsSolid())
+                if (renderer.GetBlock(blockPos, out var block) && block.Value.IsSolid())
                 {
                     hit.Distance = totalDistance;
                     hit.Normal = normal;
                     hit.BlockPosition = blockPos;
-                    hit.Block = block;
+                    hit.Block = block.Value;
                     hit.Side = side;
 
                     Vector3 hitPos = origin + direction * totalDistance;
