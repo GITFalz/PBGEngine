@@ -4,7 +4,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        Game game = new Game(1500, 1000);
+        using var game = new VoxelEngine(1500, 1000);
         game.Run();
     }
 }
