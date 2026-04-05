@@ -5,7 +5,7 @@ using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
 
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 
 public class CurveWindow
 {

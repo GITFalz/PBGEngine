@@ -5,6 +5,7 @@ using TextCopy;
 using PBG.Core;
 
 using System.Diagnostics;
+using Silk.NET.Vulkan;
 
 namespace PBG.UI
 {
@@ -15,7 +16,7 @@ namespace PBG.UI
 
         public static List<UIController> Controllers = [];
 
-        public static PBG.UI.UIField? ActiveInputField = null;
+        public static UIField? ActiveInputField = null;
         private static bool _clickedInputField = false;
 
         public static int CursorCharacter = 0;
@@ -80,11 +81,23 @@ namespace PBG.UI
             {
                 _fbo = new(() => (uint)Game.Width, () => (uint)Game.Height);
 
-                _uiPlaneShader = new(new()
+                ShaderInfo planeShaderInfo = new()
                 {
                     VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
                     FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
-                });
+                };
+
+                planeShaderInfo.ColorBlendAttachment.BlendEnable = true;
+
+                planeShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
+                planeShaderInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+                planeShaderInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+
+                planeShaderInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+                planeShaderInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+                planeShaderInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+                _uiPlaneShader = new(planeShaderInfo);
                 _uiPlaneShader.Compile();
                 
                 _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
@@ -180,9 +193,14 @@ namespace PBG.UI
                 InteractableElementsSet.Add(element);
             }
 
-            if (element is IUICol uiCollection)
+            if (element is UICol uiCollection)
             {
-                uiCollection.ForeachChildren(Internal_AddElement);
+                var children = uiCollection.GetChildren();
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var child = children[i];
+                    Internal_AddElement(child);
+                }
             }
         }
 
@@ -198,9 +216,14 @@ namespace PBG.UI
             
             element.Destroy();
 
-            if (element is IUICol uiCollection)
+            if (element is UICol uiCollection)
             {
-                uiCollection.ForeachChildren(Internal_RemoveElement);
+                var children = uiCollection.GetChildren();
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var child = children[i];
+                    Internal_RemoveElement(child);
+                }
             }
 
             element.UIController = null;
@@ -395,6 +418,21 @@ namespace PBG.UI
             return over;
         }
 
+        public static void UpdateCursor()
+        {
+            if (ActiveInputField != null)
+            {
+                int charCount = ActiveInputField.GetText().Length;
+                if (Input.IsKeyPressed(Key.Left))
+                    CursorCharacter--;
+                if (Input.IsAnyKeyPressed(Key.Right))
+                    CursorCharacter++;
+
+                CursorCharacter.ClampSety(0, charCount);
+                ActiveInputField.SetCursor();
+            }
+        }
+
         void Update()
         {
             HandleAnimations();
@@ -497,8 +535,8 @@ namespace PBG.UI
                 {
                     element.FirstPass();
                     element.SecondPass();
-                    if (!AddedElements.Contains(element))
-                        element.ApplyChanges(UIChange.Scale);
+                    //if (!AddedElements.Contains(element))
+                        //element.ApplyChanges(UIChange.Scale);
                 }
 
                 foreach (var element in AddedElements)

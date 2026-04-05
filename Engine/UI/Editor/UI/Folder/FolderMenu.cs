@@ -1,6 +1,6 @@
 using PBG.UI;
 using PBG.UI.Creator;
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 using static PBG.Editor.EditorUI;
 using PBG.Data;
 
@@ -47,7 +47,7 @@ public class FolderMenu : UIScript
                 new UIText("add file").Class(middle_left, left_[5])
             ]
         ].Ref(ref _baseOptions),
-        new UIVCol().Class(w_full, grow_children, hidden, not_toggle_old_invisible)[
+        new UIVCol("test").Class(w_full, grow_children, hidden, not_toggle_old_invisible)[
             new UICol().Class(w_full, h_[15]).OnClick(_ => DeleteFolder(EditorUI.Instance.FolderIcon))[
                 new UIText("delete folder").Class(middle_left, left_[5])
             ]

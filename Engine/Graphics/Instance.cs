@@ -4,6 +4,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Editor;
 using PBG.MathLibrary;
+using PBG.Rendering;
 using PBG.Threads;
 using PBG.UI;
 using PBG.Voxel;
@@ -59,6 +60,8 @@ public unsafe class VulkanInstance
         this.gameWindow = gameWindow;
         context = new(width, height); 
     }
+
+    public bool running = true;
 
     public void Run()
     {
@@ -120,7 +123,7 @@ public unsafe class VulkanInstance
         }
 
         gameWindow.Keyboard = input.Keyboards[0];
-        gameWindow.Mouse = input.Mice[0];
+        gameWindow.SetMouse(input.Mice[0]);
         
         InitVulkan();
 
@@ -146,7 +149,7 @@ public unsafe class VulkanInstance
 
         var editorNode = EditorScene.NewNode("Editor");
 
-        EditorController = new UIController();
+        EditorController = new UIController("EditorController");
         var editorUI = new EditorUI();
         var folderMenu = new FolderMenu();
         var fileMover = new FileMover();
@@ -179,10 +182,13 @@ public unsafe class VulkanInstance
 
     private void OnUpdate(double deltaSeconds)
     {
+        Stopwatch sw = Stopwatch.StartNew();
+
         if (_isLoading)
             return;
 
-        Input.Update(gameWindow.Mouse);
+        // --- Update pipeline ---
+        Input.Update();
         GameTime.Update((float)deltaSeconds);
         BufferBase.DisposeCached();
 
@@ -190,15 +196,18 @@ public unsafe class VulkanInstance
 
         Scene.LoadSceneFinal();
         UIController.HandleAllInputs();
+        UIController.UpdateCursor();
         Scene.CurrentScene?.UpdatePending();
-        
+
         gameWindow.OnUpdate(deltaSeconds);
-        
+
         TaskPool.Update();
         EditorWatcher.UpdateAll();
 
         EditorScene.UpdatePending();
         EditorScene.Update();
+
+        Input.LateUpdate();
     }
 
     #region Instance
@@ -935,9 +944,12 @@ public unsafe class VulkanInstance
 
     #endregion
 
+    double _timer;
+    int counter = 0;
 
     private void OnRender(double deltaSeconds)
     {
+        Stopwatch sw = Stopwatch.StartNew();
         context.vk.WaitForFences(context.device, 1, ref context.inFlightFences[context.currentFrame], true, ulong.MaxValue);
 
         uint imageIndex;
@@ -995,10 +1007,22 @@ public unsafe class VulkanInstance
             throw new InvalidOperationException("failed to present swap chain image!");
 
         context.currentFrame = (context.currentFrame + 1) % GraphicsContext.MAX_FRAMES_IN_FLIGHT;
+
+        if (_timer >= 1f)
+        {
+            Console.WriteLine(counter);
+            counter = 0;
+            _timer = 0;
+            Console.WriteLine(1 / sw.Elapsed.TotalSeconds + " fps"); sw.Stop();
+        }
+        _timer += deltaSeconds;
+        counter++;
     }
 
     private void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex) 
     {
+        GFX.RenderCallCount = 0;
+
         CommandBufferBeginInfo beginInfo = new()
         {
             SType = StructureType.CommandBufferBeginInfo,
@@ -1030,6 +1054,8 @@ public unsafe class VulkanInstance
         renderPassInfo.PClearValues = pClearValues;
 
         context.vk.CmdBeginRenderPass(commandBuffer, &renderPassInfo, SubpassContents.Inline);
+        
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
         Rect2D scissor = new()
         {
@@ -1039,9 +1065,7 @@ public unsafe class VulkanInstance
         context.vk.CmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         GFX.Viewport(0, 0, context.swapChainExtent.Width, context.swapChainExtent.Height);
-
-        FBO.currentRenderPassState = FBO.RenderPassState.Main;
-
+        
         if (_isLoading)
         {
             gameWindow.OnRenderLoad();
@@ -1049,11 +1073,21 @@ public unsafe class VulkanInstance
         }
         else
         {
+            MeshRenderer.Count = 0;
+            MeshRenderer.Time = 0;
+
             gameWindow.OnRender();
-            UIController.ClearFrameBuffer();
+            //UIController.ClearFrameBuffer();
             EditorScene.Render();
             UIController.GlobalRender();
         }
+        
+        if (_timer >= 1f)
+        {
+            Console.WriteLine(stopwatch.Elapsed.TotalMicroseconds + " µs " + MeshRenderer.Time + " µs " + MeshRenderer.Count); 
+        }
+
+        stopwatch.Stop();
 
         context.vk.CmdEndRenderPass(commandBuffer);
 

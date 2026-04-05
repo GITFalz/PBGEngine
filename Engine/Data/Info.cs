@@ -6,7 +6,7 @@ using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
 using PBG.UI.Creator;
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 
 namespace PBG.Data;
 

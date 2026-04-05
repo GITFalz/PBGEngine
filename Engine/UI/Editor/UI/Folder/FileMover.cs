@@ -1,6 +1,6 @@
 using PBG.UI;
 using PBG.UI.Creator;
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 using static PBG.Editor.EditorUI;
 using PBG.MathLibrary;
 

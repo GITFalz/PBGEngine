@@ -5,9 +5,21 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIHScroll : UIHScroll<UIHScroll>
+    public class UIHScroll : UIHCol
     {
-        public UIHScroll() : base() { Name = "UIHScroll"; }
+        public float ScrollPosition = 0;
+        protected override float TotalWidth => Border.X - ScrollPosition;
+
+        public UIHScroll() : base() 
+        { 
+            Name = "UIHScroll"; 
+            Tag = UIElementTag.UIHorizontalScrollView;
+        }
+
+        public UIHScroll(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
         
         public UIHScroll Ref(ref UIHScroll text)
         {
@@ -21,16 +33,16 @@ namespace PBG.UI
             return text;
         }
 
-        public UIHScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
+        public new UIHScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIHScroll OnHoverEnter(Action<UIHScroll>? action)    { SetOnHoverEnter(action); return this; }
-        public UIHScroll OnHover(Action<UIHScroll>? action)         { SetOnHover(action); return this; }
-        public UIHScroll OnClick(Action<UIHScroll>? action)         { SetOnClick(action); return this; }
-        public UIHScroll OnHold(Action<UIHScroll>? action)          { SetOnHold(action); return this; }
-        public UIHScroll OnRelease(Action<UIHScroll>? action)       { SetOnRelease(action); return this; }
-        public UIHScroll OnHoverExit(Action<UIHScroll>? action)     { SetOnHoverExit(action); return this; }
+        public UIHScroll OnHoverEnter(Action<UIHScroll>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIHScroll OnHover(Action<UIHScroll>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIHScroll OnClick(Action<UIHScroll>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIHScroll OnHold(Action<UIHScroll>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIHScroll OnRelease(Action<UIHScroll>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIHScroll OnHoverExit(Action<UIHScroll>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
-        public UIHScroll this[params IUIChild[] subElements]
+        public new UIHScroll this[params IUIChild[] subElements]
         {
             get { AddElements(subElements); return this; }
         }
@@ -49,13 +61,6 @@ namespace PBG.UI
         {
             ScrollAction = action; return this;
         }
-    }   
-    public class UIHScroll<TSelf> : UIHCol<TSelf> where TSelf : UIHScroll<TSelf>
-    {
-        public float ScrollPosition = 0;
-        protected override float TotalWidth => Border.X - ScrollPosition;
-
-        public UIHScroll() : base() { Tag = UIElementTag.UIHorizontalScrollView; }
 
         public static void Scroll(UIHScroll scrollView)
         {

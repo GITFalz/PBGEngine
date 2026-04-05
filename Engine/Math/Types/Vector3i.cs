@@ -3,7 +3,7 @@ using PBG.Parse;
 
 namespace PBG.MathLibrary;
 
-public struct Vector3i : ISceneSerializable
+public struct Vector3i : ISceneSerializable, IVector<int>
 {
     public int X;
     public int Y;
@@ -35,6 +35,9 @@ public struct Vector3i : ISceneSerializable
 
     public static Vector3i Zero = new(0);
     public static Vector3i One = new(1);
+
+    public readonly int Count => 3;
+    public readonly IVector<int> Default => Zero;
 
     public Vector3i(int x, int y, int z)
     {

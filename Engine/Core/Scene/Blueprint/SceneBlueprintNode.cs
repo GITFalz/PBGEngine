@@ -1,29 +1,30 @@
-using System.Reflection;
 using PBG.MathLibrary;
-using PBG.Modeling;
-using PBG.Rendering;
-using Silk.NET.Input;
 
 namespace PBG.Core;
 
-public class SceneBlueprintNode(Node parentNode, string name)
+public class SceneBlueprintNode : SceneDefinitionNode
 {
-    public string Name = name;
-
-    public TransformNode Transform = parentNode.AddChild(name);
-    public TransformNode? RuntimeNode = null;
-
     public List<ScriptBlueprint> Scripts = [];
-    public List<SceneBlueprintNode> ChildrenNodes = [];  
-    public static Dictionary<string, SceneBlueprintNode> ChildrenNodeMap = [];  
 
-    public void Copy(Scene scene, Node parent)
+    public override int ScriptCount => Scripts.Count;
+
+    public SceneBlueprintNode(Node parentNode, string name) : base(parentNode, name) {}
+
+    public override ScriptDefinition[] GetScripts()
     {
-        var newNode = parent.AddChild(Name);
+        ScriptDefinition[] scripts = new ScriptDefinition[Scripts.Count];
+        for (int i = 0; i < Scripts.Count; i++)
+            scripts[i] = Scripts[i];
+        return scripts;
+    }
 
-        newNode.Position = Transform.Position;
-        newNode.Scale = Transform.Scale;
-        newNode.Rotation = Transform.Rotation;
+    public SceneRuntimeNode Copy(Scene scene, Node parent)
+    {
+        var runtimeNode = new SceneRuntimeNode(parent, Name);
+
+        runtimeNode.Transform.Position = Transform.Position;
+        runtimeNode.Transform.Scale = Transform.Scale;
+        runtimeNode.Transform.Rotation = Transform.Rotation;
 
         for (int i = 0; i < Scripts.Count; i++)
         {
@@ -32,94 +33,35 @@ public class SceneBlueprintNode(Node parentNode, string name)
             if (instance == null)
                 continue;
 
-            newNode.AddComponent(instance);
+            var node = new ScriptRuntime(runtimeNode, component.Name)
+            {
+                ScriptingNode = instance
+            };
+            runtimeNode.Scripts.Add(node);
+            runtimeNode.Transform.AddComponent(instance);
         }
 
         for (int i = 0; i < ChildrenNodes.Count; i++)
         {
             var childNode = ChildrenNodes[i];
-            childNode.Copy(scene, newNode);
+            if (childNode is SceneBlueprintNode blueprintNode)
+            {
+                var node = blueprintNode.Copy(scene, runtimeNode.Transform);
+                runtimeNode.ChildrenNodes.Add(node);
+                runtimeNode.ChildrenNodeMap.Add(node.Name, node);
+            }
         }
 
-        RuntimeNode = newNode;
+        return runtimeNode;
     }
-    
-    public SceneBlueprintNode AddNode(string name)
+
+    public override void AddScript(ScriptDefinition scriptDefinition)
     {
-        string newName = name;
-        int count = 1;
-        while (ChildrenNodeMap.ContainsKey(newName)) 
-        { 
-            newName = name + "_" + count; 
-            count++; 
-        }
-        SceneBlueprintNode blueprintNode = new(Transform, newName);
-        ChildrenNodes.Add(blueprintNode);
-        ChildrenNodeMap.Add(newName, blueprintNode);
-        return blueprintNode;
+        if (scriptDefinition is ScriptBlueprint script)
+            Scripts.Add(script);
     }
 
-    public bool AddScript(ScriptingNode scriptingNode)
-    {   
-        var script = new InternalScriptBlueprint(this, scriptingNode);
-        Scripts.Add(script);
-        Transform.AddComponent(scriptingNode);
-        return true;
-    }
-
-    public bool AddScript(SceneScriptJson json)
-    {   
-        ScriptBlueprint script;
-        if (_internalScriptParsers.TryGetValue(json.Name, out var action))
-        {
-            var parser = action.Invoke().Parse(json);;
-            var scriptingNode = parser.GetScript();
-            script = new InternalScriptBlueprint(this, scriptingNode);
-        }
-        else
-        {
-            script = new CustomScriptBlueprint(this, json.Name);
-            script.Refresh();
-            json.ParseFields(script);
-        }
-        
-        Scripts.Add(script);
-        if (script.ScriptingNode == null)
-            return false;
-
-        Transform.AddComponent(script.ScriptingNode);
-        OrderScripts();
-        return true;
-    }
-
-    public bool AddScript(string name) => AddScript(name, out _);
-    public bool AddScript(string name, out ScriptBlueprint script)
-    {   
-        if (_internalTypes.TryGetValue(name, out var action))
-        {
-            script = new InternalScriptBlueprint(this, action.Invoke());
-        }
-        else
-        {
-            script = new CustomScriptBlueprint(this, name);
-            script.Refresh();
-        }
-        
-        Scripts.Add(script);
-        if (script.ScriptingNode == null)
-            return false;
-
-        Transform.AddComponent(script.ScriptingNode);
-        return true;
-    }
-
-    public void RefreshScripts()
-    {
-        for (int i = 0; i < Scripts.Count; i++)
-            Scripts[i].Refresh();
-    }
-
-    public void OrderScripts()
+    public override void OrderScripts()
     {
         List<ScriptBlueprint> scripts = [];
 
@@ -140,9 +82,9 @@ public class SceneBlueprintNode(Node parentNode, string name)
         Scripts = scripts;
     }
 
-    public bool RemoveScript(ScriptBlueprint script)
+    public override bool RemoveScript(ScriptDefinition script)
     {
-        if (Scripts.Remove(script) && script.ScriptingNode != null)
+        if (script is ScriptBlueprint sc && Scripts.Remove(sc) && script.ScriptingNode != null)
         {
             Transform.RemoveScript(script.ScriptingNode);
             return true;
@@ -150,77 +92,22 @@ public class SceneBlueprintNode(Node parentNode, string name)
         return false;
     }
 
-    public SceneNodeJson GetJson()
+    public override void RefreshScripts()
     {
-        var json = new SceneNodeJson
-        {
-            Name = Name,
-        };
-
-        if (Transform.Position != Vector3.Zero)         json.Position = [Transform.Position.X, Transform.Position.Y, Transform.Position.Z];
-        if (Transform.Rotation != Quaternion.Identity)  json.Rotation = [Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z, Transform.Rotation.W];
-        if (Transform.Scale != Vector3.One)             json.Scale = [Transform.Scale.X, Transform.Scale.Y, Transform.Scale.Z];
-
-        json.Scripts ??= [];
         for (int i = 0; i < Scripts.Count; i++)
-            json.Scripts.Add(Scripts[i].GetJson());
-
-        json.Nodes ??= [];
-        for (int i = 0; i < ChildrenNodes.Count; i++)
-            json.Nodes.Add(ChildrenNodes[i].GetJson());
-
-        return json;
+            Scripts[i].Refresh();
     }
 
-    public void Clear()
+    public override void Clear()
     {
         for (int i = 0; i < ChildrenNodes.Count; i++)
             ChildrenNodes[i].Clear();
 
+        for (int i = 0; i < Scripts.Count; i++)
+            RemoveScript(Scripts[i]);
+
         ChildrenNodes.Clear();
         ChildrenNodeMap.Clear();
         Scripts.Clear();
-        RuntimeNode = null;
-    }
-
-    private static readonly Dictionary<string, Func<ScriptingNode>> _internalTypes = new()
-    {
-        {  "MeshRenderer", () => new MeshRenderer() }
-    };
-
-    private static readonly Dictionary<string, Func<InternalScriptParser>> _internalScriptParsers = new()
-    {
-        {  "MeshRenderer", () => new MeshRendererParser() }
-    };
-
-    public abstract class InternalScriptParser
-    {
-        public abstract InternalScriptParser Parse(SceneScriptJson json);
-        public abstract ScriptingNode GetScript();
-    }
-
-    public class MeshRendererParser : InternalScriptParser
-    {
-        private MeshRenderer _renderer = new();
-
-        public override InternalScriptParser Parse(SceneScriptJson json)
-        {
-            if (json.Fields != null)
-            for (int i = 0; i < json.Fields.Count; i++)
-            {
-                var field = json.Fields[i];
-                if (field.Type == "Mesh" && field.Value != null)
-                {
-                    var path = Game.CurrentProjectPath / field.Value;
-                    if (File.Exists(path))
-                    {
-                        ObjLoader.LoadMesh(path, _renderer);
-                    }
-                    break;
-                }
-            }
-            return this;
-        }
-        public override ScriptingNode GetScript() => _renderer;
     }
 }

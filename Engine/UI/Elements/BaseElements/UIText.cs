@@ -1,39 +1,25 @@
 using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
 using PBG.Rendering.Meshes;
-using PBG.UI.Creator;
-
 
 namespace PBG.UI
 {
-    public interface IUIText
+    public class UIText : UIElementBase
     {
-        Vector4 Color { get; set; }
-        Vector4 Transform { get; }
-        string Text { get; }
-        int? MaxCharCount { get; set; }
-        float FontSize { get; set; }
-        bool Visible { get; }
-        int MaskIndex { get; set; }
-        public TextAlign TextAlign { get; set; }
+        public UIText() : this("") { }
+        public UIText(string text) : base((1, 1, 1, 1)) 
+        { 
+            Name = "UIText";
+            Tag = UIElementTag.UIText; 
 
-        Vector2 AnimationTranslation { get; set; }
-        float AnimationScale { get; set; }
-        float AnimationRotation { get; set; }
+            MaxCharCount ??= text.Length;
+            SetText(text);
+        }
 
-        string GetText();
-        IUIText SetText(string text);
-        UIElementBase UpdateCharacters();
-        Vector2 GetCenter();
-        TextAlign GetTextAlign();
-        TextMesh GetTextMesh();
-        UIElementBase GetElement();
-    }
-
-    public class UIText : UIText<UIText>
-    {
-        public UIText() : base("") { Name = "UIText"; }
-        public UIText(string text) : base(text) { Name = "UIText"; }
+        public UIText(string text, params IStyleData[] styles) : this(text)
+        { 
+            Class(styles);
+        }
         
         public UIText Ref(ref UIText text)
         {
@@ -49,23 +35,12 @@ namespace PBG.UI
 
         public UIText Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIText OnHoverEnter(Action<UIText>? action)    { SetOnHoverEnter(action); return this; }
-        public UIText OnHover(Action<UIText>? action)         { SetOnHover(action); return this; }
-        public UIText OnClick(Action<UIText>? action)         { SetOnClick(action); return this; }
-        public UIText OnHold(Action<UIText>? action)          { SetOnHold(action); return this; }
-        public UIText OnRelease(Action<UIText>? action)       { SetOnRelease(action); return this; }
-        public UIText OnHoverExit(Action<UIText>? action)     { SetOnHoverExit(action); return this; }
-    }
-
-    public class UIText<TSelf> : UIElement<TSelf>, IUIText where TSelf : UIText<TSelf>
-    {
-        public UIText(string text) : base((1, 1, 1, 1)) 
-        { 
-            Tag = UIElementTag.UIText; 
-
-            MaxCharCount ??= text.Length;
-            SetText(text);
-        }
+        public UIText OnHoverEnter(Action<UIText>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIText OnHover(Action<UIText>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIText OnClick(Action<UIText>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIText OnHold(Action<UIText>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIText OnRelease(Action<UIText>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIText OnHoverExit(Action<UIText>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
         public TextAlign TextAlign { get; set; } = TextAlign.Left;
         public int? MaxCharCount { get; set; } = null;
@@ -75,7 +50,7 @@ namespace PBG.UI
 
         protected bool _checkCursor = true;
 
-        public IUIText SetText(string text)
+        public UIText SetText(string text)
         {
             Text = ClampText(text, 0, MaxCharCount ?? 20);
             _text = Text;
@@ -103,6 +78,16 @@ namespace PBG.UI
         public float GetFloat(float replacement = 0) => Parse.Float.Parse(_text, replacement);
         public int GetInt(int replacement = 0) => Parse.Int.Parse(_text, replacement);
         public byte GetByte(byte replacement = 0) => (byte)Parse.Int.Parse(_text, replacement);
+        public bool TryGetValue<T>([NotNullWhen(true)] out T? value) where T : IParsable<T>
+        {
+            try {
+                value = T.Parse(_text, null);
+                return true;
+            } catch {
+                value = default;
+                return value != null;
+            }
+        }
 
         public void SetTextCharCount(string text)
         {

@@ -2,7 +2,7 @@ namespace PBG.UI;
 
 public class UIList(List<IUIChild> children) : IUIChild
 {
-    public void AddTo(IUICol parent)
+    public void AddTo(UICol parent)
     {
         for (int i = 0; i < children.Count; i++)
             children[i].AddTo(parent);
@@ -11,7 +11,7 @@ public class UIList(List<IUIChild> children) : IUIChild
 
 public class UIArray(IUIChild[] children) : IUIChild
 {
-    public void AddTo(IUICol parent)
+    public void AddTo(UICol parent)
     {
         for (int i = 0; i < children.Length; i++)
             children[i].AddTo(parent);
@@ -39,7 +39,7 @@ public class Run : IUIChild
         _element = null;
     }
 
-    public void AddTo(IUICol parent) => _element?.AddTo(parent);
+    public void AddTo(UICol parent) => _element?.AddTo(parent);
 }
 
 public class Foreach<T> : IUIChild
@@ -68,7 +68,7 @@ public class Foreach<T> : IUIChild
         }
     }
 
-    public void AddTo(IUICol parent)
+    public void AddTo(UICol parent)
     {
         for (int i = 0; i < _elements.Count; i++)
             _elements[i].AddTo(parent);
@@ -89,7 +89,7 @@ public class Foreach<TKey, TValue> : IUIChild
         }
     }
 
-    public void AddTo(IUICol parent)
+    public void AddTo(UICol parent)
     {
         for (int i = 0; i < _elements.Count; i++)
             _elements[i].AddTo(parent);
@@ -140,7 +140,7 @@ public class Forloop : IUIChild
         }
     }
 
-    public void AddTo(IUICol parent)
+    public void AddTo(UICol parent)
     {
         for (int i = 0; i < _elements.Count; i++)
             _elements[i].AddTo(parent);
@@ -161,5 +161,5 @@ public class If : IUIChild
         if (condition) _child = new UIArray(action());
     }
 
-    public void AddTo(IUICol parent) => _child?.AddTo(parent);
+    public void AddTo(UICol parent) => _child?.AddTo(parent);
 }

@@ -296,18 +296,7 @@ public unsafe class Shader : BufferBase, IShader
         }
         // === End ===
         
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings = [];
-        
+        GraphicsContext.graphicsContext.shaderCompiler.Clear();
 
         PipelineShaderStageCreateInfo vertShaderStageInfo = new()
         {

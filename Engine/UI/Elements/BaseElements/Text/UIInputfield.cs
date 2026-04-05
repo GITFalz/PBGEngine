@@ -7,12 +7,22 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIField : UIField<UIField>
+    public class UIField : UIText
     {
         private bool _removeTriggered = false;
+        public bool IsActive => UIController.ActiveInputField == this;
 
-        public UIField() : base("") { Name = "UIField"; }
-        public UIField(string text) : base(text) { Name = "UIField"; }
+        public UIField() : this("") {}
+        public UIField(string text) : base(text) 
+        { 
+            Name = "UIField"; 
+            Tag = UIElementTag.UIField; 
+        }
+
+        public UIField(string text, params IStyleData[] styles) : this(text)
+        { 
+            Class(styles);
+        }
         
         public UIField Ref(ref UIField text)
         {
@@ -28,14 +38,14 @@ namespace PBG.UI
 
         public UIField Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIField OnHoverEnter(Action<UIField>? action)    { SetOnHoverEnter(action); return this; }
-        public UIField OnHover(Action<UIField>? action)         { SetOnHover(action); return this; }
-        public UIField OnClick(Action<UIField>? action)         { SetOnClick(action); return this; }
-        public UIField OnHold(Action<UIField>? action)          { SetOnHold(action); return this; }
-        public UIField OnRelease(Action<UIField>? action)       { SetOnRelease(action); return this; }
-        public UIField OnHoverExit(Action<UIField>? action)     { SetOnHoverExit(action); return this; }
-        public UIField OnTextChange(Action<UIField>? action)     { SetOnTextChange(action); return this; }
-        public UIField OnTextEnter(Action<UIField>? action)     { SetOnTextEnter(action); return this; }
+        public UIField OnHoverEnter(Action<UIField>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIField OnHover(Action<UIField>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIField OnClick(Action<UIField>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIField OnHold(Action<UIField>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIField OnRelease(Action<UIField>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIField OnHoverExit(Action<UIField>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+        public UIField OnTextChange(Action<UIField>? action)    { UIEventExtensions.OnTextChange(this, action); return this; }
+        public UIField OnTextEnter(Action<UIField>? action)     { UIEventExtensions.OnTextEnter(this, action); return this; }
 
         public override bool Test()
         {
@@ -175,16 +185,11 @@ namespace PBG.UI
         }
 
         public override bool IsInteractable() => true;   
-    }
-    
-    public class UIField<TSelf> : UIText<UIField> where TSelf : UIField<TSelf>
-    {
+
         public PBG.UI.TextInputType TextType = PBG.UI.TextInputType.Any;
 
-        public Action<TSelf>? _onTextChange = null;
-        public Action<TSelf>? _onTextEnter = null;
-
-        public UIField(string text) : base(text) {}
+        public Action<UIField>? _onTextChange = null;
+        public Action<UIField>? _onTextEnter = null;
 
         public void SetTextType(PBG.UI.TextInputType textType)
         {

@@ -1,9 +1,10 @@
+using System.Collections;
 using PBG.Core;
 using PBG.Parse;
 
 namespace PBG.MathLibrary;
 
-public struct Vector2 : ISceneSerializable
+public struct Vector2 : ISceneSerializable, IVector<float>
 {
     public float X;
     public float Y;
@@ -13,6 +14,9 @@ public struct Vector2 : ISceneSerializable
 
     public readonly float Length => Mathf.Sqrt((X * X) + (Y * Y));
     public readonly float LengthSquared => (X * X) + (Y * Y);
+
+    public readonly int Count => 2;
+    public readonly IVector<float> Default => Zero;
 
     public Vector2(float x, float y)
     {

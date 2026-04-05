@@ -3,13 +3,16 @@ using PBG.Parse;
 
 namespace PBG.MathLibrary;
 
-public struct Vector2i : ISceneSerializable
+public struct Vector2i : ISceneSerializable, IVector<int>
 {
     public int X;
     public int Y;
 
     public static Vector2i Zero = new(0);
     public static Vector2i One = new(1);
+
+    public readonly int Count => 2;
+    public readonly IVector<int> Default => Zero;
 
     public Vector2i(int x, int y)
     {

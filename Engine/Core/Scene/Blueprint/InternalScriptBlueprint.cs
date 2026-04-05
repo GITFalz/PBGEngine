@@ -4,7 +4,7 @@ public class InternalScriptBlueprint : ScriptBlueprint
 {
     public override bool IsScriptValid => true;
 
-    public InternalScriptBlueprint(SceneBlueprintNode parent, ScriptingNode script) : base(parent, script.GetType().Name)
+    public InternalScriptBlueprint(SceneDefinitionNode parent, ScriptingNode script) : base(parent, script.GetType().Name)
     {
         ScriptingNode = script;
         Status = ScriptStatus.InternalScript;

@@ -1,6 +1,7 @@
 
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.Parse;
 using PBG.UI;
 
 namespace PBG.Rendering.Meshes
@@ -10,13 +11,16 @@ namespace PBG.Rendering.Meshes
         public int ElementCount = 0;
         public int VisibleElementCount = 0;
 
-        public HashSet<IUIPanel> PanelStructsToBeRemoved = [];
-        public HashSet<IUIPanel> PanelStructsToBeAdded = [];
-        public UIPanelStruct[] PanelStructs = [];
-        public Dictionary<UI.IUIPanel, int> Panels = [];
+        public HashSet<UIPanel> PanelStructsToBeRemoved = [];
+        public HashSet<UIPanel> PanelStructsToBeAdded = [];
+        public NewUIPanelStruct[] PanelStructs = [];
+        public Vector4[] StyleData = [];
+        public Dictionary<UIPanel, UIMetaData> Panels = [];
 
         //private Graphics.VAO _vao = new();
-        private SSBO<UIPanelStruct> _uiSSBO = new([], true);
+
+        private SSBO<NewUIPanelStruct> _uiSSBO = new([], true);
+        private SSBO<Vector4> _styleSSBO = new([], true);
 
         private bool _updateVisibility = false;
         private BufferEnum _bufferUpdateState = BufferEnum.None;
@@ -29,39 +33,40 @@ namespace PBG.Rendering.Meshes
             _controller = controller;
             Descriptor = controller.UIData.GetUiDescriptor();
             Descriptor.BindSSBO(_uiSSBO, 1);
-            Descriptor.BindSSBO(controller.MaskData.MaskSSBO, 2);
+            Descriptor.BindSSBO(_styleSSBO, 2);
+            Descriptor.BindSSBO(controller.MaskData.MaskSSBO, 3);
         }
 
-        public void AddElement(UI.IUIPanel panel)
+        public void AddElement(UIPanel panel)
         {
             PanelStructsToBeAdded.Add(panel);
             SetBufferUpdateState(BufferEnum.Recreate);
         }
 
-        public void RemoveElement(UI.IUIPanel panelToRemove)
+        public void RemoveElement(UIPanel panelToRemove)
         {
             PanelStructsToBeRemoved.Add(panelToRemove);
             SetBufferUpdateState(BufferEnum.Recreate);
         }
 
-        public void UpdateMaskIndex(UI.IUIPanel panel, int index)
+        public void UpdateMaskIndex(UIPanel panel, int index)
         {
-            if (Panels.TryGetValue(panel, out int panelIndex))
+            if (Panels.TryGetValue(panel, out var metaData))
             {
-                var panelData = PanelStructs[panelIndex];
-                panelData.Data.W = index;
-                PanelStructs[panelIndex] = panelData;
+                var panelData = PanelStructs[metaData.Index];
+                panelData.MaskIndex = index;
+                PanelStructs[metaData.Index] = panelData;
             }
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateTextureIndex(UI.IUIPanel panel)
+        public void UpdateTextureIndex(UIPanel panel)
         {
-            if (Panels.TryGetValue(panel, out int panelIndex))
+            if (Panels.TryGetValue(panel, out var metaData))
             {
-                var panelData = PanelStructs[panelIndex];
-                panelData.Data.X = panel.TextureID;
-                PanelStructs[panelIndex] = panelData;
+                var panelData = PanelStructs[metaData.Index];
+                panelData.TextureIndex = panel.TextureID;
+                PanelStructs[metaData.Index] = panelData;
             }
             SetBufferUpdateState(BufferEnum.Update);
         }
@@ -77,15 +82,15 @@ namespace PBG.Rendering.Meshes
         {
             int i = 0;
             VisibleElementCount = 0;
-            foreach (var (panel, index) in Panels)
+            foreach (var (panel, metaData) in Panels)
             {
                 //Console.WriteLine(panel.GetName() + " has a visibility of: " + panel.Visible + " at: " + index + " and: " + i);
                 if (panel.IsValid)
                 {
                     var data = PanelStructs[i];
-                    if (index != data.Data.Z)
+                    if (metaData.Index != data.ElementIndex)
                     {
-                        data.Data.Z = index;
+                        data.ElementIndex = metaData.Index;
                         PanelStructs[i] = data;
                     }
                     i++;
@@ -98,106 +103,129 @@ namespace PBG.Rendering.Meshes
 
         public void Resize()
         {
-            foreach (var (panel, index) in Panels)
+            foreach (var (panel, metaData) in Panels)
             {
-                var panelStruct = PanelStructs[index];
-                panelStruct.SizeSlice = (panel.Size.X, panel.Size.Y, panel.Slice.X, panel.Slice.Y);
-                panelStruct.Transform = panel.Transform;
-                PanelStructs[index] = panelStruct;
+                var panelStruct = PanelStructs[metaData.Index];
+                panelStruct.Size = panel.Size;
+                panelStruct.Slice = panel.Slice;
+                panelStruct.Transform = panel.Transform.Xyz;
+                PanelStructs[metaData.Index] = panelStruct;
             }
             _uiSSBO.Update(PanelStructs);
         }
 
-        public void UpdateTransform(UI.IUIPanel panel)
+        public void UpdateTransform(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.Transform = panel.Transform;
-            PanelStructs[index] = panelStruct;
+            var panelStruct = PanelStructs[metaData.Index];
+            panelStruct.Transform = panel.Transform.Xyz;
+            PanelStructs[metaData.Index] = panelStruct;
 
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateScale(UI.IUIPanel panel)
+        public void UpdateScale(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.SizeSlice = (panel.Size.X, panel.Size.Y, panel.Slice.X, panel.Slice.Y);
-            PanelStructs[index] = panelStruct;
+            var panelStruct = PanelStructs[metaData.Index];
+            panelStruct.Size = panel.Size;
+            panelStruct.Slice = panel.Slice;
+            PanelStructs[metaData.Index] = panelStruct;
 
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateColor(UI.IUIPanel panel)
+        public void UpdateColor(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
+            var panelStruct = PanelStructs[metaData.Index];
             panelStruct.Color = panel.Color;
-            PanelStructs[index] = panelStruct;
+            PanelStructs[metaData.Index] = panelStruct;
 
             _updateVisibility = true;
             if (_bufferUpdateState != BufferEnum.Recreate)
                 SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateBorderUI(UI.IUIPanel panel)
+        public void UpdateBorderUI(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.Border = panel.BorderUI;
-            PanelStructs[index] = panelStruct;
+            StyleData[metaData.StyleIndex] = panel.BorderUI;
 
             _updateVisibility = true;
             if (_bufferUpdateState != BufferEnum.Recreate)
                 SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateBorderColor(UI.IUIPanel panel)
+        public void UpdateBorderColor(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.BorderColor = panel.BorderColor;
-            PanelStructs[index] = panelStruct;
+            StyleData[metaData.StyleIndex + 1] = panel.BorderColor;
 
             _updateVisibility = true;
             if (_bufferUpdateState != BufferEnum.Recreate)
                 SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateAnimationTranslation(UI.IUIPanel panel)
+        public void UpdateAnimationTranslation(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.Translation = panel.AnimationTranslation;
-            PanelStructs[index] = panelStruct;
+            var styleData = StyleData[metaData.StyleIndex + 2];
+            styleData.Xy = panel.AnimationTranslation;
+            StyleData[metaData.StyleIndex + 2] = styleData;
 
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateAnimationScale(UI.IUIPanel panel)
+        public void UpdateAnimationScale(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.ScaleRotation.X = panel.AnimationScale;
-            PanelStructs[index] = panelStruct;
+            var styleData = StyleData[metaData.StyleIndex + 2];
+            styleData.Z = panel.AnimationScale;
+            StyleData[metaData.StyleIndex + 2] = styleData;
 
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateAnimationRotation(UI.IUIPanel panel)
+        public void UpdateAnimationRotation(UIPanel panel)
         {
-            Panels.TryGetValue(panel, out var index);
+            if (!Panels.TryGetValue(panel, out var metaData))
+                return;
 
-            var panelStruct = PanelStructs[index];
-            panelStruct.ScaleRotation.Y = panel.AnimationRotation;
-            PanelStructs[index] = panelStruct;
+            var styleData = StyleData[metaData.StyleIndex + 2];
+            styleData.W = panel.AnimationRotation;
+            StyleData[metaData.StyleIndex + 2] = styleData;
+
+            SetBufferUpdateState(BufferEnum.Update);
+        }
+
+        public void UpdateGraph(UIGraph graph)
+        {
+            if (!Panels.TryGetValue(graph, out var metaData))
+                return;
+
+            for (int i = 0; i < graph.Points.Length; i++)
+            {
+                int outerIndex = i >> 2;
+                int innerIndex = i & 3;
+                var styleData = StyleData[metaData.StyleIndex + 1 + outerIndex];
+                styleData[innerIndex] = graph.Points[i];
+                StyleData[metaData.StyleIndex + 1 + outerIndex] = styleData;
+            }
 
             SetBufferUpdateState(BufferEnum.Update);
         }
@@ -221,34 +249,61 @@ namespace PBG.Rendering.Meshes
                 case BufferEnum.Update:
                     if (_updateVisibility)
                         UpdateVisibility();
-
+                    
                     _uiSSBO.Update(PanelStructs);
+                    _styleSSBO.Update(StyleData);
                     break;
                 case BufferEnum.Recreate:
                     foreach (var panel in PanelStructsToBeRemoved)
                         Panels.Remove(panel);
 
                     foreach (var panel in PanelStructsToBeAdded)
-                        Panels.TryAdd(panel, 0);
+                        Panels.TryAdd(panel, new());
 
                     ElementCount = 0;
-                    PanelStructs = new UIPanelStruct[Panels.Count];
-                    foreach (var (panel, _) in Panels)
+                    PanelStructs = new NewUIPanelStruct[Panels.Count];
+                    List<Vector4> StyleDatas = [];
+
+                    foreach (var (panel, oldMetaData) in Panels)
                     {
-                        Panels[panel] = ElementCount;
-                        PanelStructs[ElementCount] = new UIPanelStruct
+                        var metaData = oldMetaData;
+                        metaData.Index = ElementCount;
+                        metaData.StyleIndex = StyleDatas.Count;
+                        Panels[panel] = metaData;
+
+                        int styleCount = 0;
+                        if (panel is UIGraph uiGraph)
                         {
-                            SizeSlice = (panel.Size.X, panel.Size.Y, panel.Slice.X, panel.Slice.Y),
+                            styleCount = 1;
+                            StyleDatas.Add(new(uiGraph.PointCount, 1, 0, 0));
+                            for (int i = 0; i < uiGraph.PointCount; i +=4 )
+                                StyleDatas.Add(new Vector4(0));
+                        }
+                        else
+                        {
+                            styleCount = 2;
+                            StyleDatas.Add(panel.BorderUI);
+                            StyleDatas.Add(panel.BorderColor);
+                            StyleDatas.Add(new Vector4(panel.AnimationTranslation.X, panel.AnimationTranslation.Y, panel.AnimationScale, panel.AnimationRotation));
+                        }
+                        
+                        PanelStructs[ElementCount] = new NewUIPanelStruct
+                        {
+                            Size = panel.Size,
+                            Slice = panel.Slice,
                             Color = panel.Color,
-                            Data = (panel.TextureID, 0, ElementCount, panel.MaskIndex),
-                            Transform = panel.Transform,
-                            BorderColor = panel.BorderColor,
-                            Border = panel.BorderUI,
-                            Translation = panel.AnimationTranslation,
-                            ScaleRotation = (panel.AnimationScale, panel.AnimationRotation),
+                            Transform = panel.Transform.Xyz,
+                            ElementIndex = ElementCount,
+                            TextureIndex = panel.TextureID,
+                            MaskIndex = panel.MaskIndex,
+                            StyleIndex = metaData.StyleIndex,
+                            StyleInfo = styleCount
                         };  
+                        
                         ElementCount++;
                     }
+
+                    StyleData = [..StyleDatas];
 
                     PanelStructsToBeRemoved = [];
                     PanelStructsToBeAdded = [];
@@ -256,7 +311,9 @@ namespace PBG.Rendering.Meshes
                     UpdateVisibility();
 
                     _uiSSBO.Renew(PanelStructs);
+                    _styleSSBO.Renew(StyleData);
                     Descriptor.BindSSBO(_uiSSBO, 1);
+                    Descriptor.BindSSBO(_styleSSBO, 2);
                     break;
             }
 
@@ -297,6 +354,12 @@ namespace PBG.Rendering.Meshes
             //_vao.DeleteBuffer();
             _uiSSBO.Dispose();
         }
+
+        public struct UIMetaData
+        {
+            public int Index;
+            public int StyleIndex;
+        }
     }
 
     public struct UIPanelStruct
@@ -318,5 +381,18 @@ namespace PBG.Rendering.Meshes
         {
             return $"Size: {SizeSlice.Xy}, Slice: {SizeSlice.Zw}, Color: {Color}, Data: {Data}, Transform: {Transform}";
         }
+    }
+
+    public struct NewUIPanelStruct
+    {
+        public Vector2 Size;
+        public Vector2 Slice; // 9 slice
+        public Vector4 Color;
+        public Vector3 Transform;
+        public int ElementIndex; // points to itself or later element in the same buffer, used to keep same buffer even when elements in the middle are not visible
+        public int TextureIndex;
+        public int MaskIndex;
+        public int StyleIndex;
+        public int StyleInfo; // split into 8 sections of 4 bits, the first 4 bits is the amount of styles to loop over, so 7 max (which is fine) and the next sections are just flags to tell the vertex shader what the next style is and it will look in the buffer accordingly
     }
 }

@@ -6,7 +6,7 @@ public class CustomScriptBlueprint : ScriptBlueprint
 {
     public override bool IsScriptValid => Status == ScriptStatus.Instanced;
 
-    public CustomScriptBlueprint(SceneBlueprintNode parent, string name) : base(parent, name) {}
+    public CustomScriptBlueprint(SceneDefinitionNode parent, string name) : base(parent, name) {}
 
     public override ScriptingNode? CreateInstance()
     {

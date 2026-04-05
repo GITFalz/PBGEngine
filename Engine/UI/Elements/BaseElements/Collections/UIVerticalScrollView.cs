@@ -5,9 +5,22 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIVScroll : UIVScroll<UIVScroll>
+    public class UIVScroll : UIVCol
     {
-        public UIVScroll() : base() { Name = "UIVScroll"; }
+        public Action<UIVScroll>? ScrollAction = null;
+        protected override float TotalHeight => Border.Y - ScrollPosition;
+        public float ScrollPosition = 0;
+
+        public UIVScroll() : base() 
+        { 
+            Name = "UIVScroll";
+            Tag = UIElementTag.UIVerticalScrollView;
+        }
+
+        public UIVScroll(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
         
         public UIVScroll Ref(ref UIVScroll text)
         {
@@ -21,21 +34,19 @@ namespace PBG.UI
             return text;
         }
 
-        public UIVScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
+        public new UIVScroll Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIVScroll OnHoverEnter(Action<UIVScroll>? action)    { SetOnHoverEnter(action); return this; }
-        public UIVScroll OnHover(Action<UIVScroll>? action)         { SetOnHover(action); return this; }
-        public UIVScroll OnClick(Action<UIVScroll>? action)         { SetOnClick(action); return this; }
-        public UIVScroll OnHold(Action<UIVScroll>? action)          { SetOnHold(action); return this; }
-        public UIVScroll OnRelease(Action<UIVScroll>? action)       { SetOnRelease(action); return this; }
-        public UIVScroll OnHoverExit(Action<UIVScroll>? action)     { SetOnHoverExit(action); return this; }
+        public UIVScroll OnHoverEnter(Action<UIVScroll>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIVScroll OnHover(Action<UIVScroll>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIVScroll OnClick(Action<UIVScroll>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIVScroll OnHold(Action<UIVScroll>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIVScroll OnRelease(Action<UIVScroll>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIVScroll OnHoverExit(Action<UIVScroll>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
-        public UIVScroll this[params IUIChild[] subElements]
+        public new UIVScroll this[params IUIChild[] subElements]
         {
             get { AddElements(subElements); return this; }
         }
-
-        public Action<UIVScroll>? ScrollAction = null;
 
         public override void OnHoverAction()
         {
@@ -49,13 +60,6 @@ namespace PBG.UI
         {
             ScrollAction = action; return this;
         }
-    }
-    public class UIVScroll<TSelf> : UIVCol<TSelf> where TSelf : UIVScroll<TSelf>
-    {
-        protected override float TotalHeight => Border.Y - ScrollPosition;
-        public float ScrollPosition = 0;
-
-        public UIVScroll() : base() { Tag = UIElementTag.UIVerticalScrollView; }
 
         public static void Scroll(UIVScroll scrollView)
         {

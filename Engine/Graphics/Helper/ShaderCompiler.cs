@@ -434,6 +434,21 @@ public unsafe class ShaderCompiler
         Marshal.FreeHGlobal((nint)result);
     }
 
+    internal void Clear()
+    {
+        UniformBufferAttributes = [];
+        UniformBufferBindings = [];
+
+        StorageBufferAttributes = [];
+        StorageBufferBindings = [];
+
+        SampledImageAttributes = [];
+        SampledImageBindings = [];
+
+        StorageImageAttributes = [];
+        StorageImageBindings = [];
+    }
+
     internal void Dispose()
     {
         _shaderc.CompileOptionsRelease(_options);

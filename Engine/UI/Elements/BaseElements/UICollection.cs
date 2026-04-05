@@ -2,65 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
 using PBG.UI.Creator;
 
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 
 namespace PBG.UI
 {
-    public interface IUICol
-    {
-        int MaskIndex { get; set; }
-        bool GrowFromChildren { get; set; }
-        bool WasVisible { get; set; }
-        bool FitChildren { get; set; }
-        void SetSpacing(float spacing);
-        void SetBorder(Vector4 border);
-        void SetBorderX(float x);
-        void SetBorderY(float y);
-        void SetBorderZ(float z);
-        void SetBorderW(float w);
-        void SetIgnoreInvisibleElements(bool ignore);
-        void SetAllowScrollingToTop(bool allow);
-        void SetScrollingSpeed(float speed);
-        void SetGrowFromChildren(bool grow);
-        void SetForceToggleVisible(bool force);
-        void SetMaskChildren(bool mask);
-        bool ContainsHoveringScrollView();
-        void UpdateMaskIndices();
-        List<UIElementBase> GetChildren();
-        public UIElementBase AddElement(UIElementBase element);
-    }
-    public class UICol : UICol<UICol>
-    {
-        public UICol() : base() { Name = "UICol"; }
-        
-        public UICol Ref(ref UICol text)
-        {
-            text = this;
-            return text;
-        }
-
-        public UICol Out(out UICol text)
-        {
-            text = this;
-            return text;
-        }
-
-        public UICol Class(params IStyleData[] styles) => InternalClass(this, styles);
-
-        public UICol OnHoverEnter(Action<UICol>? action)    { SetOnHoverEnter(action); return this; }
-        public UICol OnHover(Action<UICol>? action)         { SetOnHover(action); return this; }
-        public UICol OnClick(Action<UICol>? action)         { SetOnClick(action); return this; }
-        public UICol OnHold(Action<UICol>? action)          { SetOnHold(action); return this; }
-        public UICol OnRelease(Action<UICol>? action)       { SetOnRelease(action); return this; }
-        public UICol OnHoverExit(Action<UICol>? action)     { SetOnHoverExit(action); return this; }
-
-        public UICol this[params IUIChild[] subElements]
-        {
-            get { AddElements(subElements); return this; }
-        }
-    }
-
-    public class UICol<TSelf> : UIPanel<TSelf>, IUICol where TSelf : UICol<TSelf>
+    public class UICol : UIPanel
     {
         public float Spacing = 0;
         public Vector4 Border = (0, 0, 0, 0);
@@ -80,7 +26,44 @@ namespace PBG.UI
 
         public List<UIElementBase> ChildElements = [];
 
-        public UICol() : base() { Tag = UIElementTag.UICollection; }
+        public UICol() : base() 
+        { 
+            Name = "UICol";
+            Tag = UIElementTag.UICollection;
+        }
+
+        public UICol(params IStyleData[] styles) : base() 
+        { 
+            Name = "UICol";
+            Tag = UIElementTag.UICollection;
+            Class(styles);
+        }
+
+        public UICol Ref(ref UICol text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UICol Out(out UICol text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UICol Class(params IStyleData[] styles) => InternalClass(this, styles);
+
+        public UICol OnHoverEnter(Action<UICol>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UICol OnHover(Action<UICol>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UICol OnClick(Action<UICol>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UICol OnHold(Action<UICol>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UICol OnRelease(Action<UICol>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UICol OnHoverExit(Action<UICol>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+
+        public UICol this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
 
         public bool Has(UIElementBase element) => ChildElements.Contains(element);
 
@@ -303,8 +286,6 @@ namespace PBG.UI
                 WasVisible = Visible;
             }
 
-            //if (Name == "test") Console.WriteLine(visible + " " + !ForceToggleVisible + " " + !WasVisible + " " + (ParentElement?.SetVisibleBefore ?? false));
-
             if (visible && !ForceToggleVisible && !WasVisible && (ParentElement?.SetVisibleBefore ?? false))
                 return this;
             
@@ -323,9 +304,9 @@ namespace PBG.UI
             for (int i = 0; i < ChildElements.Count; i++)
             {
                 var child = ChildElements[i];
-                if (child is IUICol col)
+                if (child is UICol col)
                 {
-                    if (col is UICol && child.Hovering)
+                    if (child.Hovering)
                         return true;
                     if (col is UIVScroll && child.Hovering)
                         return true;

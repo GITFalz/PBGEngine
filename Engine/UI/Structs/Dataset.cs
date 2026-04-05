@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
 
 namespace PBG.UI
@@ -15,7 +16,16 @@ namespace PBG.UI
             set => base[key] = value;
         }
 
-        public T? Get<T>(string key) => this[key] is T t ? t : default;
+        public bool TryGet<T>(string key, [NotNullWhen(true)] out T? value)
+        {
+            value = default;
+            if (!TryGetValue(key, out var v) || v is not T t)
+                return false;
+                
+            value = t;
+            return true;
+        }
+
         public int Int(string key) => Parse.Int.Parse(this[key]);
         public float Float(string key) => Parse.Float.Parse(this[key]);
         public Vector2 Vector2(string key) => Parse.Vec2.Parse(this[key]);

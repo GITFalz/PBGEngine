@@ -3,7 +3,7 @@ using PBG.Rendering;
 using PBG.UI;
 using PBG.UI.Animation;
 
-namespace PBG.UI2;
+namespace PBG.UI;
 
 public static partial class Styles
 {
@@ -11,7 +11,7 @@ public static partial class Styles
     private static UIAnimation AnimationClick(UIElementBase e) => e.AnimationClick ??= new();
 
     // --- Scale factories
-    public static UnaryType<float> hover_scale_ = new((scale, e) => e.AnimationScale = scale);
+    public static UnaryType<float> hover_scale_ = new((scale, e) => AnimationHover(e).SetScale(scale));
     public static UnaryType<float> hover_scale_in_duration_ = new((scale, e) => AnimationHover(e).SetScaleDurationIn(scale));
     public static UnaryType<float> hover_scale_out_duration_ = new((scale, e) => AnimationHover(e).SetScaleDurationOut(scale));
     public static UnaryType<float> hover_scale_duration_ = new((scale, e) => AnimationHover(e).SetScaleDurationIn(scale).SetScaleDurationOut(scale));
@@ -38,7 +38,7 @@ public static partial class Styles
 
 
     // --- Rotation factories
-    public static UnaryType<float> hover_rotation_ = new((rotation, e) => e.AnimationRotation = rotation);
+    public static UnaryType<float> hover_rotation_ = new((rotation, e) => AnimationHover(e).SetRotation(rotation));
     public static UnaryType<float> hover_rotation_in_duration_ = new((rotation, e) => AnimationHover(e).SetRotationDurationIn(rotation));
     public static UnaryType<float> hover_rotation_out_duration_ = new((rotation, e) => AnimationHover(e).SetRotationDurationOut(rotation));
     public static UnaryType<float> hover_rotation_duration_ = new((rotation, e) => AnimationHover(e).SetRotationDurationIn(rotation).SetRotationDurationOut(rotation));
@@ -64,7 +64,7 @@ public static partial class Styles
     public static BinaryStyle<float, float> hover_rotation_easeinout_ = new((rotation, duration, e) => AnimationHover(e).SetRotation(rotation).SetRotationDuration(duration).SetRotationEase(EaseEffect.GetEaseEffect(Rendering.EasingType.EaseInOut)));
 
     // --- Translation factories
-    public static UnaryType<Vector2> hover_translation_ = new((translation, e) => e.AnimationTranslation = translation);
+    public static UnaryType<Vector2> hover_translation_ = new((translation, e) => AnimationHover(e).SetTranslation(translation));
     public static UnaryType<float> hover_translation_in_duration_ = new((translation, e) => AnimationHover(e).SetTranslationDurationIn(translation));
     public static UnaryType<float> hover_translation_out_duration_ = new((translation, e) => AnimationHover(e).SetTranslationDurationOut(translation));
     public static UnaryType<float> hover_translation_duration_ = new((translation, e) => AnimationHover(e).SetTranslationDurationIn(translation).SetTranslationDurationOut(translation));
@@ -117,7 +117,7 @@ public static partial class Styles
     
     
     // --- Scale factories
-    public static UnaryType<float> click_scale_ = new((scale, e) => e.AnimationScale = scale);
+    public static UnaryType<float> click_scale_ = new((scale, e) => AnimationClick(e).SetScale(scale));
     public static UnaryType<float> click_scale_in_duration_ = new((scale, e) => AnimationClick(e).SetScaleDurationIn(scale));
     public static UnaryType<float> click_scale_out_duration_ = new((scale, e) => AnimationClick(e).SetScaleDurationOut(scale));
     public static UnaryType<float> click_scale_duration_ = new((scale, e) => AnimationClick(e).SetScaleDurationIn(scale).SetScaleDurationOut(scale));
@@ -144,7 +144,7 @@ public static partial class Styles
 
 
     // --- Rotation factories
-    public static UnaryType<float> click_rotation_ = new((rotation, e) => e.AnimationRotation = rotation);
+    public static UnaryType<float> click_rotation_ = new((rotation, e) => AnimationClick(e).SetRotation(rotation));
     public static UnaryType<float> click_rotation_in_duration_ = new((rotation, e) => AnimationClick(e).SetRotationDurationIn(rotation));
     public static UnaryType<float> click_rotation_out_duration_ = new((rotation, e) => AnimationClick(e).SetRotationDurationOut(rotation));
     public static UnaryType<float> click_rotation_duration_ = new((rotation, e) => AnimationClick(e).SetRotationDurationIn(rotation).SetRotationDurationOut(rotation));
@@ -170,7 +170,7 @@ public static partial class Styles
     public static BinaryStyle<float, float> click_rotation_easeinout_ = new((rotation, duration, e) => AnimationClick(e).SetRotation(rotation).SetRotationDuration(duration).SetRotationEase(EaseEffect.GetEaseEffect(Rendering.EasingType.EaseInOut)));
 
     // --- Translation factories
-    public static UnaryType<Vector2> click_translation_ = new((translation, e) => e.AnimationTranslation = translation);
+    public static UnaryType<Vector2> click_translation_ = new((translation, e) => AnimationClick(e).SetTranslation(translation));
     public static UnaryType<float> click_translation_in_duration_ = new((translation, e) => AnimationClick(e).SetTranslationDurationIn(translation));
     public static UnaryType<float> click_translation_out_duration_ = new((translation, e) => AnimationClick(e).SetTranslationDurationOut(translation));
     public static UnaryType<float> click_translation_duration_ = new((translation, e) => AnimationClick(e).SetTranslationDurationIn(translation).SetTranslationDurationOut(translation));

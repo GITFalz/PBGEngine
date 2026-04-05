@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using PBG.MathLibrary;
 using Silk.NET.Input;
 
@@ -6,15 +7,15 @@ namespace PBG.Data
 {
     public static class Input
     {
-        private static Keytate[] Keytates = new Keytate[(int)Key.Menu + 1];
-        private static Keytate[] MouseStates = new Keytate[14];
+        private static KeyState[] Keytates = new KeyState[(int)Key.Menu + 1];
+        private static KeyState[] MouseStates = new KeyState[14];
         private static Vector2? _mouseScroll = Vector2.Zero;
 
         private static Vector2 _oldMousePosition;
         private static Vector2 _fixedOldMousePosition = Vector2.Zero;
 
-        public static HashSet<Key> PressedKey = new HashSet<Key>();
-        public static HashSet<MouseButton> PressedButtons = new HashSet<MouseButton>();
+        private static List<int> _activeKeys = [];
+        private static List<int> _activeMouseButtons = [];
 
         public static Vector2 ScrollDelta { get; private set; }
         public static Vector2 MousePosition { get; private set; }
@@ -28,30 +29,32 @@ namespace PBG.Data
         {
             MouseDelta = Vector2.Zero;
             MousePosition = mouse.Position;
+
+            mouse.MouseMove += (mouse, position) =>
+            {
+                MousePosition = position;
+
+                if (_oldCursorMode != CursorMode.Disabled || Game.Instance.CursorMode != CursorMode.Normal)
+                    MouseDelta = MousePosition - _oldMousePosition;
+
+                _oldMousePosition = position;
+            };
         }
 
-        public static void Update(IMouse mouse)
+        public static void Update()
         {
-            HandleStates(Keytates);
-            HandleStates(MouseStates);
-
             _oldMousePosition = MousePosition;
             _fixedOldMousePosition = FixedMousePosition;
 
             Vector2i movementInput = Vector2i.Zero;
-            if (IsKeyDown(Key.W))
-                movementInput.Y += 1;
-            if (IsKeyDown(Key.S))
-                movementInput.Y -= 1;
-
-            if (IsKeyDown(Key.A))
-                movementInput.X += 1;
-            if (IsKeyDown(Key.D))
-                movementInput.X -= 1;
+            if (IsKeyDown(Key.W)) movementInput.Y += 1;
+            if (IsKeyDown(Key.S)) movementInput.Y -= 1;
+            if (IsKeyDown(Key.A)) movementInput.X += 1;
+            if (IsKeyDown(Key.D)) movementInput.X -= 1;
 
             if (!Game.IsCursorState(CursorMode.Disabled))
-                FixedMousePosition = mouse.Position;
-            
+                FixedMousePosition = MousePosition;
+
             if (_mouseScroll == null)
             {
                 ScrollDelta = (0, 0);
@@ -61,29 +64,56 @@ namespace PBG.Data
                 ScrollDelta = _mouseScroll.Value;
                 _mouseScroll = null;
             }
-            
-            MousePosition = mouse.Position;
-
-            if (_oldCursorMode != CursorMode.Disabled || Game.Instance.CursorMode != CursorMode.Normal)
-                MouseDelta = MousePosition - _oldMousePosition;
 
             MovementInput = movementInput;
-
             _oldCursorMode = Game.Instance.CursorMode;
+        }
+
+        public static void LateUpdate()
+        {
+            for (int i = _activeKeys.Count - 1; i >= 0; i--)
+            {
+                int key = _activeKeys[i];
+                ref var state = ref Keytates[key];
+
+                if (state.Released)
+                    _activeKeys.RemoveAt(i);
+
+                state.WasDown = state.IsDown;
+                state.Pressed = false;
+                state.Released = false;
+            }
+
+            for (int i = _activeMouseButtons.Count - 1; i >= 0; i--)
+            {
+                int key = _activeMouseButtons[i];
+                ref var state = ref MouseStates[key];
+
+                if (state.Released)
+                    _activeMouseButtons.RemoveAt(i);
+
+                state.WasDown = state.IsDown;
+                state.Pressed = false;
+                state.Released = false;
+            }
+
+            MouseDelta = Vector2.Zero;
         }
 
         public static void OnKeyDown(Key key)
         {
             if (key == Key.Unknown)
                 return;
-            
-            var state = Keytates[(int)key];
+
+            ref var state = ref Keytates[(int)key];
+
             if (state.IsDown)
                 return;
 
-            state.ConfirmPressed = true;
-            state.ConfirmReleased = false;
-            Keytates[(int)key] = state;
+            state.IsDown = true;
+            state.Pressed = true;
+
+            _activeKeys.Add((int)key);
         }
 
         public static void OnKeyUp(Key key)
@@ -91,29 +121,37 @@ namespace PBG.Data
             if (key == Key.Unknown)
                 return;
 
-            var state = Keytates[(int)key];
-            state.ConfirmReleased = true;
-            state.ConfirmPressed = false;
-            Keytates[(int)key] = state;
+            ref var state = ref Keytates[(int)key];
+
+            if (!state.IsDown)
+                return;
+
+            state.IsDown = false;
+            state.Released = true;
         }
 
         public static void OnMouseDown(MouseButton button)
         {
-            var state = MouseStates[(int)button];
+            ref var state = ref MouseStates[(int)button];
+
             if (state.IsDown)
                 return;
 
-            state.ConfirmPressed = true;
-            state.ConfirmReleased = false;
-            MouseStates[(int)button] = state;
+            state.IsDown = true;
+            state.Pressed = true;
+
+            _activeMouseButtons.Add((int)button);
         }
 
         public static void OnMouseUp(MouseButton button)
         {
-            var state = MouseStates[(int)button];
-            state.ConfirmReleased = true;
-            state.ConfirmPressed = false;
-            MouseStates[(int)button] = state;
+            ref var state = ref MouseStates[(int)button];
+
+            if (!state.IsDown)
+                return;
+
+            state.IsDown = false;
+            state.Released = true;
         }
 
         public static void OnMouseWheel(Vector2 scroll)
@@ -261,46 +299,7 @@ namespace PBG.Data
             return false;
         }
 
-
-        private static void HandleStates(Keytate[] states)
-        {
-            for (int i = 0; i < states.Length; i++)
-            {
-                var state = states[i];
-
-                state.WasDown = state.IsDown;
-
-                if (state.ConfirmPressed)
-                {
-                    state.Pressed = true;
-                    state.IsDown = true;
-                    state.ConfirmPressed = false;
-                    state.ConfirmReleased = false;
-                    state.Released = false;
-                }
-                else
-                {
-                    state.Pressed = false;
-                }
-
-                if (state.ConfirmReleased)
-                {
-                    state.Released = true;
-                    state.IsDown = false;
-                    state.ConfirmPressed = false;
-                    state.ConfirmReleased = false;
-                    state.Pressed = false;
-                }
-                else
-                {
-                    state.Released = false;
-                }
-
-                states[i] = state;
-            }
-        }
-
-        private struct Keytate
+        private struct KeyState
         {
             public bool IsDown;
             public bool WasDown;

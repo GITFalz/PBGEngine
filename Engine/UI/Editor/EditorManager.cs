@@ -12,7 +12,7 @@ namespace PBG.Editor;
 public class EditorManager : ScriptingNode
 {
     private static EditorState _editorState = EditorState.Stopped;
-    public static SceneBlueprintNode? SelectedNode = null;
+    public static TransformNode? SelectedNode = null;
     public static EditorManager Instance = null!;
     public static bool WorldSpace = true;
 
@@ -33,6 +33,8 @@ public class EditorManager : ScriptingNode
 
     public FileSystemWatcher FileSystemWatcher = new();
     public HashSet<string> FileChanges = [];
+
+    private float _timer = 0;
     
     public EditorManager(EditorUI ui)
     {
@@ -68,15 +70,15 @@ public class EditorManager : ScriptingNode
 
     public void LoadSuccess(MeshRenderer mesh)
     {
-        Console.WriteLine("Loaded mesh successfully " + (SceneBlueprint.BlueprintScene == null));
-        if (SceneBlueprint.BlueprintScene != null)
+        Console.WriteLine("Loaded mesh successfully " + (SceneDefinition.BlueprintScene == null));
+        if (SceneDefinition.BlueprintScene != null)
         {
-            SceneBlueprintNode node = SceneBlueprint.AddNode("Model");
+            SceneDefinitionNode node = SceneDefinition.Blueprint.AddNode("Model");
             node.AddScript(mesh);
             node.OrderScripts();
 
-            SceneBlueprint.BlueprintScene.UpdatePending();
-            EditorUI.Instance.ReloadSceneHierarchy();
+            SceneDefinition.BlueprintScene.UpdatePending();
+            Instance.UI.ReloadSceneHierarchy(SceneDefinition.Blueprint, SceneDefinition.BlueprintScene);
         } 
     }
 
@@ -115,7 +117,7 @@ public class EditorManager : ScriptingNode
             {
                 if (Input.IsKeyPressed(Key.S))
                 {
-                    SceneSerializer.Serialize(SceneBlueprint.CurrentPath, SceneBlueprint.GetJson());
+                    SceneSerializer.Serialize(SceneBlueprint.CurrentPath, SceneBlueprint.Blueprint.GetJson());
                 }
             }
         }
@@ -145,12 +147,28 @@ public class EditorManager : ScriptingNode
             {
                 Game.SetCursorState(CursorMode.Normal);
             }
+
+            if (Scene.CurrentScene?.UpdatedPending ?? false)
+            {
+                EditorUI.Instance.ReloadSceneHierarchy(Scene.CurrentScene);
+            }
         }
         
         if (GameTime.FpsUpdated)
         {
-            EditorUI.Instance.FPSText.UpdateText($"FPS: {GameTime.Fps}");
-        }    
+            EditorUI.Instance.FPSText.UpdateText($"{GameTime.Fps}");
+        }   
+
+        if (_timer > 0.1f)
+        {
+            EditorUI.Instance.MsText.UpdateText(""+(GameTime.DeltaTime * 1000));
+            EditorUI.Instance.MsGraph.AdvancePoint(GameTime.DeltaTime);
+
+            EditorUI.Instance.DrawCallText.UpdateText(""+GFX.RenderCallCount);
+            EditorUI.Instance.DrawCallGraph.AdvancePoint((float)GFX.RenderCallCount / 2000f);
+            _timer = 0;
+        } 
+        _timer += GameTime.DeltaTime;
     }
 
     private void HandleFileChange()
@@ -214,27 +232,27 @@ public class EditorManager : ScriptingNode
         if (SelectedNode == null)
             return;
 
-        transformGizmo.Position = SelectedNode.Transform.Position;
+        transformGizmo.Position = Transform.Position;
         if (!WorldSpace)
         {
-            rotationGizmo.Rotation = SelectedNode.Transform.Rotation;
+            rotationGizmo.Rotation = Transform.Rotation;
         }
 
         transformGizmo.Update();
         transformGizmo.Rotation = rotationGizmo.Rotation;
         rotationGizmo.Position = transformGizmo.Position;
 
-        SelectedNode.Transform.Position = transformGizmo.Position;
+        Transform.Position = transformGizmo.Position;
 
         if (rotationGizmo.Update())
         {
             if (WorldSpace)
             {
-                SelectedNode.Transform.Rotation = rotationGizmo.ChangedRotation * SelectedNode.Transform.Rotation;
+                Transform.Rotation = rotationGizmo.ChangedRotation * Transform.Rotation;
             }
             else
             {
-                SelectedNode.Transform.Rotation = rotationGizmo.Rotation;
+                Transform.Rotation = rotationGizmo.Rotation;
             }
         }
 
@@ -261,15 +279,14 @@ public class EditorManager : ScriptingNode
 
     void Dispose()
     {
-        SceneBlueprint.Clear();
+        SceneBlueprint.Blueprint.Clear();
+        SceneBlueprint.Active?.Clear();
         FileSystemWatcher.Dispose();
     }
 
-
     public static void ResetScene()
     {
-        SceneBlueprint.RefreshScripts();
-        Instance.UI.ReloadSceneHierarchy();
+        SceneBlueprint.Blueprint.RefreshScripts();
         Scene.UnloadScene();
     }
 

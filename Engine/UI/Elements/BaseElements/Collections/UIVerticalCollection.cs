@@ -5,9 +5,19 @@ using PBG.UI.Creator;
 namespace PBG.UI
 {
 
-    public class UIVCol : UIVCol<UIVCol>
+    public class UIVCol : UICol
     {
-        public UIVCol() : base() { Name = "UIVCol"; }
+        public UIVCol() : this("UIVCol") {}
+        public UIVCol(string name) : base() 
+        { 
+            Name = name; 
+            Tag = UIElementTag.UIVerticalCollection; 
+        }
+
+        public UIVCol(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
         
         public UIVCol Ref(ref UIVCol text)
         {
@@ -21,27 +31,22 @@ namespace PBG.UI
             return text;
         }
 
-        public UIVCol Class(params IStyleData[] styles) => InternalClass(this, styles);
+        public new UIVCol Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIVCol OnHoverEnter(Action<UIVCol>? action)    { SetOnHoverEnter(action); return this; }
-        public UIVCol OnHover(Action<UIVCol>? action)         { SetOnHover(action); return this; }
-        public UIVCol OnClick(Action<UIVCol>? action)         { SetOnClick(action); return this; }
-        public UIVCol OnHold(Action<UIVCol>? action)          { SetOnHold(action); return this; }
-        public UIVCol OnRelease(Action<UIVCol>? action)       { SetOnRelease(action); return this; }
-        public UIVCol OnHoverExit(Action<UIVCol>? action)     { SetOnHoverExit(action); return this; }
+        public UIVCol OnHoverEnter(Action<UIVCol>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIVCol OnHover(Action<UIVCol>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIVCol OnClick(Action<UIVCol>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIVCol OnHold(Action<UIVCol>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIVCol OnRelease(Action<UIVCol>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIVCol OnHoverExit(Action<UIVCol>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
-        public UIVCol this[params IUIChild[] subElements]
+        public new UIVCol this[params IUIChild[] subElements]
         {
             get { AddElements(subElements); return this; }
         }
-    }
-    
-    public class UIVCol<TSelf> : UICol<TSelf> where TSelf : UIVCol<TSelf>
-    {
+
         protected virtual float TotalHeight => Border.Y;
 
-        public UIVCol() : base() { Tag = UIElementTag.UIVerticalCollection; }
-        
         public override void CollectionFirstPass()
         {
             if (!GrowFromChildren)
@@ -142,6 +147,12 @@ namespace PBG.UI
 
         private void HandleGrowFromChildren()
         {
+            var sizeX = Size.X;
+            if (!Width.IsPercent())
+            {
+                SizeX -= Border.X + Border.Y;
+            }
+            
             float totalHeight = TotalHeight;
             float maxWidth = 0;
 
@@ -179,10 +190,11 @@ namespace PBG.UI
                 var child = ChildElements[i];
                 if (child.PercentAlignement.HasFlag(PercentAlignementType.Horizontal))
                 {
-                    child.Width.AddedOffset = -(Border.X + Border.Z);
                     child.CalculateWidth();
                 }
             };
+
+            SizeX = sizeX;
         }
         
         public float GetTotalYSize()

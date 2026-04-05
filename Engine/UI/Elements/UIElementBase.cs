@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using PBG.Data;
 using PBG.MathLibrary;
 using PBG.UI.Animation;
 using PBG.UI.Exception;
@@ -102,7 +103,191 @@ namespace PBG.UI
         public UIElementBase(UIAlign alignement) { Alignement = alignement; }
         public UIElementBase(string name, UIAlign alignement) { Name = name; Alignement = alignement; }
 
-        public void AddTo(IUICol parent) => parent.AddElement(this);
+        private Action<UIElementBase>? _onHoverEnter { get; set; } = null;
+        private Action<UIElementBase>? _onHover { get; set; } = null;
+        private Action<UIElementBase>? _onClick { get; set; } = null;
+        private Action<UIElementBase>? _onHold { get; set; } = null;
+        private Action<UIElementBase>? _onRelease { get; set; } = null;
+        private Action<UIElementBase>? _onHoverExit { get; set; } = null;
+
+        public virtual void OnHoverEnterAction() => _onHoverEnter?.Invoke(this);
+        public virtual void OnHoverAction() => _onHover?.Invoke(this);
+        public virtual void OnClickAction() => _onClick?.Invoke(this);
+        public virtual void OnHoldAction() => _onHold?.Invoke(this);
+        public virtual void OnReleaseAction() => _onRelease?.Invoke(this);
+        public virtual void OnHoverExitAction() => _onHoverExit?.Invoke(this);
+
+        public virtual bool Test()
+        {
+            var mouseOver = IsMouseOver();
+            TestButtons(mouseOver);
+            return mouseOver;
+        }
+
+        public bool IsMouseOver()
+        {
+            Vector2 pos = Input.GetMousePosition();
+            return MouseOver(pos);
+        }
+
+        private void TestButtons(bool mouseOver)
+        {
+            if (mouseOver)
+            {
+                if (!Hovering)
+                {
+                    if (UIController != null) AnimationHover?.Enter(UIController, this, ref DeleteHoverAnimationAction);
+                    OnHoverEnterAction();
+                    Hovering = true;
+                }
+
+                OnHoverAction();
+
+                if (Input.IsMousePressed(MouseButton.Left) && !Clicked)
+                {
+                    if (UIController != null) AnimationClick?.Enter(UIController, this, ref DeleteClickAnimationAction);
+                    OnClickAction();
+                    Clicked = true;
+                }
+            }
+            else if (Hovering)
+            {
+                if (UIController != null) AnimationHover?.Exit(UIController, this, ref DeleteHoverAnimationAction);
+                OnHoverExitAction();
+                Hovering = false;
+            }
+
+            if (Clicked)
+            {
+                OnHoldAction();
+            }
+
+            if (Input.IsMouseReleased(MouseButton.Left))
+            {
+                if (Clicked)
+                {
+                    if (UIController != null) AnimationClick?.Exit(UIController, this, ref DeleteClickAnimationAction);
+                    OnReleaseAction();
+                    Clicked = false;
+                }
+            }
+        }
+
+        public bool MouseOver(Vector2 pos)
+        {
+            Vector2 point1 = Point1;
+            Vector2 point2 = Point2;
+
+            if (Masked)
+            {
+                point1 = Mathf.Max(Point1, MaskPoint1);
+                point2 = Mathf.Min(Point2, MaskPoint2);
+            }
+
+            bool inside = pos.X >= point1.X && pos.X <= point2.X && pos.Y >= point1.Y && pos.Y <= point2.Y;
+            if (inside)
+            {
+                HoverFactor = new Vector2(
+                    (pos.X - Point1.X) / (Point2.X - Point1.X),
+                    (pos.Y - Point1.Y) / (Point2.Y - Point1.Y)
+                );
+            }
+
+            return inside;
+        }
+
+        public void CalculateBoundaries(Vector2 offset)
+        {
+            Matrix4 model = UIController?.ModelMatrix ?? Matrix4.Identity;
+            if (Masked && GetMaskPanel(out Rendering.Mask.UIMaskStruct? mask))
+            {
+                GetBoundaries(offset, mask.Value.TopLeft, mask.Value.Size, model, out MaskPoint1, out MaskPoint2);
+            }
+
+            GetBoundaries(offset, Origin, Size, model, out Point1, out Point2);
+        }
+        
+        public void GetBoundaries(Vector2 offset, Vector2 origin, Vector2 size, Matrix4 model, out Vector2 point1, out Vector2 point2)
+        {
+            point1 = Vector3.TransformPosition((origin.X, origin.Y, 0), model).Xy + offset;
+            point2 = Vector3.TransformPosition((origin.X + size.X, origin.Y + size.Y, 0), model).Xy + offset;
+        }
+
+        public UIElementBase StopTesting()
+        {
+            UIController?.SetAsInteractable(this, false);
+            return this;
+        }
+
+        public UIElementBase ResumeTesting()
+        {
+            UIController?.SetAsInteractable(this, true);
+            return this;
+        }
+
+        public virtual UIElementBase SetOnHoverEnter(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onHoverEnter = action;
+            return this;
+        }
+
+        public virtual UIElementBase SetOnHover(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onHover = action;
+            return this;
+        }
+
+        public virtual UIElementBase SetOnClick(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onClick = action;
+            return this;
+        }
+
+        public virtual UIElementBase SetOnHold(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onHold = action;
+            return this;
+        }
+
+        public virtual UIElementBase SetOnRelease(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onRelease = action;
+            return this;
+        }
+
+        public virtual UIElementBase SetOnHoverExit(Action<UIElementBase>? action)
+        {
+            UIController?.SetAsInteractable(this, action != null);
+            _onHoverExit = action;
+            return this;
+        }
+
+        public virtual bool IsInteractable() =>
+            _onHoverEnter != null ||
+            _onHover != null ||
+            _onClick != null ||
+            _onHold != null ||
+            _onRelease != null ||
+            _onHoverExit != null ||
+            AnimationHover != null ||
+            AnimationClick != null;
+
+        public void Delete()
+        {
+            Visible = false;
+            OnHoverExitAction();
+            OnReleaseAction();
+            ParentElement?.RemoveElement(this);
+            ParentElement = null;
+            UIController?.RemoveElement(this);
+        }
+
+        public void AddTo(UICol parent) => parent.AddElement(this);
 
         public void Created()
         {
@@ -179,22 +364,13 @@ namespace PBG.UI
                 UIController.MaxDepth = Mathf.Max(UIController.MaxDepth, depth);
                 UIController?.CalculateBoundaries();
             }
-
-            if (ParentElement is IUICol col && col.FitChildren)
-            {
-                Console.WriteLine(width + " " + height + " " + offset + " " + Origin + " " + Size);
-            }
         }
 
         public virtual void Generate() { }
-        public abstract bool Test();
-        public abstract bool IsMouseOver();
-        public abstract void CalculateBoundaries(Vector2 offset);
         public abstract void UpdateChildMaskIndex(int index);
         public virtual void UpdateTextureIndex(int textureIndex) { }
         public virtual void UpdateIconIndex(int textureIndex) {}
         public virtual void UpdateItem(string name) {}
-        public abstract bool IsInteractable();
         public abstract bool GetMaskPanel([NotNullWhen(true)] out PBG.Rendering.Mask.UIMaskStruct? mask);
         public void ApplyChanges(UIChange changes = UIChange.None)
         {
@@ -396,13 +572,6 @@ namespace PBG.UI
             for (int i = 0; i < styles.Length; i++)
                 styles[i].Set(this);
             return element;
-        }
-
-        public virtual void Delete()
-        {
-            ParentElement?.RemoveElement(this);
-            ParentElement = null;
-            UIController?.RemoveElement(this);
         }
 
         public override string ToString()

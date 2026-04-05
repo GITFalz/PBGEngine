@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PBG.Data;
 using PBG.Graphics;
@@ -29,16 +30,26 @@ public unsafe class SubMesh(Mesh Mesh, SubMeshInfo info) : IDisposable
 
     public void Render(MeshRenderer meshRenderer)
     {
+        Stopwatch sw = Stopwatch.StartNew();
         Material.Bind();
+        double a = sw.Elapsed.TotalMicroseconds; sw.Restart();
         meshRenderer.Descriptor.Bind();
+        double b = sw.Elapsed.TotalMicroseconds; sw.Restart();
 
         meshRenderer.Descriptor.Uniform(Material.ModelLocation, meshRenderer.Transform.GetModelMatrix());
         meshRenderer.Descriptor.Uniform(Material.ViewLocation, meshRenderer.Camera.ViewMatrix);
         meshRenderer.Descriptor.Uniform(Material.ProjectionLocation, meshRenderer.Camera.ProjectionMatrix);
+        double c = sw.Elapsed.TotalMicroseconds; sw.Restart();
 
         _indexBuffer.Bind();
+        double d = sw.Elapsed.TotalMicroseconds; sw.Restart();
 
         GFX.DrawIndexed(_indexCount, 1, 0, 0, 0);
+        double e = sw.Elapsed.TotalMicroseconds; sw.Restart();
+        if (GameTime.FpsUpdated)
+        {
+            Console.WriteLine(a + " " + b + " " + c + " " + d + " " + e);
+        }
     }
 
     public void Dispose()

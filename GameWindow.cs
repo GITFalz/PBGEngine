@@ -9,10 +9,18 @@ public abstract class GameWindow
 
     public IMouse Mouse;
     public IKeyboard Keyboard;
+    private PBG.Data.CursorMode _cursorMode;
     public PBG.Data.CursorMode CursorMode
     {
-        get => (PBG.Data.CursorMode)Mouse.Cursor.CursorMode;
-        set => Mouse.Cursor.CursorMode = (CursorMode)value;
+        get => _cursorMode;
+        set
+        {
+            if (_cursorMode == value)
+                return;
+
+            _cursorMode = value;
+            Mouse.Cursor.CursorMode = (CursorMode)value;
+        }
     }
     
     public static GameExecutionMode ExecutionMode = GameExecutionMode.Running;
@@ -20,6 +28,12 @@ public abstract class GameWindow
     public GameWindow(int width, int height)
     {
         instance = new VulkanInstance(this, width, height);
+    }
+
+    public void SetMouse(IMouse mouse)
+    {
+        Mouse = mouse;
+        _cursorMode = (PBG.Data.CursorMode)mouse.Cursor.CursorMode;
     }
 
     public abstract void OnKeyDown(IKeyboard keyboard, Key key, int scanCode);

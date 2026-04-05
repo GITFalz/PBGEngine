@@ -11,6 +11,7 @@ namespace PBG.Graphics;
 
 public unsafe class GFX
 {
+    internal static int RenderCallCount = 0;
     private static GraphicsContext _graphicsContext = null!;
     public static uint CurrentFrame => _graphicsContext.currentFrame;
     
@@ -188,28 +189,52 @@ public unsafe class GFX
 
     
     public static void Draw(uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
-    => Vk.CmdDraw(CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+    {
+        Vk.CmdDraw(CommandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        RenderCallCount++;
+    }
 
     public static void Draw(CommandBuffer commandBuffer, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
-    => Vk.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+    {
+        Vk.CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        RenderCallCount++;
+    }
 
     public static void DrawIndexed(uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
-    => Vk.CmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    {
+        Vk.CmdDrawIndexed(CommandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        RenderCallCount++;
+    }
 
     public static void DrawIndexed(CommandBuffer commandBuffer, uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
-    => Vk.CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    {
+        Vk.CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        RenderCallCount++;
+    }
 
     public static void DrawIndirect(Buffer buffer, ulong offset, uint drawCount, uint stride)
-    => Vk.CmdDrawIndirect(CommandBuffer, buffer, offset, drawCount, stride);
+    {
+        Vk.CmdDrawIndirect(CommandBuffer, buffer, offset, drawCount, stride);
+        RenderCallCount++;
+    }
 
     public static void DrawIndirect(CommandBuffer commandBuffer, Buffer buffer, ulong offset, uint drawCount, uint stride)
-    => Vk.CmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
+    {
+        Vk.CmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
+        RenderCallCount++;
+    }
 
     public static void DrawIndirectCount(Buffer buffer, ulong offset, Buffer countBuffer, ulong countOffset, uint maxDrawCount, uint stride)
-    => Vk.CmdDrawIndirectCount(CommandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
+    {
+        Vk.CmdDrawIndirectCount(CommandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
+        RenderCallCount++;
+    }
 
     public static void DrawIndirectCount(CommandBuffer commandBuffer, Buffer buffer, ulong offset, Buffer countBuffer, ulong countOffset, uint maxDrawCount, uint stride)
-    => Vk.CmdDrawIndirectCount(commandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
+    {
+        Vk.CmdDrawIndirectCount(commandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
+        RenderCallCount++;
+    }
     #endregion
 
 }

@@ -3,12 +3,15 @@ using PBG.Parse;
 
 namespace PBG.MathLibrary
 {
-    public struct Quaternion : ISceneSerializable
+    public struct Quaternion : ISceneSerializable, IVector<float>
     {
         public float X, Y, Z, W;
         public Vector3 Xyz => (X, Y, Z);
 
         public static readonly Quaternion Identity = new Quaternion(0, 0, 0, 1);
+
+        public readonly int Count => 4;
+        public readonly IVector<float> Default => Identity;
 
         public Quaternion(float x, float y, float z, float w)
         {

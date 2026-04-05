@@ -5,35 +5,17 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public interface IUIPanel
+    public abstract class UIPanel : UIElementBase
     {
-        Vector4 Color { get; set; }
-        Vector4 Transform { get; set; }
-        Vector4 BorderColor { get; set; }
-        Vector4 BorderUI { get; set; }
-        int TextureID { get; set; }
-        bool Visible { get; }
-        int MaskIndex { get; }
-        Vector2 Size { get; set; }
-        Vector2 Slice { get; set; }
-        Vector2 AnimationTranslation { get; set; }
-        float AnimationScale { get; set; }
-        float AnimationRotation { get; set; }
-        bool IsValid => Visible && (Color.W + BorderColor.W != 0);
-        UIElementBase UpdateColor();
-        string GetName();
-    }
-
-    public abstract class UIPanel<TSelf> : UIElement<TSelf>, IUIPanel where TSelf : UIPanel<TSelf>
-    {
-        public int TextureID { get; set; } = -1;
-        public Vector2 Slice { get; set; } = (-1, -1);
-        public Vector4 BorderColor { get; set; } = Vector4.Zero;
-        public Vector4 BorderUI { get; set;} = Vector4.Zero;
+        public int TextureID = -1;
+        public Vector2 Slice = (-1, -1);
+        public Vector4 BorderColor = Vector4.Zero;
+        public Vector4 BorderUI = Vector4.Zero;
+        public bool IsValid => Visible && (Color.W + BorderColor.W != 0);
 
         public UIPanel() : base((0, 0, 0, 0)) { }
 
-        public string GetName() => Name;
+        public UIPanel Class(params IStyleData[] styles) => InternalClass(this, styles);
 
         public override void UpdateChildMaskIndex(int index) => UIController?.UIMesh.UpdateMaskIndex(this, index);
         public override void UpdateTextureIndex(int textureIndex)
@@ -88,5 +70,7 @@ namespace PBG.UI
             return this;
         }
         public override void Destroy() => ControllerCheck().UIMesh.RemoveElement(this);
+
+        public UIElementTag GetTag() => Tag;
     }
 }

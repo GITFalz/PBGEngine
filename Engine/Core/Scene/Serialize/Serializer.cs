@@ -14,7 +14,7 @@ public static class SceneSerializer
         if (Path.GetExtension(path) != ".json")
             return false;
 
-        SceneBlueprint.Clear();
+        SceneBlueprint.Blueprint.Clear();
 
         JsonSerializerSettings settings = new()
         {

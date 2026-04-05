@@ -2,7 +2,7 @@ using PBG.Graphics;
 using PBG.UI;
 using PBG.MathLibrary;
 using PBG.UI.Creator;
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 using PBG.Data;
 using PBG.Core;
 using PBG;

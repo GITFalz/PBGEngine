@@ -13,20 +13,20 @@ namespace PBG.Rendering.Meshes
         public int LineCount = 0;
         public UILineStruct[] LineStructs = [];
 
-        public UI.IUIText? CursorText = null;
+        public UIText? CursorText = null;
         public int CursorCharacter = -1;
         
         public int GlyphCount = 0;
         public int VisibleGlyphCount = 0;
         public int VisibleLineCount = 0;
         public UIGlyphStruct[] GlyphStructs = [];
-        public Dictionary<UI.IUIText, TextMetadata> Texts = [];
+        public Dictionary<UIText, TextMetadata> Texts = [];
 
-        public HashSet<IUIText> TextsToBeRemoved = [];
-        public HashSet<IUIText> TextsToBeAdded = [];
+        public HashSet<UIText> TextsToBeRemoved = [];
+        public HashSet<UIText> TextsToBeAdded = [];
 
         private SSBO<UILineStruct> _lineSSBO = new([], true);
-        private SSBO<UIGlyphStruct> _glyphSSBO = new([]);
+        private SSBO<UIGlyphStruct> _glyphSSBO = new([], true);
 
         private bool _updateVisibility = false;
         private BufferEnum _bufferUpdateState = BufferEnum.None;
@@ -42,13 +42,13 @@ namespace PBG.Rendering.Meshes
             Descriptor.BindSSBO(controller.MaskData.MaskSSBO, 3);
         }
 
-        public void AddElement(UI.IUIText text)
+        public void AddElement(UIText text)
         {
             TextsToBeAdded.Add(text);
             SetBufferUpdateState(BufferEnum.Recreate);
         }
 
-        public void GenerateCharacters(IUIText textElement)
+        public void GenerateCharacters(UIText textElement)
         {
             if (!Texts.TryGetValue(textElement, out TextMetadata textMetaData))
                 return;
@@ -90,7 +90,7 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void SetCharactersColor(IUIText text, Vector3 color, int start, int count)
+        public void SetCharactersColor(UIText text, Vector3 color, int start, int count)
         {
             if (!Texts.TryGetValue(text, out TextMetadata textMetaData) || start >= textMetaData.CharCount)
                 return;
@@ -111,18 +111,18 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void RemoveElement(UI.IUIText textToRemove)
+        public void RemoveElement(UIText textToRemove)
         {
             TextsToBeRemoved.Add(textToRemove);
             SetBufferUpdateState(BufferEnum.Recreate);
         }
 
-        public void UpdateCharacters(UI.IUIText text)
+        public void UpdateCharacters(UIText text)
         {
             GenerateCharacters(text);
         }
 
-        public void UpdateMaskIndex(UI.IUIText text, int index)
+        public void UpdateMaskIndex(UIText text, int index)
         {
             if (Texts.TryGetValue(text, out var textMetadata))
             {
@@ -132,7 +132,7 @@ namespace PBG.Rendering.Meshes
             }
         }
 
-        public void UpdateTransform(UI.IUIText text)
+        public void UpdateTransform(UIText text)
         {
             if (!Texts.TryGetValue(text, out TextMetadata metaData))
                 return;
@@ -147,7 +147,7 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateColor(UI.IUIText text)
+        public void UpdateColor(UIText text)
         {
             if (!Texts.TryGetValue(text, out TextMetadata metaData))
                 return;
@@ -159,7 +159,7 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void SetCursor(UI.IUIText text)
+        public void SetCursor(UIText text)
         {
             RemoveCursor();
             if (!Texts.TryGetValue(text, out TextMetadata metaData))
@@ -402,7 +402,7 @@ namespace PBG.Rendering.Meshes
             }
         }
 
-        public void UpdateAnimationTranslation(UI.IUIText text)
+        public void UpdateAnimationTranslation(UIText text)
         {
             Texts.TryGetValue(text, out var meta);
 
@@ -413,7 +413,7 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateAnimationScale(UI.IUIText text)
+        public void UpdateAnimationScale(UIText text)
         {
             Texts.TryGetValue(text, out var meta);
 
@@ -424,7 +424,7 @@ namespace PBG.Rendering.Meshes
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateAnimationRotation(UI.IUIText text)
+        public void UpdateAnimationRotation(UIText text)
         {
             Texts.TryGetValue(text, out var meta);
 

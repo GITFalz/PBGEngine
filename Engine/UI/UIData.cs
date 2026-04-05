@@ -35,14 +35,46 @@ namespace PBG.UI
         
         public UIData(TextureType textureType)
         {   
-            UiShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag") });
+            ShaderInfo uiInfo = new() 
+            { 
+                VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), 
+                FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag") 
+            };
+
+            uiInfo.ColorBlendAttachment.BlendEnable = true;
+
+            uiInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
+            uiInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            uiInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+
+            uiInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+            uiInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            uiInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+            UiShader = new Shader(uiInfo);
             UiShader.Compile();
 
             UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest});
             IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest});
             ItemTexture = ItemDataManager.Image;
 
-            TextShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag") });
+            ShaderInfo textInfo = new() 
+            { 
+                VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), 
+                FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag")
+            };
+            
+            textInfo.ColorBlendAttachment.BlendEnable = true;
+
+            textInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
+            textInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            textInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+
+            textInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+            textInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            textInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+            TextShader = new Shader(textInfo);
             TextShader.Compile();
 
             TextTexture = new TextureArray(new("TextAtlas.png", 14, 18) { Filter = Filter.Linear, SamplerMode = SamplerAddressMode.ClampToEdge }); 
@@ -58,9 +90,9 @@ namespace PBG.UI
         public Descriptor GetUiDescriptor()
         {
             var descriptor = UiShader.GetDescriptorSet();
-            descriptor.BindTextureArray(UiTexture, 3);
-            descriptor.BindTextureArray(IconTexture, 4);
-            descriptor.BindTextureArray(ItemTexture, 5);
+            descriptor.BindTextureArray(UiTexture, 4);
+            descriptor.BindTextureArray(IconTexture, 5);
+            descriptor.BindTextureArray(ItemTexture, 6);
             return descriptor;
         }
 

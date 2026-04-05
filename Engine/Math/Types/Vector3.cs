@@ -3,7 +3,7 @@ using PBG.Parse;
 
 namespace PBG.MathLibrary;
 
-public struct Vector3 : ISceneSerializable
+public struct Vector3 : ISceneSerializable, IVector<float>
 {
     public float X;
     public float Y;
@@ -42,6 +42,9 @@ public struct Vector3 : ISceneSerializable
 
     public readonly float Length => Mathf.Sqrt((X * X) + (Y * Y) + (Z * Z));
     public readonly float LengthSquared => (X * X) + (Y * Y) + (Z * Z);
+
+    public readonly int Count => 3;
+    public readonly IVector<float> Default => Zero;
 
     public Vector3(float x, float y, float z)
     {

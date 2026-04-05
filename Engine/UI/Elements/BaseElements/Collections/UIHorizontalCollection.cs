@@ -4,9 +4,20 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIHCol : UIHCol<UIHCol>
+    public class UIHCol : UICol
     {
-        public UIHCol() : base() { Name = "UIHCol"; }
+        protected virtual float TotalWidth => Border.X;
+
+        public UIHCol() : base() 
+        { 
+            Name = "UIHCol"; 
+            Tag = UIElementTag.UIHorizontalCollection;
+        }
+
+        public UIHCol(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
         
         public UIHCol Ref(ref UIHCol text)
         {
@@ -20,26 +31,19 @@ namespace PBG.UI
             return text;
         }
 
-        public UIHCol Class(params IStyleData[] styles) => InternalClass(this, styles);
+        public new UIHCol Class(params IStyleData[] styles) => InternalClass(this, styles);
 
-        public UIHCol OnHoverEnter(Action<UIHCol>? action)    { SetOnHoverEnter(action); return this; }
-        public UIHCol OnHover(Action<UIHCol>? action)         { SetOnHover(action); return this; }
-        public UIHCol OnClick(Action<UIHCol>? action)         { SetOnClick(action); return this; }
-        public UIHCol OnHold(Action<UIHCol>? action)          { SetOnHold(action); return this; }
-        public UIHCol OnRelease(Action<UIHCol>? action)       { SetOnRelease(action); return this; }
-        public UIHCol OnHoverExit(Action<UIHCol>? action)     { SetOnHoverExit(action); return this; }
+        public UIHCol OnHoverEnter(Action<UIHCol>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIHCol OnHover(Action<UIHCol>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIHCol OnClick(Action<UIHCol>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIHCol OnHold(Action<UIHCol>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIHCol OnRelease(Action<UIHCol>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIHCol OnHoverExit(Action<UIHCol>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
-        public UIHCol this[params IUIChild[] subElements]
+        public new UIHCol this[params IUIChild[] subElements]
         {
             get { AddElements(subElements); return this; }
         }
-    }
-    
-    public class UIHCol<TSelf> : UICol<TSelf> where TSelf : UIHCol<TSelf>
-    {
-        protected virtual float TotalWidth => Border.X;
-
-        public UIHCol() : base() { Tag = UIElementTag.UIHorizontalCollection; }
 
         public override void CollectionFirstPass()
         {

@@ -67,6 +67,35 @@ namespace PBG.Core
             Name = "";
         }
 
+        public TransformNode Copy()
+        {
+            var node = new TransformNode(Name, Scene)
+            {
+                Position = Position,
+                Scale = Scale,
+                Rotation = Rotation
+            };
+
+            for (int i = 0; i < Components.Count; i++)
+            {
+                var script = Components[i];
+                var instance = script.Copy();
+                if (instance == null)
+                    continue;
+
+                node.AddComponent(instance);
+            }
+
+            for (int i = 0; i < Children.Count; i++)
+            {
+                var childNode = Children[i];
+                var copy = childNode.Copy();
+                AddNode(copy);
+            }
+
+            return node;
+        }
+
         public void AddComponent(ScriptingNode component)
         {
             component.Transform = this;

@@ -1,7 +1,7 @@
 
 using PBG.Core;
 using PBG.Rendering;
-using static PBG.UI2.Styles;
+using static PBG.UI.Styles;
 
 namespace PBG.UI.Creator
 {

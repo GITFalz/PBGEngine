@@ -6,7 +6,7 @@ public abstract class Node
 {
     public string Name = "";
     public Scene Scene = null!;
-    public Node ParentNode = null!;
+    public Node? ParentNode = null;
     public List<TransformNode> Children = [];
 
     public TransformNode GetNode(string path)
@@ -36,6 +36,14 @@ public abstract class Node
 
         // If no child matches
         throw new Exception($"Node not found: {path}");
+    }
+
+    public void AddNode(TransformNode node)
+    {
+        node.Name = GetUniqueName(node.Name);
+        Children.Add(node);
+        node.ParentNode = this;
+        Scene.SetAsPending(node);
     }
 
     public TransformNode AddChild(string name)
@@ -130,7 +138,10 @@ public abstract class Node
     public string GetUniqueName() => GetUniqueName("Collection");
     public string GetUniqueName(string name)
     {
-        HashSet<string> names = [.. Children.Select(c => c.Name)];
+        HashSet<string> names = [];
+        for (int i = 0; i < Children.Count; i++)
+            names.Add(Children[i].Name);
+            
         int n = 1;
         string newName = name;
         while (names.Contains(newName))

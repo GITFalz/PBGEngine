@@ -51,7 +51,7 @@ public class SceneBaseJson : SceneJsonParser
             Name = sceneName;
         }
 
-        SceneBlueprint.Clear();
+        SceneBlueprint.Blueprint.Clear();
         SceneBlueprint.Name = Name;
         for (int i = 0; i < Nodes.Count; i++)
             Nodes[i].Load();
@@ -69,7 +69,7 @@ public class SceneNodeJson : SceneJsonParser
 
     public void Load()
     {
-        SceneBlueprintNode node = SceneBlueprint.AddNode(Name);
+        SceneBlueprintNode node = (SceneBlueprintNode)SceneDefinition.Blueprint.AddNode(Name);
         LoadGlobal(node);
     }
 
@@ -138,7 +138,7 @@ public class SceneFieldJson : SceneJsonParser
         Value = value.ToString();
     }
 
-    public void ParseField(Dictionary<string, MemberInfo> memberMap, ScriptBlueprint script)
+    public void ParseField(Dictionary<string, MemberInfo> memberMap, ScriptDefinition script)
     {
         if (Name == null || !memberMap.TryGetValue(Name, out var member))
             return;

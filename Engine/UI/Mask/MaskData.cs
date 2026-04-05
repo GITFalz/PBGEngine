@@ -8,7 +8,7 @@ namespace PBG.Rendering.Mask
     public class MaskData
     {
         public List<UIMaskStruct> MaskStructs = [];
-        public Dictionary<UI.IUICol, int> Collections = [];
+        public Dictionary<UICol, int> Collections = [];
 
         public SSBO<UIMaskStruct> MaskSSBO = new([]);
 
@@ -21,7 +21,7 @@ namespace PBG.Rendering.Mask
             _controller = controller;
         }
 
-        public UIMaskStruct AddElement(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
+        public UIMaskStruct AddElement(UICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             if (Collections.TryGetValue(collection, out int value))
             {
@@ -48,7 +48,7 @@ namespace PBG.Rendering.Mask
             return maskStruct;
         }
 
-        public void RemoveElement(UI.IUICol collectionToRemove)
+        public void RemoveElement(UICol collectionToRemove)
         {
             if (!Collections.TryGetValue(collectionToRemove, out int index))
                 return;
@@ -80,7 +80,7 @@ namespace PBG.Rendering.Mask
             return true;
         }
 
-        public void UpdateTransform(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
+        public void UpdateTransform(UICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             if (!Collections.TryGetValue(collection, out int index))
                 return;
@@ -93,7 +93,7 @@ namespace PBG.Rendering.Mask
             SetBufferUpdateState(BufferEnum.Update);
         }
 
-        public void UpdateScale(UI.IUICol collection, Vector2 topLeft, Vector2 bottomRight)
+        public void UpdateScale(UICol collection, Vector2 topLeft, Vector2 bottomRight)
         {
             UpdateTransform(collection, topLeft, bottomRight);
         }
@@ -114,7 +114,7 @@ namespace PBG.Rendering.Mask
             {
                 case BufferEnum.Recreate:
                     MaskSSBO.Renew([..MaskStructs]);
-                    _controller.UIMesh.Descriptor.BindSSBO(MaskSSBO, 2);
+                    _controller.UIMesh.Descriptor.BindSSBO(MaskSSBO, 3);
                     _controller.TextMesh.Descriptor.BindSSBO(MaskSSBO, 3);
                     break;
                 case BufferEnum.Update:

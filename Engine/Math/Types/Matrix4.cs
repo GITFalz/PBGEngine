@@ -4,7 +4,7 @@ using PBG.Parse;
 
 namespace PBG.MathLibrary
 {
-    public struct Matrix4 : ISceneSerializable
+    public struct Matrix4 : ISceneSerializable, IVector<float>
     {
         public float M11, M21, M31, M41;
 
@@ -30,6 +30,9 @@ namespace PBG.MathLibrary
             0,0,0,0
         );
 
+        public readonly int Count => 16; 
+        public readonly IVector<float> Default => Identity;
+
         public Matrix4(
             float m11, float m21, float m31, float m41,
             float m12, float m22, float m32, float m42,
@@ -40,6 +43,32 @@ namespace PBG.MathLibrary
             M12=m12; M22=m22; M32=m32; M42=m42;
             M13=m13; M23=m23; M33=m33; M43=m43;
             M14=m14; M24=m24; M34=m34; M44=m44;
+        }
+
+        public float this[int index]
+        {
+            readonly get 
+            {
+                return index switch
+                {
+                    0  => M11, 1  => M21, 2  => M31, 3  => M41,
+                    4  => M12, 5  => M22, 6  => M32, 7  => M42,
+                    8  => M13, 9  => M23, 10 => M33, 11 => M43,
+                    12 => M14, 13 => M24, 14 => M34, 15 => M44,
+                    _ => throw new IndexOutOfRangeException($"[Error:({GetType().Name})] : Unknown index '{index}'")
+                };
+            }
+            set
+            {
+                switch (index)
+                {
+                    case 0:  M11 = value; break; case 1:  M21 = value; break; case 2:  M31 = value; break; case 3:  M41 = value; break;
+                    case 4:  M12 = value; break; case 5:  M22 = value; break; case 6:  M32 = value; break; case 7:  M42 = value; break;
+                    case 8:  M13 = value; break; case 9:  M23 = value; break; case 10: M33 = value; break; case 11: M43 = value; break;
+                    case 12: M14 = value; break; case 13: M24 = value; break; case 14: M34 = value; break; case 15: M44 = value; break;
+                    default: throw new IndexOutOfRangeException($"[Error:({GetType().Name})] : Unknown index '{index}'");
+                }
+            }
         }
 
         public static Matrix4 CreateTranslation(float x, float y, float z) =>

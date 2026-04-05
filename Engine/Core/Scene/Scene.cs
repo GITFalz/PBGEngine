@@ -24,6 +24,7 @@ namespace PBG.Core
         public bool Started = false;
         public bool Restart = false;
         public bool ShouldResize = false;
+        public bool UpdatedPending = false;
 
         public RootNode RootNode;
 
@@ -130,7 +131,6 @@ namespace PBG.Core
 
         public void Start()
         {
-            InitComponents();
             RootNode.Start();
         }
 
@@ -151,6 +151,7 @@ namespace PBG.Core
 
         public void UpdatePending()
         {
+            UpdatedPending = false;
             if (_pendingList.Count > 0)
             {
                 for (int i = 0; i < _pendingList.Count; i++)
@@ -163,6 +164,7 @@ namespace PBG.Core
                 _pendingHash = [];
 
                 _updateStart = true;
+                UpdatedPending = true;
             }
         }
 
