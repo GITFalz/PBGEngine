@@ -1,33 +1,27 @@
+using PBG.Data;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.Voxel;
 
 namespace PBG.Core;
 
-public class Scene
+public class Scene : Game
 {
     public Camera Camera = new();
 
-    public List<UIController> ActiveUIControllers = [];
     public VoxelRenderer VoxelRenderer;
 
-    public Scene()
+    public Scene() : base("Main")
     {
         VoxelRenderer = new(this);
+        Camera.SetCameraMode(CameraMode.Free);
     }
 
-    public void Start()
+    public override List<ScriptingNode> Initialize()
     {
-        VoxelRenderer.Test();
-    }
-
-    public void Render()
-    {
-        VoxelRenderer.Render();
-    }
-
-    public void Dispose()
-    {
-        VoxelRenderer.Dispose();
+        return [
+            Camera,
+            VoxelRenderer
+        ];
     }
 }

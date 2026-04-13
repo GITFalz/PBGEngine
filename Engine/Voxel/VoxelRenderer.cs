@@ -1,13 +1,15 @@
+
 using System.Diagnostics.CodeAnalysis;
+using PBG;
 using PBG.Core;
+using PBG.Data;
 using PBG.Graphics;
 using PBG.Mathematics;
 using PBG.Rendering;
+using PBG.Voxel;
 
-namespace PBG.Voxel;
-
-[SystemInit(1)]
-public class VoxelRenderer : IVoxelRenderer
+[SystemInit(InitPriority.Data)]
+public class VoxelRenderer : ScriptingNode, IVoxelRenderer
 {
     public static Shader VoxelShader = null!;
     public static int ViewLocation = -1;
@@ -59,6 +61,11 @@ public class VoxelRenderer : IVoxelRenderer
 
     public Camera GetCamera() => Scene.Camera;
 
+    public void Awake()
+    {
+        Test();
+    }
+
     public void Test()
     {
         VoxelChunk chunk = new(this, (0, 0, 0));
@@ -73,38 +80,33 @@ public class VoxelRenderer : IVoxelRenderer
         Chunks.Add(chunk);
         ActiveChunks.Add(chunk.Position, chunk);
 
-        var vertexData = VoxelChunkGenerator.GenerateIndirectMesh(chunk);
-        if (vertexData.Count == 0)
+        VoxelChunkGenerator.GenerateIndirectMesh(chunk);
+        if (!chunk.HasMesh())
             return;
 
         if (VoxelMeshes.Count == 0)
             VoxelMeshes.Add(new());
 
         VoxelMesh? voxelMesh = null;
-        Allocation allocation = new();
         for (int i = 0; i < VoxelMeshes.Count; i++)
         {
             var mesh = VoxelMeshes[i];
-            if (mesh.TryAllocate((uint)vertexData.Count, out var alloc))
+            if (mesh.TryAllocate(chunk))
             {
                 voxelMesh = mesh;
-                allocation = alloc;
                 break;
             }
         }
 
         if (voxelMesh == null)
         {
-            VoxelMeshes.Add(new());
-            voxelMesh = VoxelMeshes[^1];
-            if (!voxelMesh.TryAllocate((uint)vertexData.Count, out var alloc))
-                throw new Exception("[Error] : Vertex data to large for any vertex mesh with a size of " + vertexData.Count);
-
-            allocation = alloc;
+            voxelMesh = new();
+            VoxelMeshes.Add(voxelMesh);
+            if (!voxelMesh.TryAllocate(chunk))
+                throw new Exception("[Error] : Vertex data to large for any vertex mesh with a size of " + chunk.VertexCount);
         }
 
-        chunk.Allocation = allocation;
-        voxelMesh.Update(chunk, [..vertexData]);
+        voxelMesh.Update(chunk);
     }
 
     public void Render()

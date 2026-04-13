@@ -2,8 +2,7 @@ using System.Runtime.InteropServices;
 using PBG.Graphics;
 using PBG.Graphics.Vulkan;
 using PBG.Mathematics;
-
-namespace PBG.Voxel;
+using PBG.Voxel;
 
 public class VoxelMesh
 {
@@ -70,7 +69,7 @@ public class VoxelMesh
             descriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             descriptor.BindSSBO(MeshSSBO, 1);
             descriptor.BindSSBO(_matrixSSBO, 2);
-            //descriptor.BindTextureArray(BlockData.BlockTextureArray, 5);
+            descriptor.BindTextureArray(BlockData.BlockTextureArray, 4);
             //descriptor.BindFramebufferDepth(VoxelRenderer.CloseFBO, 6);
             //descriptor.BindFramebufferDepth(VoxelRenderer.MiddleFBO, 7);
             //descriptor.BindFramebufferDepth(VoxelRenderer.FarFBO, 8);
@@ -86,9 +85,15 @@ public class VoxelMesh
         }    
     }
 
-    public bool TryAllocate(uint size, out Allocation alloc)
+    public bool TryAllocate(VoxelChunk chunk)
     {
-        alloc = new() { Mesh = this, VertexCount = size };
+        uint size = chunk.VertexCount;
+        Allocation alloc = new() 
+        { 
+            Mesh = this, 
+            VertexCount = size 
+        };
+
         uint chunkCount = (uint)Mathf.CeilToInt((float)size / (float)SLOT_SIZE);
 
         for (int i = 0; i < Allocations.Count; i++)
@@ -110,6 +115,7 @@ public class VoxelMesh
                     Allocations[i] = a;
                 }
 
+                chunk.Allocation = alloc;
                 return true;
             }
         }
@@ -117,15 +123,17 @@ public class VoxelMesh
         return false;
     }
 
-    public void Update(VoxelChunk chunk, Vector4i[] data)
+    public void Update(VoxelChunk chunk)
     {
         nint stride = Marshal.SizeOf<Vector4i>();
-        MeshSSBO.Update(data, (ulong)(chunk.Allocation.Offset * SLOT_SIZE * stride), 0);
+        MeshSSBO.Update(chunk.GetVertexData(), (ulong)(chunk.Allocation.Offset * SLOT_SIZE * stride), 0);
         for (int i = 0; i < chunk.Allocation.Size; i++)
         {
             long index = chunk.Allocation.Offset + i;
             _matrices[index] = chunk.ModelMatrix;
         }
+
+        chunk.ClearVertexData();
 
         _updateChunkData = true;
         if (chunk.Allocation.Start < _updateStart) _updateStart = chunk.Allocation.Start;

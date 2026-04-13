@@ -66,7 +66,7 @@ namespace PBG.Voxel
             { {8,  7, 17}, {26,17,25}, {24,25,15}, {6, 15,  7}  },   // 5
         };
 
-        public static List<Vector4i> GenerateIndirectMesh(VoxelChunk chunk)
+        public static void GenerateIndirectMesh(VoxelChunk chunk)
         {
             List<Vector4i> vertexData = [];
             Block[] sideBlocks = new Block[27];
@@ -137,7 +137,7 @@ namespace PBG.Voxel
                 }
             }
 
-            return vertexData;
+            chunk.SetVertexData([..vertexData]);
         }
 
         public class VoxelFaces

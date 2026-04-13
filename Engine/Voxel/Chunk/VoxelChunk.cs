@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using PBG.Mathematics;
 
 namespace PBG.Voxel;
@@ -17,6 +16,9 @@ public class VoxelChunk
 
     public VoxelRenderer Renderer;
 
+    private Vector4i[] _vertexData = [];
+    public uint VertexCount = 0;
+
     public VoxelChunk(VoxelRenderer renderer, Vector3i position)
     {
         Renderer = renderer;
@@ -25,6 +27,17 @@ public class VoxelChunk
 
         ModelMatrix = Matrix4.CreateTranslation(Position);
     }
+
+    public bool HasMesh() => VertexCount > 0;
+
+    public void SetVertexData(Vector4i[] vertexData)
+    {
+        _vertexData = vertexData;
+        VertexCount = (uint)_vertexData.Length;
+    }
+
+    public Vector4i[] GetVertexData() => _vertexData;
+    public void ClearVertexData() => _vertexData = [];
 
     public bool InBounds(Vector3i pos) => InBounds(pos.X, pos.Y, pos.Z);
     public bool InBounds(int x, int y, int z)
@@ -109,42 +122,4 @@ public class VoxelChunk
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int GetIndex(Vector3i position) => (position.X & 31) + (position.Z & 31) * 32 + (position.Y & 31) * 1024;
-}
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct BlockVertexData
-{
-    public float PX, PY, PZ;
-    public float UX, UY;
-    public float NX, NY, NZ;
-    public int TextureIndex;
-
-    public BlockVertexData(Vector3 position, Vector2 uvs, Vector3 normals, int texture)
-    {
-        PX = position.X; PY = position.Y; PZ = position.Z;
-        UX = uvs.X; UY = uvs.Y;
-        NX = normals.X; NY = normals.Y; NZ = normals.Z;
-        TextureIndex = texture;
-    }
-
-    public BlockVertexData(Vector3 position, Vector2 uvs, Vector3 normals, int texture, int side, int corner)
-    {
-        PX = position.X; PY = position.Y; PZ = position.Z;
-        UX = uvs.X; UY = uvs.Y;
-        NX = normals.X; NY = normals.Y; NZ = normals.Z;
-        TextureIndex = texture | (side << 16) | (corner << 20);
-    }
-
-    public override string ToString()
-    {
-        int texture = TextureIndex & 0xFFFF;
-        int ao = TextureIndex >> 16;
-
-        return $"P({PX},{PY},{PZ}) U({UX},{UY}) N({NX},{NY},{NZ}) T:{texture} AO:{ao}";
-    }
-
-    public void SetAmbientOcclusion(int ao)
-    {
-        TextureIndex = (TextureIndex & 0x0000FFFF) | (ao << 16);
-    }
 }
