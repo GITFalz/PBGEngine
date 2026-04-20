@@ -7,7 +7,7 @@ using PBG.MathLibrary;
 using PBG.Parse;
 using PBG.Rendering;
 using PBG.UI;
-using Silk.NET.Input;
+
 
 public class AnimationEditor : BaseEditor
 {

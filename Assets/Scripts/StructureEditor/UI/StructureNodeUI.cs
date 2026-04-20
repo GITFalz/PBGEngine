@@ -26,12 +26,12 @@ public partial class StructureNodeUI(StructureNodeManager nodeManager) : UIScrip
 
 
     public override UIElementBase Script() =>
-    new UICol(Class(w_full, h_full), Sub([
+    new UICol(w_full, h_full)[
         NavigationBar(),
         LeftPanel(),
         CenterPanel(),
         RightPanel()
-    ]));
+    ];
 
     public void SetName(UIField field) => NodeManager.FileName = field.GetTrimmedText();
     public void Update()

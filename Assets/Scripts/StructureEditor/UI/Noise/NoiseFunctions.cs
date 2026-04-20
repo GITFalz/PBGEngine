@@ -89,11 +89,11 @@ public partial class StructureNodeUI
             {
                 string fileName = Path.GetFileNameWithoutExtension(file);
                 fileCollections.Add(
-                    new UICol("file-element", Class(left_[5], top_[5], w_full_minus_[10], h_[30], blank_sharp_g_[20]),
-                    OnClickCol(type == "group" ? _=>LoadGroup(fileName) : _=>LoadBasic(fileName)), Sub([
-                        new UIText(fileName.Length > 25 ? fileName[..25] : fileName, Class(middle_left, left_[5], mc_[Mathf.Min(fileName.Length, 25)], fs_[1])),
-                        new UIText("X", Class(middle_right, right_[5], mc_[1], fs_[1.2f]), OnClickText(_ => NodeManager.DeleteFile(file)))
-                    ]))
+                    new UICol("file-element", left_[5], top_[5], w_full_minus_[10], h_[30], blank_sharp_g_[20])
+                    .OnClick(type == "group" ? _=>LoadGroup(fileName) : _=>LoadBasic(fileName))[
+                        new UIText(fileName.Length > 25 ? fileName[..25] : fileName, middle_left, left_[5], mc_[Mathf.Min(fileName.Length, 25)], fs_[1]),
+                        new UIText("X", middle_right, right_[5], mc_[1], fs_[1.2f]).OnClick(_ => NodeManager.DeleteFile(file))
+                    ]
                 );
             }
         }

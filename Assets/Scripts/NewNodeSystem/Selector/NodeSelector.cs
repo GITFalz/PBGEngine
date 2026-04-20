@@ -126,8 +126,8 @@ public class NodeSelector : ScriptingNode
     class SelectorUI(NodeSelector selector, Dictionary<string, SelectorCollection> Collections) : UIScript
     {
         public override UIElementBase Script() =>
-        new UICol(Class(grow_children, blank_sharp_g_[20], border_[5, 5, 5, 5], invisible), Sub([
-            ..Run(() =>
+        new UICol(grow_children, blank_sharp_g_[20], border_[5, 5, 5, 5], invisible)[
+            Run(() =>
             {
                 var mainScroll = new UIVScroll(w_[200], h_[400], blank_sharp_g_[10], border_[5, 5, 5, 5], spacing_[5], mask_children);
                 var bg = new UIImg(w_[200], h_[400], left_[205], blank_sharp_g_[10]);
@@ -143,7 +143,7 @@ public class NodeSelector : ScriptingNode
                     CreateUIElements(collection, subButtonCollection, sideScroll);
                     sideScroll.AddElement(subButtonCollection);
 
-                    col.SetOnClick(c =>
+                    col.OnClick(c =>
                     {
                         if (subButtonCollection.Visible)
                             return;
@@ -169,22 +169,21 @@ public class NodeSelector : ScriptingNode
 
                 return [mainScroll, bg, sideScroll];
             })
-        ]));
+        ];
 
         private Action GenerateCustomSection(string name, Func<UIElementBase[]> createElements, UIVScroll mainScroll, UICol sideScroll)
         {
             var side = new UIVScroll(spacing_[5], w_[190], h_[30], border_[5, 5, 5, 5], grow_children) { Name = name };
-            var col = new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-            OnClick<UICol>(_ =>
+            var col = new UICol(w_[190], h_[30], blank_sharp_g_[20])
+            .OnClick(_ =>
             {
                 if (side.Visible)
                     return;
                 sideScroll.SetVisible(false);
                 side.SetVisible(true);
-            }),
-            Sub(
-                new UIText(name, Class(middle_center, mc_[name.Length], fs_[1]))
-            ));
+            })[
+                new UIText(name, middle_center, mc_[name.Length], fs_[1])
+            ];
             var elements = createElements();
             side.AddElements(elements);
 
@@ -201,8 +200,8 @@ public class NodeSelector : ScriptingNode
         }
 
         private UIElementBase CreateConnectorNodeButton() =>
-        new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-        OnClick<UICol>(_ =>
+        new UICol(w_[190], h_[30], blank_sharp_g_[20])
+        .OnClick(_ =>
         {
             Vector3 position = new Vector3(selector.Position.X, selector.Position.Y, 0);
             position = Vector3.TransformPosition(position, NodeManager.NodeUIController.ModelMatrix.Inverted());
@@ -210,14 +209,13 @@ public class NodeSelector : ScriptingNode
             NodeManager.NodeUIController.AddElement(node.Collection);
             NodeManager.AddNode(node);
             Element.SetVisible(false);
-        }),
-        Sub(
-            new UIText("Basic", Class(middle_center, mc_[6], fs_[1]))
-        ));
+        })[
+            new UIText("Basic", middle_center, mc_[6], fs_[1])
+        ];
 
         private UIElementBase CreatePerformanceNodeButton() =>
-        new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-        OnClick<UICol>(_ =>
+        new UICol(w_[190], h_[30], blank_sharp_g_[20])
+        .OnClick(_ =>
         {
             Vector3 position = new Vector3(selector.Position.X, selector.Position.Y, 0);
             position = Vector3.TransformPosition(position, NodeManager.NodeUIController.ModelMatrix.Inverted());
@@ -225,14 +223,13 @@ public class NodeSelector : ScriptingNode
             NodeManager.NodeUIController.AddElement(node.Collection);
             NodeManager.AddNode(node);
             Element.SetVisible(false);
-        }),
-        Sub(
-            new UIText("Cache", Class(middle_center, mc_[6], fs_[1]))
-        ));
+        })[
+            new UIText("Cache", middle_center, mc_[6], fs_[1])
+        ];
         
         private UIElementBase CreateIfElseNodeButton() =>
-        new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-        OnClick<UICol>(_ =>
+        new UICol(w_[190], h_[30], blank_sharp_g_[20])
+        .OnClick(_ =>
         {
             Vector3 position = new Vector3(selector.Position.X, selector.Position.Y, 0);
             position = Vector3.TransformPosition(position, NodeManager.NodeUIController.ModelMatrix.Inverted());
@@ -240,15 +237,14 @@ public class NodeSelector : ScriptingNode
             NodeManager.NodeUIController.AddElement(node.Collection);
             NodeManager.AddNode(node);
             Element.SetVisible(false);
-        }),
-        Sub(
-            new UIText("IfElse", Class(middle_center, mc_[6], fs_[1]))
-        ));
+        })[
+            new UIText("IfElse", middle_center, mc_[6], fs_[1])
+        ];
 
         private UIElementBase[] CreateStructureNodeButtons()
         {
-            var col = new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-            OnClick<UICol>(_ =>
+            var col = new UICol(w_[190], h_[30], blank_sharp_g_[20])
+            .OnClick(_ =>
             {
                 Vector3 position = new Vector3(selector.Position.X, selector.Position.Y, 0);
                 position = Vector3.TransformPosition(position, NodeManager.NodeUIController.ModelMatrix.Inverted());
@@ -256,10 +252,9 @@ public class NodeSelector : ScriptingNode
                 NodeManager.NodeUIController.AddElement(node.Collection);
                 NodeManager.AddNode(node);
                 Element.SetVisible(false);
-            }),
-            Sub(
-                new UIText("Base", Class(middle_center, mc_[6], fs_[1]))
-            ));
+            })[
+                new UIText("Base", middle_center, mc_[6], fs_[1])
+            ];
             return [col];
         }
         
@@ -272,8 +267,8 @@ public class NodeSelector : ScriptingNode
             {
                 var file = files[i];
                 var name = Path.GetFileNameWithoutExtension(file);
-                var button = new UICol(Class(w_[190], h_[30], blank_sharp_g_[20]),
-                OnClick<UICol>(_ => {
+                var button = new UICol(w_[190], h_[30], blank_sharp_g_[20])
+                .OnClick(_ => {
                     if (name == NodeManager.LoadedFileName && NodeManager.NodeEditorType == NodeEditorType.Group)
                         return;
 
@@ -294,10 +289,9 @@ public class NodeSelector : ScriptingNode
                     NodeManager.NodeUIController.AddElement(node.Collection);
                     NodeManager.AddNode(node);
                     Element.SetVisible(false);
-                }),
-                Sub(
-                    new UIText(name, Class(middle_center, mc_[name.Length], fs_[1]))
-                ));
+                })[
+                    new UIText(name, middle_center, mc_[name.Length], fs_[1])
+                ];
                 buttons[i] = button;
             }
             return buttons;

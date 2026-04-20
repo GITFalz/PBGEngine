@@ -5,47 +5,55 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIVScroll : UIVScroll<UIVScroll>
+    public class UIVScroll : UIVCol
     {
-        private UIVScroll(string name, Class classes, UIElementBase[] subs, params Event<UIVScroll>[] events) : base(classes.Styles, events)
-        {
+        public Action<UIVScroll>? ScrollAction = null;
+        protected override float TotalHeight => Border.Y - ScrollPosition;
+        public float ScrollPosition = 0;
+
+        public UIVScroll() : this("UIVScroll") {}
+
+        public UIVScroll(string name) : base() 
+        { 
             Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+            Tag = UIElementTag.UIVerticalScrollView;
         }
 
+        public UIVScroll(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
 
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
-
-        public UIVScroll(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIVScroll(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
+        public UIVScroll(string name, params IStyleData[] styles) : this(name)
+        { 
+            Class(styles);
+        }
         
-        public UIVScroll(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1) : this("UICollection", classes, [], e1) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIVScroll(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1) : this(name, classes, [], e1) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2) : this(name, classes, [], e1, e2) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIVScroll(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIVScroll(Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIVScroll Ref(ref UIVScroll text)
+        {
+            text = this;
+            return text;
+        }
 
-        public UIVScroll(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIVScroll(string name, Class classes, Event<UIVScroll> e1, Event<UIVScroll> e2, Event<UIVScroll> e3, Event<UIVScroll> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
+        public UIVScroll Out(out UIVScroll text)
+        {
+            text = this;
+            return text;
+        }
 
-        public Action<UIVScroll>? ScrollAction = null;
+        public new UIVScroll Class(params IStyleData[] styles) => Style(this, styles);
+
+        public UIVScroll OnHoverEnter(Action<UIVScroll>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIVScroll OnHover(Action<UIVScroll>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIVScroll OnClick(Action<UIVScroll>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIVScroll OnHold(Action<UIVScroll>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIVScroll OnRelease(Action<UIVScroll>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIVScroll OnHoverExit(Action<UIVScroll>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+
+        public new UIVScroll this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
 
         public override void OnHoverAction()
         {
@@ -58,72 +66,6 @@ namespace PBG.UI
         public UIVScroll SetOnScroll(Action<UIVScroll>? action)
         {
             ScrollAction = action; return this;
-        }
-    }
-    public class UIVScroll<TSelf> : UIVCol<TSelf> where TSelf : UIVScroll<TSelf>
-    {
-        public float ScrollPosition = 0;
-
-        public UIVScroll(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIVerticalScrollView; }
-
-        public override void CollectionFirstPass()
-        {
-            float offsetX(UIElementBase child) => child.IsLeftAligned() ? Border.X : (child.IsRightAligned() ? Border.Z : 0);
-
-            float maxWidth = 0;
-            float totalHeight = Border.Y - ScrollPosition;
-            
-            HashSet<UIElementBase> percentWidthChildren = [];
-            HashSet<UIElementBase> growChildren = [];
-
-            if (!GrowFromChildren)
-            {
-                CalculateHeight();
-                CalculateWidth();
-            }
-            else if (!Width.IsNone())
-            {
-                CalculateWidth();
-            }
-            
-            ForeachChildren(child =>
-            {
-                child.FirstPass();
-                if (!child.Visible && IgnoreInvisibleElements)
-                    return;
-
-                float xOffset = offsetX(child);
-
-                child.CollectionOffset = (xOffset, totalHeight);
-
-                if (GrowFromChildren && Width.IsNone())
-                {
-                    if (child.Width.IsPercent())
-                    {
-                        percentWidthChildren.Add(child);
-                    }
-                    else
-                    {
-                        maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
-                    }
-                }
-
-                totalHeight += child.BaseOffset.Y + child.Size.Y + Spacing;
-            });
-            if (GrowFromChildren)
-            {   
-                if (Width.IsNone())
-                    Width = UISize.None(maxWidth);
-
-                Height = UISize.Pixels(totalHeight - Spacing + Border.W);
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentWidthChildren, child =>
-                {
-                    child.Width.AddedOffset = -(Border.X + Border.Z);
-                    child.CalculateWidth();
-                });
-            }
         }
 
         public static void Scroll(UIVScroll scrollView)
@@ -139,10 +81,11 @@ namespace PBG.UI
             float oldScrollPosition = scrollView.ScrollPosition;
             scrollView.ScrollPosition = Mathf.Clampy(newScroll, 0, max);
             float delta = scrollView.ScrollPosition - oldScrollPosition;
-            scrollView.ForeachChildren(child =>
+            for (int i = 0; i < scrollView.ChildElements.Count; i++)
             {
+                var child = scrollView.ChildElements[i];
                 child.CollectionOffset.Y -= delta;
-            });
+            };
 
             scrollView.SecondPass();
             scrollView.UpdateTransform();

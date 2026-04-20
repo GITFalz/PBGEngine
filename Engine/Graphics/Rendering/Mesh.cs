@@ -17,8 +17,6 @@ public unsafe class Mesh : ScriptingNode, IDisposable
 
     private Descriptor _descriptor;
 
-    private GraphicsContext _context;
-
     private VBO<MeshVertex> _vertexBuffer = new([]);
     private IBO _indexBuffer = new([]);
     private uint _indexCount = 0;
@@ -34,8 +32,6 @@ public unsafe class Mesh : ScriptingNode, IDisposable
 
     public Mesh()
     {
-        _context = GraphicsContext.graphicsContext;
-
         if (!_generated)
         {
             _shader = new Shader(new()
@@ -70,7 +66,7 @@ public unsafe class Mesh : ScriptingNode, IDisposable
         _vertexBuffer.Dispose();
         _indexBuffer.Dispose();
 
-        _context.vk.FreeCommandBuffers(_context.device, _context.commandPool, 1, ref _commandBuffer);
+        GFX.Vk.FreeCommandBuffers(GFX.Device, GFX.CommandPool, 1, ref _commandBuffer);
     }
 
     private MeshVertex[] BuildVertexBuffer()

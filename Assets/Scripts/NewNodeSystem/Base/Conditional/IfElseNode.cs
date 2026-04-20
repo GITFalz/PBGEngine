@@ -8,7 +8,7 @@ using PBG.UI;
 using PBG.UI.Creator;
 
 using static PBG.UI.Styles;
-using Silk.NET.Input;
+
 
 public class IfElseNode : NodeBase
 {
@@ -213,47 +213,47 @@ public class IfElseUI(
     private UICol? _type = null;
 
     public override UIElementBase Script() =>
-    new UICol(Class(left_[position.X], top_[position.Y], grow_children), Sub(
-        new UIImg("Selection1", Class(blank_round, rgba_[0, 0, 0, 0], w_[25], h_full, middle_left)),
-        new UIImg("Selection2", Class(blank_round, rgba_[0, 0, 0, 0], w_[25], h_full, middle_right)),
-        new UIImg("Selection3", Class(blank_round, rgba_[0, 0, 0, 0], h_[25], w_full, top_center)),
-        new UIImg("Selection4", Class(blank_round, rgba_[0, 0, 0, 0], h_[25], w_full, bottom_center)),
-        new UICol(Class(border_[5, 5, 5, 5], grow_children), Sub([
-            new UIImg(Class(h_[40], w_full, blank_round, rgb_v3_[color])),
-            new UICol(Class(border_[0, 30, 0, 0], grow_children), Sub([ 
-                new UIButton(Class(w_full_minus_[25], h_[30], bottom_[30]), OnClick(Select), OnHold(MoveNode), OnHoverButton(_ => { if (Input.IsKeyPressed(Key.K)) Console.WriteLine("Hovering " + node.GetName()); })),
-                new UIText($"IfElse", Class(mc_[6], fs_[1], bottom_[20], left_[5])),
-                new UIText("X", Class(top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]), OnClick(DeleteNode)),
-                new UICol(Class(grow_children), Sub(
-                    new UIImg(Class(w_full, h_[20], blank_sharp_g_[30])),
-                    new UIImg(Class(w_full, h_[20], blank_sharp_g_[30], bottom_left)),
-                    new UIImg(Class(w_[20], h_full, blank_sharp_g_[30], top_right)),
-                    new UIImg(Class(blank_sharp_g_[30], h_full, w_[110])),
-                    new UIVCol(Class(border_[5, 5, 5, 5], grow_children), Sub([
-                        new UIHCol(Class(grow_children), Sub(
-                            new UIVCol(Class(grow_children), Sub([
-                                ..Run(() => {
+    new UICol(left_[position.X], top_[position.Y], grow_children)[
+        new UIImg("Selection1", blank_round, rgba_[0, 0, 0, 0], w_[25], h_full, middle_left),
+        new UIImg("Selection2", blank_round, rgba_[0, 0, 0, 0], w_[25], h_full, middle_right),
+        new UIImg("Selection3", blank_round, rgba_[0, 0, 0, 0], h_[25], w_full, top_center),
+        new UIImg("Selection4", blank_round, rgba_[0, 0, 0, 0], h_[25], w_full, bottom_center),
+        new UICol(border_[5, 5, 5, 5], grow_children)[
+            new UIImg(h_[40], w_full, blank_round, rgb_v3_[color]),
+            new UICol(border_[0, 30, 0, 0], grow_children)[ 
+                new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode).OnHover(_ => { if (Input.IsKeyPressed(Key.K)) Console.WriteLine("Hovering " + node.GetName()); }),
+                new UIText($"IfElse", mc_[6], fs_[1], bottom_[20], left_[5]),
+                new UIText("X", top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]).OnClick(DeleteNode),
+                new UICol(grow_children)[
+                    new UIImg(w_full, h_[20], blank_sharp_g_[30]),
+                    new UIImg(w_full, h_[20], blank_sharp_g_[30], bottom_left),
+                    new UIImg(w_[20], h_full, blank_sharp_g_[30], top_right),
+                    new UIImg(blank_sharp_g_[30], h_full, w_[110]),
+                    new UIVCol(border_[5, 5, 5, 5], grow_children)[
+                        new UIHCol(grow_children)[
+                            new UIVCol(grow_children)[
+                                Run(() => {
                                     var UIButton = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[color], middle_left);
                                     var field = new NodeInputField(UIButton, node, new() { Name = "Value", Type = "float" });
-                                    UIButton.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); });
+                                    UIButton.OnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); });
                                     node.InputFields.Add("Value", field);
                                     var input = new UIField("0", mc_[8], middle_left, left_[5], fs_[1], data_["value", 0f]);
                                     if ( field.Value is NodeValue_Float floatValue)
                                     {
                                         floatValue.input1 = input;
                                     }
-                                    return new UIVCol(Class(h_[30], grow_children), Sub([
-                                        new UIHCol(Class(h_[30], spacing_[5], w_[130]), Sub([
+                                    return new UIVCol(h_[30], grow_children)[
+                                        new UIHCol(h_[30], spacing_[5], w_[130])[
                                             UIButton,
-                                            new UIText("Value", Class(mc_[5], fs_[1], middle_left))
-                                        ])),
+                                            new UIText("Value", mc_[5], fs_[1], middle_left)
+                                        ],
                                         NodeValue.DefaultParent(NodeValue.DefaultInput(
-                                            (UIField)input.
-                                            SetOnTextChange(f => {
+                                            (UIField)input
+                                            .OnTextChange(f => {
                                                 float value = f.GetFloat();
                                                 f.Dataset["value"] = value;
                                                 field.Value.UpdateValue(0, value);
-                                            }).SetOnHold(f => {
+                                            }).OnHold(f => {
                                                 float value = f.Dataset.Float("value");
                                                 float delta = Input.GetMouseDelta().X * NodeHelper.SlideSpeed;
                                                 if (delta == 0f) return;
@@ -262,31 +262,31 @@ public class IfElseUI(
                                                 f.SetText(value.ToString()).UpdateCharacters();
                                                 field.Value.UpdateValue(0, value);
                                             })
-                                        )),
-                                    ]));
+                                        ))
+                                    ];
                                 }),
-                                ..Run(() => {
+                                Run(() => {
                                     var UIButton = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[color], middle_left);
                                     var field = new NodeInputField(UIButton, node, new() { Name = "Compare", Type = "float" });
-                                    UIButton.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); });
+                                    UIButton.OnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); });
                                     node.InputFields.Add("Compare", field);
                                     var input = new UIField("0", mc_[8], middle_left, left_[5], fs_[1], data_["value", 0f]);
                                     if (field.Value is NodeValue_Float floatValue)
                                     {
                                         floatValue.input1 = input;
                                     }
-                                    return new UIVCol(Class(h_[30], grow_children), Sub([
-                                        new UIHCol(Class(h_[30], spacing_[5], w_[130]), Sub([
+                                    return new UIVCol(h_[30], grow_children)[
+                                        new UIHCol(h_[30], spacing_[5], w_[130])[
                                             UIButton,
-                                            new UIText("Compare", Class(mc_[7], fs_[1], middle_left))
-                                        ])),
+                                            new UIText("Compare", mc_[7], fs_[1], middle_left)
+                                        ],
                                         NodeValue.DefaultParent(NodeValue.DefaultInput(
-                                            (UIField)input.
-                                            SetOnTextChange(f => {
+                                            (UIField)input
+                                            .OnTextChange(f => {
                                                 float value = f.GetFloat();
                                                 f.Dataset["value"] = value;
                                                 field.Value.UpdateValue(0, value);
-                                            }).SetOnHold(f => {
+                                            }).OnHold(f => {
                                                 float value = f.Dataset.Float("value");
                                                 float delta = Input.GetMouseDelta().X * NodeHelper.SlideSpeed;
                                                 if (delta == 0f) return;
@@ -295,43 +295,42 @@ public class IfElseUI(
                                                 f.SetText(value.ToString()).UpdateCharacters();
                                                 field.Value.UpdateValue(0, value);
                                             })
-                                        )),
-                                    ]));
+                                        ))
+                                    ];
                                 }),
-                                ..Foreach([new List<string>() { "==", "!=", "<" }, ["<=", ">", ">="]], types => 
-                                    new UICol(Class(w_full_minus_[30], h_[30], top_[5]), Sub([
-                                        ..Foreach(types, (i, type) => {
-                                            var align = new List<UIStyleData>(){ top_left, top_center, top_right };
+                                Foreach([new List<string>() { "==", "!=", "<" }, ["<=", ">", ">="]], types => 
+                                    new UICol(w_full_minus_[30], h_[30], top_[5])[
+                                        Foreach(types, (i, type) => {
+                                            var align = new List<IStyleData>(){ top_left, top_center, top_right };
                                             var col = new UICol(w_[30], h_[30], blank_sharp_g_[node.Type == type ? 50 : 40], data_["type", type], align[i]);
                                             if (node.Type == type) _type = col;
-                                            col.SetOnClick(SetType);
-                                            col.AddElement(new UIText(type, Class(middle_center, fs_[1], mc_[type.Length])));
+                                            col.OnClick(SetType);
+                                            col.AddElement(new UIText(type, middle_center, fs_[1], mc_[type.Length]));
                                             return col;
                                         })
-                                    ]))
-                                ),
-                            ])),
-                            newCol(Class(min_w_[200], min_h_[200], grow_children, border_[0, 0, 20, 20]),
-                            OnHoverEnter<UICol>(_ => IfElseNode.HoveringIfElseNodes.Add(node)),
-                            OnHoverExit<UICol>(_ => IfElseNode.HoveringIfElseNodes.Remove(node)), 
-                            Sub(
-                                new UIButton(Class(w_[30], h_[30], blank_sharp, rgb_v3_[color], top_left, left_[-20], top_[20]),
-                                OnClick<UIButton>(UIButton => _oldScaleUIButtonOffset = UIButton.BaseOffset),
-                                OnHold<UIButton>(UIButton => {
+                                    ]
+                                )
+                            ],
+                            new UICol(min_w_[200], min_h_[200], grow_children, border_[0, 0, 20, 20])
+                            .OnHoverEnter(_ => IfElseNode.HoveringIfElseNodes.Add(node))
+                            .OnHoverExit(_ => IfElseNode.HoveringIfElseNodes.Remove(node))[
+                                new UIButton(w_[30], h_[30], blank_sharp, rgb_v3_[color], top_left, left_[-20], top_[20])
+                                .OnClick(UIButton => _oldScaleUIButtonOffset = UIButton.BaseOffset)
+                                .OnHold(UIButton => {
                                     if (Input.IsKeyDown(Key.ControlLeft)) return;
                                     Vector2 mouseDelta = Input.GetMouseDelta();
                                     if (mouseDelta == Vector2.Zero) return;
                                     _oldScaleUIButtonOffset += mouseDelta * (1 / UIButton.UIController?.Scale ?? 1f);
                                     UIButton.BaseOffset = Mathf.Max(_oldScaleUIButtonOffset, (-20, 20));
                                     Element.ApplyChanges(UIChange.Scale);
-                                }))
-                            ), ref node.SubCollection)
-                        ))
-                    ]))
-                ))
-            ]))
-        ]))
-    ));
+                                })
+                            ].Ref(ref node.SubCollection)
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ];
 
     public void SetType(UICol collection)
     {

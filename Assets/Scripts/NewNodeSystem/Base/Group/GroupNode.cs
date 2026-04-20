@@ -9,7 +9,7 @@ using PBG.UI;
 using PBG.UI.Creator;
 using static PBG.UI.Styles;
 using GroupNoise = PBG.Assets.Scripts.NoiseNodes.Nodes.GroupNode;
-using Silk.NET.Input;
+
 
 public class GroupNode : NodeBase
 {
@@ -375,10 +375,10 @@ public class GroupNodeUI(
 ) : UIScript
 {
     public override UIElementBase Script() =>
-    new UICol(Class(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children), Sub(
-        new UICol(Class(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children), Sub([
-            new UIButton(Class(w_full_minus_[25], h_[30], bottom_[30]), OnClick<UIButton>(Select), OnHold<UIButton>(MoveNode), 
-            OnHoverEnterButton(_ => 
+    new UICol(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children)[
+        new UICol(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children)[
+            new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode)
+            .OnHoverEnter(_ => 
             {
                 if (GroupDisplay.connectionRenderer != null)
                     return;
@@ -422,9 +422,9 @@ public class GroupNodeUI(
 
                     GroupDisplay.UpdateDisplay(data.Nodes);
                 }
-            }),
-            OnHoverExitButton(_ =>  { GroupDisplay.connectionRenderer = null; data.GroupNodeDisplayCollection.SetVisible(false); } ),
-            OnHoverButton(_ => 
+            })
+            .OnHoverExit(_ =>  { GroupDisplay.connectionRenderer = null; data.GroupNodeDisplayCollection.SetVisible(false); } )
+            .OnHover(_ => 
             { 
                 var delta = Input.ScrollDelta.Y;
                 if (delta != 0)
@@ -449,44 +449,44 @@ public class GroupNodeUI(
                     }
                     Console.WriteLine("---- End ----");
                 }
-            })),
-            new UIText($"Group {node.GroupName}", Class(mc_[node.GroupName.Length + 6], fs_[1], bottom_[20], left_[5])),
-            new UIText("X", Class(top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]), OnClick<UIText>(DeleteNode)),
-            new UIVCol(Class(blank_sharp_g_[30], grow_children), Sub(
-                new UIVCol(Class(border_[5, 5, 5, 5], grow_children), Sub([
-                    new UIHCol(Class(grow_children), Sub(
-                        new UIVCol(Class(grow_children), Sub([
-                            ..Foreach(data.Inputs, (name, type) => {
+            }),
+            new UIText($"Group {node.GroupName}", mc_[node.GroupName.Length + 6], fs_[1], bottom_[20], left_[5]),
+            new UIText("X", top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]).OnClick(DeleteNode),
+            new UIVCol(blank_sharp_g_[30], grow_children)[
+                new UIVCol(border_[5, 5, 5, 5], grow_children)[
+                    new UIHCol(grow_children)[
+                        new UIVCol(grow_children)[
+                            Foreach(data.Inputs, (name, type) => {
                                 var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[color], middle_left);
                                 var field = new NodeInputField(button, node, new() { Name = name, Type = type });
                                 node.InputFields.Add(name, field);
-                                button.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input);});
-                                return new UIVCol(Class(h_[30], grow_children), Sub([
-                                    new UIHCol(Class(h_[30], spacing_[5], w_[130]), Sub([
+                                button.OnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input);});
+                                return new UIVCol(h_[30], grow_children)[
+                                    new UIHCol(h_[30], spacing_[5], w_[130])[
                                         button,
-                                        new UIText(name.Length <= 10 ? name : name[..10], Class(mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left))
-                                    ])),
+                                        new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left)
+                                    ],
                                     field.Value.GetInputFields()
-                                ]));
+                                ];
                             })
-                        ])),
-                        new UIVCol(Class(grow_children), Sub([
-                            ..Foreach(data.Outputs, (name, output) => {
+                        ],
+                        new UIVCol(grow_children)[
+                            Foreach(data.Outputs, (name, output) => {
                                 var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_right);
                                 var field = new NodeOutputField(button, node, new() { Name = name, Type = output.OutputField.Value.GetGLSLType() });
-                                button.SetOnClick(_ => NodeBase.Connect(field.Output));
+                                button.OnClick(_ => NodeBase.Connect(field.Output));
                                 node.OutputFields.Add(name, field);
-                                return new UICol(Class(h_[30], spacing_[5], w_[130], top_left), Sub([
-                                    new UIText(name.Length <= 10 ? name : name[..10], Class(mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left)),
+                                return new UICol(h_[30], spacing_[5], w_[130], top_left)[
+                                    new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left),
                                     button
-                                ]));
+                                ];
                             })
-                        ]))
-                    ))
-                ]))
-            ))
-        ]))
-    ));
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ];
 
     public void Select(UIButton _) => NodeManager.Select(node);
 

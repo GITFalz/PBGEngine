@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using PBG.Core;
 using PBG.Data;
-using Silk.NET.Input;
+
 namespace PBG.UI.FileManager;
 
 public class FileManager : ScriptingNode

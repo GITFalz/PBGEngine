@@ -305,7 +305,7 @@ public class VariantJSON
         Placements?.PopulatePlacements(definition, index);
     }
 
-    public static void GenerateFace(BlockDefinition definition, BlockJSON json, BoxJSON boxJson, Box box, List<VoxelFace> voxelFaces, Vector3 normal, bool canBeOccluded, int side, int x, int y, int index)
+    public unsafe static void GenerateFace(BlockDefinition definition, BlockJSON json, BoxJSON boxJson, Box box, List<VoxelFace> voxelFaces, Vector3 normal, bool canBeOccluded, int side, int x, int y, int index)
     {
         int textureIndex = json.DefaultFace.Texture;
         var faces = boxJson.Faces;
@@ -351,23 +351,25 @@ public class VariantJSON
             Side = side
         };
 
-        BlockData.FaceGeometries.Add(new()
+        FaceGeometry face = new()
         {
-            A = A,
-            B = B,
-            C = C,
-            D = D,
-
-            UvA = uvA,
-            UvB = uvB,
-            UvC = uvC,
-            UvD = uvD,
-
             Normal = normal,
 
             TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
-        });
+        };
+        
 
+        for (int j = 0; j < 3; j++) face.Vertices[    j] = A[j];
+        for (int j = 0; j < 3; j++) face.Vertices[4 + j] = B[j];
+        for (int j = 0; j < 3; j++) face.Vertices[8 + j] = C[j];
+        for (int j = 0; j < 3; j++) face.Vertices[12+ j] = D[j];
+
+        for (int j = 0; j < 2; j++) face.Uvs[    j] = uvA[j];
+        for (int j = 0; j < 2; j++) face.Uvs[2 + j] = uvB[j];
+        for (int j = 0; j < 2; j++) face.Uvs[4 + j] = uvC[j];
+        for (int j = 0; j < 2; j++) face.Uvs[6 + j] = uvD[j];
+
+        BlockData.FaceGeometries.Add(face);
         BlockJSON.GeometryIndex++;
 
         GetBitMask(ref voxelFace);

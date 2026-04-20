@@ -62,54 +62,52 @@ public partial class StructureNodeUI
     }
     
     public UIElementBase TreeSections(params UIElementBase[] sections) => 
-    new UIVCol(Class(spacing_[5], w_full, top_right, spacing_[5], grow_children), Sub(sections));
+    new UIVCol(spacing_[5], w_full, top_right, spacing_[5], grow_children)[sections];
 
     public UIElementBase TreeSection(string title, params UIElementBase[] contents) => 
-    new UIVCol(Class(grow_children, w_full_minus_[10], top_center), Sub([
-        new UICol(Class(h_[25], w_full), Sub([
-            new UIText(title, Class(mc_[title.Length], fs_[1.2f], middle_left)),
-        ])),
-        ..contents,
-    ]));
+    new UIVCol(grow_children, w_full_minus_[10], top_center)[
+        new UICol(h_[25], w_full)[
+            new UIText(title, mc_[title.Length], fs_[1.2f], middle_left)
+        ],
+        new UIArray(contents)
+    ];
 
     public UIElementBase TreeField(string label, Vector4 data, ref UIField fieldRef) =>
-    new UIVCol(Class(grow_children, w_full), Sub([
-        new UICol(Class(h_[25], w_full), Sub([
-            new UIText(label, Class(mc_[label.Length], fs_[1f], middle_left))
-        ])),
-        new UICol(Class(h_[25], w_full, blank_sharp_g_[10]),
-        OnHoldCol(c => SlideValue(c.GetElement<UIField>(), data.Y, data.Z, data.W)),
-        Sub([
-            newField(""+data.X, Class(middle_left, left_[7], mc_[8], fs_[1f]), OnTextChange(_ => nodeManager.TreeSettingsChanged = true), ref fieldRef)
-        ]))
-    ]));
+    new UIVCol(grow_children, w_full)[
+        new UICol(h_[25], w_full)[
+            new UIText(label, mc_[label.Length], fs_[1f], middle_left)
+        ],
+        new UICol(h_[25], w_full, blank_sharp_g_[10]).OnHold(c => SlideValue(c.GetElement<UIField>(), data.Y, data.Z, data.W))[
+            new UIField(""+data.X, middle_left, left_[7], mc_[8], fs_[1f]).OnTextChange(_ => nodeManager.TreeSettingsChanged = true).Ref(ref fieldRef)
+        ]
+    ];
 
     public UIElementBase TreeField(string label, Vector4 data1, Vector4 data2, ref UIField fieldRef1, ref UIField fieldRef2) =>
-    new UIVCol(Class(grow_children, w_full), Sub([
-        new UICol(Class(h_[25], w_full), Sub([
-            new UIText(label, Class(mc_[label.Length], fs_[1f], middle_left))
-        ])),
-        new UICol(Class(h_[25], w_full), Sub([
-            new UICol(Class(h_[25], w_half_minus_[2], blank_sharp_g_[10]),
-            OnHoldCol(c => SlideValue(c.GetElement<UIField>(), data1.Y, data1.Z, data1.W)),
-            Sub([
-                newField(""+data1.X, Class(middle_left, left_[7], mc_[8], fs_[1f]), OnTextChange(_ => nodeManager.TreeSettingsChanged = true), ref fieldRef1)
-            ])),
-            new UICol(Class(h_[25], w_half_minus_[2], blank_sharp_g_[10], top_right),
-            OnHoldCol(c => SlideValue(c.GetElement<UIField>(), data2.Y, data2.Z, data2.W)),
-            Sub([
-                newField(""+data2.X, Class(middle_left, left_[7], mc_[8], fs_[1f]), OnTextChange(_ => nodeManager.TreeSettingsChanged = true), ref fieldRef2)
-            ]))
-        ]))
-    ]));
+    new UIVCol(grow_children, w_full)[
+        new UICol(h_[25], w_full)[
+            new UIText(label, mc_[label.Length], fs_[1f], middle_left)
+        ],
+        new UICol(h_[25], w_full)[
+            new UICol(h_[25], w_half_minus_[2], blank_sharp_g_[10])
+            .OnHold(c => SlideValue(c.GetElement<UIField>(), data1.Y, data1.Z, data1.W))
+            [
+                new UIField(""+data1.X, middle_left, left_[7], mc_[8], fs_[1f]).OnTextChange(_ => nodeManager.TreeSettingsChanged = true).Ref(ref fieldRef1)
+            ],
+            new UICol(h_[25], w_half_minus_[2], blank_sharp_g_[10], top_right)
+            .OnHold(c => SlideValue(c.GetElement<UIField>(), data2.Y, data2.Z, data2.W))
+            [
+                new UIField(""+data2.X, middle_left, left_[7], mc_[8], fs_[1f]).OnTextChange(_ => nodeManager.TreeSettingsChanged = true).Ref(ref fieldRef2)
+            ]
+        ]
+    ];
 
     public UIElementBase TreeOptions(string label, string[] options, int selectedIndex, Action<int> onSelect)
     {
-        var col = new UIVCol(Class(grow_children, w_full), Sub([
-            new UICol(Class(h_[25], w_full), Sub([
-                new UIText(label, Class(mc_[label.Length], fs_[1f], middle_left))
-            ]))
-        ]));
+        var col = new UIVCol(grow_children, w_full)[
+            new UICol(h_[25], w_full)[
+                new UIText(label, mc_[label.Length], fs_[1f], middle_left)
+            ]
+        ];
         onSelect(selectedIndex);
         List<UIElementBase> rows = [];
         for (int i = 0; i < options.Length; i += 3)
@@ -117,8 +115,8 @@ public partial class StructureNodeUI
             List<UIElementBase> rowOptions = [];
             for (int j = i; j < i + 3 && j < options.Length; j++)
             {
-                var option = new UICol(Class(w_[32f], h_[30], blank_sharp_g_[j == selectedIndex ? 40 : 30], _topAlignment[j % 3], data_["option_index", j]),
-                OnClickCol(c => {
+                var option = new UICol(w_[32f], h_[30], blank_sharp_g_[j == selectedIndex ? 40 : 30], _topAlignment[j % 3], data_["option_index", j])
+                .OnClick(c => {
                     var oldC = col.Dataset.Get<UICol>("selected");
                     if (oldC != null && oldC != c)
                     {
@@ -128,17 +126,17 @@ public partial class StructureNodeUI
                         onSelect(c.Dataset.Int("option_index"));
                         nodeManager.TreeSettingsChanged = true;
                     }
-                }),
-                Sub(
-                    new UIText(options[j], Class(mc_[options[j].Length], fs_[1], middle_center))
-                ));
+                })
+                [
+                    new UIText(options[j], mc_[options[j].Length], fs_[1], middle_center)
+                ];
                 rowOptions.Add(option);
                 if (j == selectedIndex)
                 {
                     col.Dataset["selected"] = option;
                 }
             }
-            rows.Add(new UICol(Class(h_[30], w_full, i != 0 ? top_[5] : top_[0]), [..rowOptions]));
+            rows.Add(new UICol(h_[30], w_full, i != 0 ? top_[5] : top_[0])[rowOptions]);
         }
         col.AddElements(rows);
         return col;
@@ -146,9 +144,9 @@ public partial class StructureNodeUI
 
     public UIElementBase TreeToggle(string label, bool state, Action<bool> onToggle, ref UICol col)
     {
-        col = new UICol(Class(h_[25], w_full), Sub(
-            new UIText(label, Class(mc_[label.Length], fs_[1f], middle_left)),
-            new UIImg(Class(w_[20], h_[20], top_right, right_[2.5f], blank_sharp_g_[state ? 30 : 10], data_["state", state]), OnClickImg(img =>
+        col = new UICol(h_[25], w_full)[
+            new UIText(label, mc_[label.Length], fs_[1f], middle_left),
+            new UIImg(w_[20], h_[20], top_right, right_[2.5f], blank_sharp_g_[state ? 30 : 10], data_["state", state]).OnClick(img =>
             {
                 bool s = img.Dataset.Bool("state");
                 s = !s;
@@ -156,12 +154,12 @@ public partial class StructureNodeUI
                 img.UpdateColor(new Vector4(new Vector3(s ? 0.3f : 0.1f), 1f));
                 onToggle(s);
                 nodeManager.TreeSettingsChanged = true;
-            }))
-        ));
+            })
+        ];
         return col;
     }
 
-    private static readonly UIStyleData[] _topAlignment = [top_left, top_center, top_right];
+    private static readonly IStyleData[] _topAlignment = [top_left, top_center, top_right];
     
     public TreeGenerationInfo GetCurrentTreeInfo()
     {

@@ -3,32 +3,46 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIImg : UIImg<UIImg>
+    public class UIImg : UIPanel
     {
-        private UIImg(string name, Class classes, params IEvent[] events) : base(classes.Styles, events)
-        {
-            Name = name;
+        public UIImg() : this("UIImg") {}
+        public UIImg(string name) : base() 
+        { 
+            Name = name; 
             Tag = UIElementTag.UIImage;
         }
 
-        // ORIGINAL PUBLIC CONSTRUCTORS
-        public UIImg(params UIStyleData[] classes) : this("UIImg", new Class(classes), []) { }
-        public UIImg(Class classes) : this("UIImg", classes, []) { }
-        public UIImg(string name, params UIStyleData[] classes) : this(name, new Class(classes), []) { }
-        public UIImg(string name, Class classes) : this(name, classes, []) { }
+        public UIImg(params IStyleData[] styles) : this()
+        { 
+            Styles.bg_white.Set(this);
+            Class(styles);
+        }
+
+        public UIImg(string name, params IStyleData[] styles) : this(name)
+        { 
+            Styles.bg_white.Set(this);
+            Class(styles);
+        }
         
-        public UIImg(Class classes, Event<UIImg> e1) : this("UIImg", classes, e1) { }
-        public UIImg(Class classes, Event<UIImg> e1, Event<UIImg> e2) : this("UIImg", classes, e1, e2) { }
-        public UIImg(Class classes, Event<UIImg> e1, Event<UIImg> e2, Event<UIImg> e3) : this("UIImg", classes, e1, e2, e3) { }
-        public UIImg(Class classes, Event<UIImg> e1, Event<UIImg> e2, Event<UIImg> e3, Event<UIImg> e4) : this("UIImg", classes, e1, e2, e3, e4) { }
-        
-        public UIImg(string name, Class classes, Event<UIImg> e1) : this(name, classes, [e1]) { }
-        public UIImg(string name, Class classes, Event<UIImg> e1, Event<UIImg> e2) : this(name, classes, [e1, e2]) { }
-        public UIImg(string name, Class classes, Event<UIImg> e1, Event<UIImg> e2, Event<UIImg> e3) : this(name, classes, [e1, e2, e3]) { }
-        public UIImg(string name, Class classes, Event<UIImg> e1, Event<UIImg> e2, Event<UIImg> e3, Event<UIImg> e4) : this(name, classes, [e1, e2, e3, e4]) { }
-    }
-    public class UIImg<TSelf> : UIPanel<TSelf> where TSelf : UIImg<TSelf>
-    {
-        public UIImg(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIImage; }
+        public UIImg Ref(ref UIImg text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIImg Out(out UIImg text)
+        {
+            text = this;
+            return text;
+        }
+
+        public new UIImg Class(params IStyleData[] styles) => Style(this, styles);
+
+        public UIImg OnHoverEnter(Action<UIImg>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIImg OnHover(Action<UIImg>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIImg OnClick(Action<UIImg>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIImg OnHold(Action<UIImg>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIImg OnRelease(Action<UIImg>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIImg OnHoverExit(Action<UIImg>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
     }
 }

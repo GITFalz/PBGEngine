@@ -5,7 +5,7 @@ using PBG.Data;
 using PBG.UI;
 using PBG.UI.Creator;
 using static PBG.UI.Styles;
-using Silk.NET.Input;
+
 
 public class StructureEditorScriptUI(StructureEditor editor) : UIScript
 {
@@ -31,32 +31,31 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
     public Formatter Formatter = new();
 
     public override UIElementBase Script() =>
-    new UICol(Class(w_full_minus_[480], h_full_minus_[60], top_center, top_[60], mask_children), Sub(
-        new UICol(Class(w_full, h_[30], blank_full_g_[10]), Sub(
-            new UIImg(Class(w_[20], h_[20], icon_[15], bg_white, left_[5], middle_left, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => editor.CloseScript())),
-            newImg(Class(w_[20], h_[20], icon_[24], bg_white, right_[55], middle_right, hidden), OnClickImg(_ => Save()), ref LoadingIcon),
-            newText("Compilation Successfull", Class(middle_right, rgba_[0, 1, 0, 1], right_[55], hidden), ref SuccessText),
-            newText("An error occured", Class(middle_right, rgba_[1, 0, 0, 1], right_[55], hidden), ref ErrorText),
-            new UIImg(Class(w_[20], h_[20], icon_[27], bg_white, right_[30], middle_right, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => Save())),
-            new UIImg(Class(w_[20], h_[20], icon_[0], bg_white, right_[5], middle_right, hover_scale_easeout_[1.2f, 0.2f]), OnClickImg(_ => Compile()))
-        )),
-        newVScroll(Class(w_[40], h_full_minus_[30], bottom_left, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5]), Sub(
-            new UIText("1", Class(left_[5]))
-        ), ref IndexCanvasCol),
+    new UICol(w_full_minus_[480], h_full_minus_[60], top_center, top_[60], mask_children)[
+        new UICol(w_full, h_[30], blank_full_g_[10])[
+            new UIImg(w_[20], h_[20], icon_[15], bg_white, left_[5], middle_left, hover_scale_easeout_[1.2f, 0.2f]).OnClick(_ => editor.CloseScript()),
+            new UIImg(w_[20], h_[20], icon_[24], bg_white, right_[55], middle_right, hidden).OnClick(_ => Save()).Ref(ref LoadingIcon),
+            new UIText("Compilation Successfull", middle_right, rgba_[0, 1, 0, 1], right_[55], hidden).Ref(ref SuccessText),
+            new UIText("An error occured", middle_right, rgba_[1, 0, 0, 1], right_[55], hidden).Ref(ref ErrorText),
+            new UIImg(w_[20], h_[20], icon_[27], bg_white, right_[30], middle_right, hover_scale_easeout_[1.2f, 0.2f]).OnClick(_ => Save()),
+            new UIImg(w_[20], h_[20], icon_[0], bg_white, right_[5], middle_right, hover_scale_easeout_[1.2f, 0.2f]).OnClick(_ => Compile())
+        ],
+        new UIVScroll(w_[40], h_full_minus_[30], bottom_left, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5])[
+            new UIText("1", left_[5])
+        ].Ref(ref IndexCanvasCol),
         new UIImg(w_[2], h_full_minus_[30], bottom_left, blank_full_g_[10], left_[40]),
-        newCol(Class(bottom_right, w_full_minus_[45], h_full_minus_[33]), Sub(), ref HighlightCol),
-        newVCol(Class(depth_[10], grow_children, blank_full_g_[10], hidden), [
-            new UICol(Class(w_full, h_[15], blank_full_g_[10]), []),
-            newVCol(Class(grow_children, border_[5, 5, 5, 5]), [
-                new UIText("No error yet"),
-            ], ref InfoTextCol)
-        ], ref InfoPanel),
-        newVScroll(Class(w_full_minus_[42], h_full_minus_[30], bottom_right, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5]), 
-        OnHoverVScroll(_ => Hover()),
-        Sub(
-            new UIField("", Class(mc_[1000], data_["index", 0], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange))
-        ), ref TextCanvasCol)
-    ));
+        new UICol(bottom_right, w_full_minus_[45], h_full_minus_[33]).Ref(ref HighlightCol),
+        new UIVCol(depth_[10], grow_children, blank_full_g_[10], hidden)[
+            new UICol(w_full, h_[15], blank_full_g_[10]),
+            new UIVCol(grow_children, border_[5, 5, 5, 5])[
+                new UIText("No error yet")
+            ].Ref(ref InfoTextCol)
+        ].Ref(ref InfoPanel),
+        new UIVScroll(w_full_minus_[42], h_full_minus_[30], bottom_right, spacing_[5], border_[0, 5, 0, 0], blank_full_g_[5])
+        .OnHover(_ => Hover())[
+            new UIField("", mc_[1000], data_["index", 0], left_[5], depth_[2]).OnClick(LineClick).OnTextChange(OnFieldChange)
+        ].Ref(ref TextCanvasCol)
+    ];
 
     private UIField? _newSetField = null;
     private int _oldCursorChar = 0;
@@ -70,7 +69,7 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
             lines.Add("");
         for (int i = 0; i < lines.Count; i++)
         {
-            var newLine = new UIField(lines[i], Class(mc_[1000], data_["index", 0], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange));
+            var newLine = new UIField(lines[i], mc_[1000], data_["index", 0], left_[5], depth_[2]).OnClick(LineClick).OnTextChange(OnFieldChange);
             TextCanvasCol.AddElement(newLine);
             UIController.AddElement(newLine);
             newLine.OnCreated += () => Formatter.FormatLine(newLine);
@@ -96,8 +95,8 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
 
         UIImg MakeButton(CompilerLog log)
         {
-            UIImg img = new(Class(w_[7 * log.Token.Count + 4], h_[9 + 4], rgba_v4_[log.Color], left_[7 * log.Token.IndexStart], top_[14 * log.Index], blank_full),
-            OnHoverEnterImg(_ => ShowInfo(log)), OnHoverImg(_ => HoverInfo(log)), OnHoverExitImg(_ => HideInfo()));
+            var img = new UIImg(w_[7 * log.Token.Count + 4], h_[9 + 4], rgba_v4_[log.Color], left_[7 * log.Token.IndexStart], top_[14 * log.Index], blank_full)
+            .OnHoverEnter(_ => ShowInfo(log)).OnHover(_ => HoverInfo(log)).OnHoverExit(_ => HideInfo());
             HighlightCol.AddElement(img);
             UIController.AddElement(img);
             return img;
@@ -356,7 +355,7 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
             var line = TextCanvasCol.ChildElements[i];
             line.Dataset["index"] = i;
 
-            UIText newIndex = new(""+(i + 1), Class(left_[5]));
+            UIText newIndex = new(""+(i + 1), left_[5]);
             IndexCanvasCol.AddElement(newIndex);
             UIController.AddElement(newIndex);
         }
@@ -367,12 +366,12 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
         UIField newLine;
         if (UIController.CursorCharacter == 0)
         {
-            newLine = new(CurrentField?.GetText() ?? "", Class(mc_[1000], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange));
+            newLine = new UIField(CurrentField?.GetText() ?? "", mc_[1000], left_[5], depth_[2]).OnClick(LineClick).OnTextChange(OnFieldChange);
             CurrentField?.UpdateText("");
         }
         else if (UIController.CursorCharacter == (CurrentField?.GetText() ?? "").Length)
         {
-            newLine = new("", Class(mc_[1000], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange));
+            newLine = new UIField("", mc_[1000], left_[5], depth_[2]).OnClick(LineClick).OnTextChange(OnFieldChange);
         }
         else
         {
@@ -391,7 +390,7 @@ public class StructureEditorScriptUI(StructureEditor editor) : UIScript
                 }
             }
             CurrentField?.UpdateText(currentText);
-            newLine = new(newText, Class(mc_[1000], left_[5], depth_[2]), OnClickField(LineClick), OnTextChange(OnFieldChange));
+            newLine = new UIField(newText, mc_[1000], left_[5], depth_[2]).OnClick(LineClick).OnTextChange(OnFieldChange);
         }
         return newLine;
     }

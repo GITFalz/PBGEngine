@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using PBG.Data;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
 
 namespace PBG.Graphics;
@@ -54,14 +53,14 @@ public unsafe class FBO : BufferBase, IResizeable
 
     private void CreateFramebuffer()
     {
-        RenderPass renderPass = GraphicsContext.graphicsContext.framebufferRenderPass;
+        RenderPass renderPass = VulkanInstance.Instance.FramebufferClearRenderPass.RenderPass;
         GFX.CreateImage(Width, Height, GFX.SwapChainFormat, ImageTiling.Optimal,
             ImageUsageFlags.TransferDstBit | ImageUsageFlags.TransferSrcBit | ImageUsageFlags.ColorAttachmentBit | ImageUsageFlags.SampledBit,
             MemoryPropertyFlags.DeviceLocalBit,
             out colorImage, out colorMemory);
         colorView = GFX.CreateImageView(colorImage, GFX.SwapChainFormat, ImageAspectFlags.ColorBit, 1);
 
-        var depthFormat = GraphicsContext.graphicsContext.FindDepthFormat();
+        var depthFormat = VulkanInstance.Instance.VulkanDepthBuffer.FindDepthFormat();
         GFX.CreateImage(Width, Height, depthFormat, ImageTiling.Optimal,
             ImageUsageFlags.TransferDstBit | ImageUsageFlags.DepthStencilAttachmentBit | ImageUsageFlags.SampledBit,
             MemoryPropertyFlags.DeviceLocalBit,
@@ -283,7 +282,6 @@ public unsafe class FBO : BufferBase, IResizeable
             DependencyFlags.None,
             0, null, 0, null, 1, &depthBarrier);
 
-        var ctx = GraphicsContext.graphicsContext;
         var renderPassInfo = new RenderPassBeginInfo
         {
             SType       = StructureType.RenderPassBeginInfo,
@@ -295,16 +293,17 @@ public unsafe class FBO : BufferBase, IResizeable
         pClearValues[0].Color        = new(0.0f, 0.0f, 0.0f, 0f);
         pClearValues[1].DepthStencil = new(1.0f, 0);
 
+        var renderer = VulkanInstance.Instance;
         if (!_started)
         {
             _started = true;
-            renderPassInfo.RenderPass      = ctx.framebufferRenderPass;
+            renderPassInfo.RenderPass      = renderer.FramebufferClearRenderPass.RenderPass;
             renderPassInfo.ClearValueCount = 2;
             renderPassInfo.PClearValues    = pClearValues;
         }
         else
         {
-            renderPassInfo.RenderPass      = ctx.framebufferRenderPassLoad;
+            renderPassInfo.RenderPass      = renderer.FramebufferLoadRenderPass.RenderPass;
             renderPassInfo.ClearValueCount = 0;
             renderPassInfo.PClearValues    = null;
         }
@@ -334,13 +333,14 @@ public unsafe class FBO : BufferBase, IResizeable
     public void Unbind()
     {
         Unbind(GFX.CommandBuffer);   
-        var ctx = GraphicsContext.graphicsContext;
+
+        var renderer = VulkanInstance.Instance;
         var renderPassInfo = new RenderPassBeginInfo
         {
             SType = StructureType.RenderPassBeginInfo,
-            RenderPass = ctx.renderPassLoad,
-            Framebuffer = ctx.currentFramebuffer,
-            RenderArea = new Rect2D(new Offset2D(0, 0), ctx.swapChainExtent),
+            RenderPass = renderer.LoadRenderPass.RenderPass,
+            Framebuffer = renderer.CurrentFramebuffer,
+            RenderArea = new Rect2D(new Offset2D(0, 0), renderer.VulkanSwapchain.SwapChainExtent),
             ClearValueCount = 0,
             PClearValues = null
         };
@@ -351,8 +351,8 @@ public unsafe class FBO : BufferBase, IResizeable
         {
             X = 0.0f,
             Y = 0.0f,
-            Width = ctx.swapChainExtent.Width,
-            Height = ctx.swapChainExtent.Height,
+            Width = renderer.VulkanSwapchain.SwapChainExtent.Width,
+            Height = renderer.VulkanSwapchain.SwapChainExtent.Height,
             MinDepth = 0.0f,
             MaxDepth = 1.0f
         };
@@ -361,7 +361,7 @@ public unsafe class FBO : BufferBase, IResizeable
         var scissor = new Rect2D
         {
             Offset = new Offset2D(0, 0),
-            Extent = ctx.swapChainExtent
+            Extent = renderer.VulkanSwapchain.SwapChainExtent
         };
         GFX.Vk.CmdSetScissor(GFX.CommandBuffer, 0, 1, &scissor);
         _currentLayout = ImageLayout.ShaderReadOnlyOptimal;

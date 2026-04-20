@@ -359,26 +359,14 @@ namespace PBG.Voxel
     }
 }
 
-public struct FaceGeometry
+public unsafe struct FaceGeometry
 {
-    public Vector3 A;
-    float P1;
-    public Vector3 B;
-    float P2;
-    public Vector3 C;
-    float P3;
-    public Vector3 D;
-    float P4;
-
-    public Vector2 UvA;
-    public Vector2 UvB;
-    public Vector2 UvC;
-    public Vector2 UvD;
-
+    public fixed float Vertices[4 * 4];
+    public fixed float Uvs[4 * 2];
     public Vector3 Normal;
-
     public int TextureIndex;
 }
+
 
 public class BlockPlacement
 {

@@ -7,7 +7,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Rendering;
 using PBG.Threads;
-using Silk.NET.Input;
+
 
 public class StructureNodeManager : ScriptingNode
 {

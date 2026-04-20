@@ -67,12 +67,6 @@ public abstract class Node
         return false;
     }
 
-    public virtual void InitAwake()
-    {
-        for (int i = 0; i < Children.Count; i++)
-            Children[i].InitAwake();
-    }
-
     internal virtual void InitLoop(Scene scene)
     {
         for (int i = 0; i < Children.Count; i++)
@@ -139,11 +133,6 @@ public abstract class Node
     public virtual void Delete() {}
     public void DeleteChildren()
     {
-        for (int i = 0; i < Children.Count; i++)
-        {
-            var child = Children[i];
-            child.Dispose();
-        }
         Children.Clear();
     }
 }

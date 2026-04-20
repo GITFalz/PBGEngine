@@ -8,7 +8,7 @@ using PBG.Threads;
 using PBG.UI;
 using PBG.UI.Creator;
 using PBG.UI.FileManager;
-using Silk.NET.Input;
+
 
 public class TextureEditor : BaseEditor 
 {

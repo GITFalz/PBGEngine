@@ -6,7 +6,7 @@ using PBG.Graphics;
 using PBG.Voxel;
 using System.Runtime.InteropServices;
 using PBG.Data;
-using Silk.NET.Input;
+
 using PBG.UI;
 
 public class GLSLManager

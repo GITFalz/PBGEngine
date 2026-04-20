@@ -8,8 +8,9 @@ using PBG.UI;
 using PBG.UI.Creator;
 using PBG.Voxel;
 using static PBG.UI.Styles;
-using Silk.NET.Input;
+
 using Silk.NET.Vulkan;
+using PBG.Graphics.Vulkan;
 
 public partial class StructureEditor : BaseStructureEditor
 {
@@ -680,13 +681,13 @@ public partial class StructureEditor : BaseStructureEditor
         }
     }
 
-    public class ChangeElement(StructureEditor editor, UIField field, int min, int max, Action updateAction) : UIScript { public override UIElementBase Script() =>
-    new UIHCol(Class(w_[55], h_full, spacing_[5], top_right, right_[5]), Sub(
-        new UICol(Class(w_half, h_full, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), OnClickCol(_ => editor.Decrement(field, min, max, updateAction)), Sub(
-            new UIImg(Class(w_[20], h_[20], middle_center, icon_[17], bg_white))
-        )),
-        new UICol(Class(w_half, h_full, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), OnClickCol(_ => editor.Increment(field, min, max, updateAction)), Sub(
-            new UIImg(Class(w_[20], h_[20], middle_center, icon_[16], bg_white))
-        ))
-    ));}
+    public static UIElementBase ChangeElement(StructureEditor editor, UIField field, int min, int max, Action updateAction) =>
+    new UIHCol(w_[55], h_full, spacing_[5], top_right, right_[5])[
+        new UICol(w_half, h_full, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]).OnClick(_ => editor.Decrement(field, min, max, updateAction))[
+            new UIImg(w_[20], h_[20], middle_center, icon_[17], bg_white)
+        ],
+        new UICol(w_half, h_full, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]).OnClick(_ => editor.Increment(field, min, max, updateAction))[
+            new UIImg(w_[20], h_[20], middle_center, icon_[16], bg_white)
+        ]
+    ];
 }

@@ -3,7 +3,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using Silk.NET.Input;
+
 using Plane = System.Numerics.Plane;
 
 namespace PBG.Rendering

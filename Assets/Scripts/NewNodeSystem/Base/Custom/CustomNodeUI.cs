@@ -14,11 +14,11 @@ public class CustomNodeUI(
 {
     public override UIElementBase Script() =>
     new BaseNodeUI(node, name, position, color, true, () => [
-        new UIVCol(Class(blank_sharp_g_[30], grow_children), Sub(
-            new UIVCol(Class(border_[5, 5, 5, 5], grow_children, spacing_[5]), Sub([
-                new UIHCol(Class(grow_children), Sub(
-                    new UIVCol(Class(grow_children), Sub([
-                        ..Foreach(inputFields, input => {
+        new UIVCol(blank_sharp_g_[30], grow_children)[
+            new UIVCol(border_[5, 5, 5, 5], grow_children, spacing_[5])[
+                new UIHCol(grow_children)[
+                    new UIVCol(grow_children)[
+                        Foreach(inputFields, input => {
                             NodeInputField field;
                             if (input.CanConnect && !input.External)
                             {
@@ -26,7 +26,7 @@ public class CustomNodeUI(
                                 field = new(button, node, input);
                                 node.InputFields.Add(input.Name, field);
                                 button.Dataset["field"] = field;
-                                return new CustomNodeUIInput(input.Name, button, field);
+                                return CustomNodeUIInput(input.Name, button, field);
                             }
                             field = new(null, node, input);
                             node.InputFields.Add(input.Name, field);
@@ -34,48 +34,42 @@ public class CustomNodeUI(
                             {
                                 return null;
                             }
-                            return new CustomNodeUIInput(input.Name, null, field);
+                            return CustomNodeUIInput(input.Name, null, field);
                         })
-                    ])),
-                    new UIVCol(Class(grow_children), Sub([
-                        ..Foreach(outputFields, output => new CustomNodeUIOutput(node, output, output.Name))
-                    ]))
-                )),
-                ..If(node.IsOutput, () => 
-                new UICol(Class(w_full, h_[30]), Sub(
-                    new UICol(Class(w_[50], h_full, blank_sharp_g_[10], middle_right), Sub(
-                        new UIField(""+node.OutputPriority, Class(mc_[5], middle_right, right_[5]), OnTextChange(f => node.OutputPriority = f.GetInt()))
-                    )),
-                    new UIText("Priority", Class(middle_left))
-                )))
-            ]))
-        ))
+                    ],
+                    new UIVCol(grow_children)[
+                        Foreach(outputFields, output => CustomNodeUIOutput(node, output, output.Name))
+                    ]
+                ],
+                If(node.IsOutput, () => 
+                new UICol(w_full, h_[30])[
+                    new UICol(w_[50], h_full, blank_sharp_g_[10], middle_right)[
+                        new UIField(""+node.OutputPriority, mc_[5], middle_right, right_[5]).OnTextChange(f => node.OutputPriority = f.GetInt())
+                    ],
+                    new UIText("Priority", middle_left)
+                ])
+            ]
+        ]
     ]);
-}
 
-public class CustomNodeUIInput(string name, UIButton? button, NodeInputField field) : UIScript
-{
-    public override UIElementBase Script() =>
-    new UIVCol(Class(h_[30], grow_children), Sub([
-        new UIHCol(Class(h_[30], spacing_[5], w_[130]), Sub([
-            ..Run(() => button?.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); })),
-            new UIText(name.Length <= 10 ? name : name[..10], Class(mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left))
-        ])),
-        field.Value.GetInputFields()
-    ]));
-}
+    public static UIElementBase CustomNodeUIInput(string name, UIButton? button, NodeInputField field) =>
+        new UIVCol(h_[30], grow_children)[
+            new UIHCol(h_[30], spacing_[5], w_[130])[
+                Run(() => button?.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); })),
+                new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left)
+            ],
+            field.Value.GetInputFields()
+        ];
 
-public class CustomNodeUIOutput(CustomNode node, NodeOutputParam output, string name) : UIScript
-{
-    public override UIElementBase Script() =>
-    new UICol(Class(h_[30], spacing_[5], w_[130], top_left), Sub([
-        new UIText(name.Length <= 10 ? name : name[..10], Class(mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left)),
-        ..Run(() => {
-            var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_right);
-            var field = new NodeOutputField(button, node, output);
-            button.SetOnClick(_ => NodeBase.Connect(field.Output));
-            node.OutputFields.Add(output.Name, field);
-            return button;
-        })
-    ]));
+    public static UIElementBase CustomNodeUIOutput(CustomNode node, NodeOutputParam output, string name) =>
+        new UICol(h_[30], spacing_[5], w_[130], top_left)[
+            new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left),
+            Run(() => {
+                var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_right);
+                var field = new NodeOutputField(button, node, output);
+                button.SetOnClick(_ => NodeBase.Connect(field.Output));
+                node.OutputFields.Add(output.Name, field);
+                return button;
+            })
+        ];
 }

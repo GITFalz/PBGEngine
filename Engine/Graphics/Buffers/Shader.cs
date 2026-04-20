@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
-using PBG.Data;
-using PBG.MathLibrary;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
 using static ShaderCompiler;
@@ -12,7 +11,7 @@ public struct ShaderInfo
 {
     public string VertexShaderPath = "";
     public string? FragmentShaderPath = null;
-    public RenderPass RenderPass = GFX.RenderPass;
+    public RenderPass RenderPass = VulkanInstance.Instance.ClearRenderPass.RenderPass;
 
     public PipelineRasterizationStateCreateInfo Rasterizer = new()
     {
@@ -53,6 +52,13 @@ public struct ShaderInfo
         Front = new(), // Optional
         Back = new() // Optional
     };
+
+    public PipelineInputAssemblyStateCreateInfo InputAssembly = new()
+    {
+        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
+        Topology = PrimitiveTopology.TriangleList,
+        PrimitiveRestartEnable = false
+    };
     
     public ShaderInfo(string vertShader, string fragShader)
     {
@@ -71,12 +77,11 @@ public unsafe class Shader : BufferBase, IShader
     private Dictionary<string, int> _locations = [];
     private UniformBufferAttribute[] _uniformAttribues = [];
 
-    public DescriptorSetLayout descriptorSetLayout;
+    public DescriptorSetLayout DescriptorSetLayout;
+    public PipelineLayout PipelineLayout;
+    public Pipeline GraphicsPipeline;
 
-    public PipelineLayout pipelineLayout;
-    public Pipeline graphicsPipeline;
-
-    public ShaderInfo _shaderInfo;
+    private ShaderInfo _shaderInfo;
 
     public Shader(ShaderInfo info)
     {
@@ -117,16 +122,16 @@ public unsafe class Shader : BufferBase, IShader
     public void Bind() => Bind(GFX.CommandBuffer);
     public void Bind(CommandBuffer commandBuffer)
     {
-        GFX.Vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, graphicsPipeline);
+        GFX.Vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, GraphicsPipeline);
     }
     
     public void Compile()
     {
-        ShaderData vertexData = GraphicsContext.graphicsContext.shaderCompiler.CompileAndReflect(_shaderInfo.VertexShaderPath, ShaderKind.VertexShader);
+        ShaderData vertexData = _shaderCompiler.CompileAndReflect(_shaderInfo.VertexShaderPath, ShaderKind.VertexShader);
         ShaderData? fragmentData = null;
         if (_shaderInfo.FragmentShaderPath != null)
         {
-            fragmentData = GraphicsContext.graphicsContext.shaderCompiler.CompileAndReflect(_shaderInfo.FragmentShaderPath, ShaderKind.FragmentShader);
+            fragmentData = _shaderCompiler.CompileAndReflect(_shaderInfo.FragmentShaderPath, ShaderKind.FragmentShader);
         }
 
         ShaderModule vertModule = CreateShaderModule(vertexData.SpirV);
@@ -155,12 +160,12 @@ public unsafe class Shader : BufferBase, IShader
         // === Unfiorm Mapping ===
         int uniformBindingsIndex = 0;
         Dictionary<uint, int> uniformBindingsMap = [];
-        _uniformBindings = new UniformBufferLayout[GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings.Count];
+        _uniformBindings = new UniformBufferLayout[_shaderCompiler.UniformBufferBindings.Count];
         List<UniformBufferAttribute> uniformBufferAttributes = [];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.UniformBufferAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes[i];
+            var attribute = _shaderCompiler.UniformBufferAttributes[i];
             uint size;
             if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
@@ -175,7 +180,7 @@ public unsafe class Shader : BufferBase, IShader
             }
             else
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings[attribute.Binding];
+                var layout = _shaderCompiler.UniformBufferBindings[attribute.Binding];
                 attribute.Index = (uint)uniformBindingsIndex;
                 size = layout.Size;
 
@@ -196,14 +201,14 @@ public unsafe class Shader : BufferBase, IShader
         // === Storage Mapping ===
         int storageBindingsIndex = 0;
         Dictionary<uint, int> storageBindingsMap = [];
-        StorageBufferLayout[] storageBindings = new StorageBufferLayout[GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings.Count];
+        StorageBufferLayout[] storageBindings = new StorageBufferLayout[_shaderCompiler.StorageBufferBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.StorageBufferAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes[i];
+            var attribute = _shaderCompiler.StorageBufferAttributes[i];
             if (!storageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings[attribute.Binding];
+                var layout = _shaderCompiler.StorageBufferBindings[attribute.Binding];
                 storageBindings[storageBindingsIndex] = layout;
                 storageBindingsMap.Add(attribute.Binding, storageBindingsIndex);
                 storageBindingsIndex++;
@@ -214,14 +219,14 @@ public unsafe class Shader : BufferBase, IShader
         // === Sampled Image Mapping ===
         int imageBindingsIndex = 0;
         Dictionary<uint, int> imageBindingsMap = [];
-        SampledImageLayout[] imageBindings = new SampledImageLayout[GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings.Count];
+        SampledImageLayout[] imageBindings = new SampledImageLayout[_shaderCompiler.SampledImageBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.SampledImageAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes[i];
+            var attribute = _shaderCompiler.SampledImageAttributes[i];
             if (!imageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings[attribute.Binding];
+                var layout = _shaderCompiler.SampledImageBindings[attribute.Binding];
                 imageBindings[imageBindingsIndex] = layout;
                 imageBindingsMap.Add(attribute.Binding, imageBindingsIndex);
                 imageBindingsIndex++;
@@ -232,14 +237,14 @@ public unsafe class Shader : BufferBase, IShader
         // === Storage Image Mapping ===
         int storageImageBindingsIndex = 0;
         Dictionary<uint, int> storageImageBindingsMap = [];
-        SampledImageLayout[] storageImageBindings = new SampledImageLayout[GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings.Count];
+        SampledImageLayout[] storageImageBindings = new SampledImageLayout[_shaderCompiler.StorageImageBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.StorageImageAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes[i];
+            var attribute = _shaderCompiler.StorageImageAttributes[i];
             if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings[attribute.Binding];
+                var layout = _shaderCompiler.StorageImageBindings[attribute.Binding];
                 storageImageBindings[storageImageBindingsIndex] = layout;
                 storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
                 storageImageBindingsIndex++;
@@ -284,30 +289,19 @@ public unsafe class Shader : BufferBase, IShader
         fixed (DescriptorSetLayoutBinding* pLayoutBindings = layoutBindings)
         layoutInfo.PBindings = pLayoutBindings;
 
-        if (GFX.CreateDescriptorSetLayout(&layoutInfo, null, out descriptorSetLayout) != Result.Success) {
+        if (GFX.CreateDescriptorSetLayout(&layoutInfo, null, out DescriptorSetLayout) != Result.Success) {
             throw new InvalidOperationException("failed to create descriptor set layout!");
         }
         // === End ===
         
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings = [];
-
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings = [];
-        
+        _shaderCompiler.Clear();
 
         PipelineShaderStageCreateInfo vertShaderStageInfo = new()
         {
             SType = StructureType.PipelineShaderStageCreateInfo,
             Stage = ShaderStageFlags.VertexBit,
             Module = vertModule,
-            PName = GraphicsContext.graphicsContext.mainPtr
+            PName = _mainPtr
         };
 
         List<PipelineShaderStageCreateInfo> preShaderStages = [vertShaderStageInfo];
@@ -319,7 +313,7 @@ public unsafe class Shader : BufferBase, IShader
                 SType = StructureType.PipelineShaderStageCreateInfo,
                 Stage = ShaderStageFlags.FragmentBit,
                 Module = fragModule.Value,
-                PName = GraphicsContext.graphicsContext.mainPtr
+                PName = _mainPtr
             };
 
             preShaderStages.Add(fragShaderStageInfo);
@@ -352,13 +346,7 @@ public unsafe class Shader : BufferBase, IShader
             vertexInputInfo.PVertexAttributeDescriptions = pAttributeDescriptions;
         }
 
-        PipelineInputAssemblyStateCreateInfo inputAssembly = new()
-        {
-            SType = StructureType.PipelineInputAssemblyStateCreateInfo,
-            Topology = PrimitiveTopology.TriangleList,
-            PrimitiveRestartEnable = false
-        };
-
+        var inputAssembly = _shaderInfo.InputAssembly;
 
         // == Viewport Settings ==
         Viewport viewport = new()
@@ -436,10 +424,10 @@ public unsafe class Shader : BufferBase, IShader
             PPushConstantRanges = null, // Optional
         };
 
-        fixed (DescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
+        fixed (DescriptorSetLayout* pDescriptorSetLayout = &DescriptorSetLayout)
         pipelineLayoutInfo.PSetLayouts = pDescriptorSetLayout;
 
-        if (GFX.CreatePipelineLayout(&pipelineLayoutInfo, null, out pipelineLayout) != Result.Success) {
+        if (GFX.CreatePipelineLayout(&pipelineLayoutInfo, null, out PipelineLayout) != Result.Success) {
             throw new InvalidOperationException("failed to create pipeline layout!");
         }
 
@@ -457,8 +445,8 @@ public unsafe class Shader : BufferBase, IShader
             PDepthStencilState = &depthStencil,
             PColorBlendState = &colorBlending,
             PDynamicState = &dynamicState,
-            Layout = pipelineLayout,
-            RenderPass = _shaderInfo.RenderPass.Handle == 0 ? GFX.RenderPass : _shaderInfo.RenderPass,
+            Layout = PipelineLayout,
+            RenderPass = _shaderInfo.RenderPass,
             Subpass = 0,
             BasePipelineHandle = default, // Optional
             BasePipelineIndex = -1 // Optional
@@ -467,7 +455,7 @@ public unsafe class Shader : BufferBase, IShader
         fixed (PipelineShaderStageCreateInfo* pShaderStages = shaderStages)
         pipelineInfo.PStages = pShaderStages;
 
-        if (GFX.CreateGraphicsPipelines(default, 1, &pipelineInfo, null, out graphicsPipeline) != Result.Success) {
+        if (GFX.CreateGraphicsPipelines(default, 1, &pipelineInfo, null, out GraphicsPipeline) != Result.Success) {
             throw new InvalidOperationException("failed to create graphics pipeline!");
         }
 
@@ -478,8 +466,8 @@ public unsafe class Shader : BufferBase, IShader
 
     public Descriptor GetDescriptorSet()
     {
-        GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
-        return new(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+        _shaderBuffer.AllocateDescriptorLayout(DescriptorSetLayout, out var descriptorSets, out var descriptorPool);
+        return new(this, PipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
     }
 
     private ShaderModule CreateShaderModule(byte[] code)
@@ -521,9 +509,9 @@ public unsafe class Shader : BufferBase, IShader
         _locations = [];
         _uniformAttribues = [];
         
-        GFX.DestroyPipeline(graphicsPipeline);
-        GFX.DestroyPipelineLayout(pipelineLayout);
+        GFX.DestroyPipeline(GraphicsPipeline);
+        GFX.DestroyPipelineLayout(PipelineLayout);
 
-        GFX.DestroyDescriptorSetLayout(descriptorSetLayout);
+        GFX.DestroyDescriptorSetLayout(DescriptorSetLayout);
     }
 }

@@ -13,11 +13,11 @@ public class GradientNodeUI(
 ) : UIScript {
     public override UIElementBase Script() =>
     new BaseNodeUI(node, name, position, color, true, () => [
-        new UIVCol(Class(blank_sharp_g_[30], grow_children), Sub(
-            new UIVCol(Class(border_[5, 5, 5, 5], grow_children), Sub([
-                new UIHCol(Class(grow_children), Sub(
-                    new UIVCol(Class(grow_children), Sub([
-                        ..Foreach(inputFields, input => {
+        new UIVCol(blank_sharp_g_[30], grow_children)[
+            new UIVCol(border_[5, 5, 5, 5], grow_children)[
+                new UIHCol(grow_children)[
+                    new UIVCol(grow_children)[
+                        Foreach(inputFields, input => {
                             NodeInputField field;
                             if (input.CanConnect && !input.External)
                             {
@@ -25,7 +25,7 @@ public class GradientNodeUI(
                                 field = new(button, node, input);
                                 node.InputFields.Add(input.Name, field);
                                 button.Dataset["field"] = field;
-                                return new CustomNodeUIInput(input.Name, button, field);
+                                return CustomNodeUI.CustomNodeUIInput(input.Name, button, field);
                             }
                             field = new(null, node, input);
                             node.InputFields.Add(input.Name, field);
@@ -33,14 +33,14 @@ public class GradientNodeUI(
                             {
                                 return null;
                             }
-                            return new CustomNodeUIInput(input.Name, null, field);
+                            return CustomNodeUI.CustomNodeUIInput(input.Name, null, field);
                         })
-                    ])),
-                    new UIVCol(Class(grow_children), Sub([
-                        ..Foreach(outputFields, output => new CustomNodeUIOutput(node, output, output.Name))
-                    ]))
-                ))
-            ]))
-        ))
+                    ],
+                    new UIVCol(grow_children)[
+                        Foreach(outputFields, output => CustomNodeUI.CustomNodeUIOutput(node, output, output.Name))
+                    ]
+                ]
+            ]
+        ]
     ]);
 }

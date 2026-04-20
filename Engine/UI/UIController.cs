@@ -3,7 +3,7 @@ using PBG.Data;
 using PBG.MathLibrary;
 using TextCopy;
 using PBG.Core;
-using Silk.NET.Input;
+
 
 namespace PBG.UI
 {
@@ -179,9 +179,14 @@ namespace PBG.UI
                 InteractableElementsSet.Add(element);
             }
 
-            if (element is IUICollection uiCollection)
+            if (element is UICol uiCollection)
             {
-                uiCollection.ForeachChildren(Internal_AddElement);
+                var children = uiCollection.GetChildren();
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var child = children[i];
+                    Internal_AddElement(child);
+                }
             }
         }
 
@@ -197,9 +202,14 @@ namespace PBG.UI
             
             element.Destroy();
 
-            if (element is IUICollection uiCollection)
+            if (element is UICol uiCollection)
             {
-                uiCollection.ForeachChildren(Internal_RemoveElement);
+                var children = uiCollection.GetChildren();
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var child = children[i];
+                    Internal_RemoveElement(child);
+                }
             }
 
             element.UIController = null;
@@ -301,7 +311,7 @@ namespace PBG.UI
 
             if (key == Key.Enter && (ActiveInputField.UIController?.RemoveInputfieldOnEnter ?? true))
             {
-                ActiveInputField.OnTextEnter?.Invoke(ActiveInputField);
+                ActiveInputField._onTextEnter?.Invoke(ActiveInputField);
                 RemoveInputfield();
                 return;
             }

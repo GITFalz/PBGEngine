@@ -4,61 +4,49 @@ using PBG.UI.Creator;
 
 namespace PBG.UI
 {
-    public class UIHCol : UIHCol<UIHCol>
+    public class UIHCol : UICol
     {
-        private UIHCol(string name, Class classes, UIElementBase[] subs, params Event<UIHCol>[] events) : base(classes.Styles, events)
-        {
-            Name = name;
-            Tag = UIElementTag.UICollection;
-            if (subs != null && subs.Length > 0)
-                AddElements(subs);
+        protected virtual float TotalWidth => Border.X;
+
+        public UIHCol() : base() 
+        { 
+            Name = "UIHCol"; 
+            Tag = UIElementTag.UIHorizontalCollection;
         }
 
-
-        // ----- ORIGINAL 11 PUBLIC CONSTRUCTORS (unchanged signatures) -----
-
-        public UIHCol(params UIStyleData[] classes) : this("UICollection", new Class(classes), [], []) { }
-        public UIHCol(string name, params UIStyleData[] classes) : this(name, new Class(classes), [], []) { }
+        public UIHCol(params IStyleData[] styles) : this()
+        { 
+            Class(styles);
+        }
         
-        public UIHCol(Class classes) : this("UICollection", classes, [], [] ) { }
-        public UIHCol(Class classes, Event<UIHCol> e1) : this("UICollection", classes, [], e1) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2) : this("UICollection", classes, [], e1, e2) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3) : this("UICollection", classes, [], e1, e2, e3) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4) : this("UICollection", classes, [], e1, e2, e3, e4) { }
-        
-        public UIHCol(string name, Class classes) : this(name, classes, [], [] ) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1) : this(name, classes, [], e1) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2) : this(name, classes, [], e1, e2) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3) : this(name, classes, [], e1, e2, e3) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4) : this(name, classes, [], e1, e2, e3, e4) { }
-        
-        public UIHCol(Class classes, UIElementBase[] subs) : this("UICollection", classes, subs, []) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, UIElementBase[] subs) : this("UICollection", classes, subs, e1) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3) { }
-        public UIHCol(Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4, UIElementBase[] subs) : this("UICollection", classes, subs, e1, e2, e3, e4) { }
+        public UIHCol Ref(ref UIHCol text)
+        {
+            text = this;
+            return text;
+        }
 
-        public UIHCol(string name, Class classes, UIElementBase[] subs) : this(name, classes, subs, []) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, UIElementBase[] subs) : this(name, classes, subs, e1) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, UIElementBase[] subs) : this(name, classes, subs, e1, e2) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3) { }
-        public UIHCol(string name, Class classes, Event<UIHCol> e1, Event<UIHCol> e2, Event<UIHCol> e3, Event<UIHCol> e4, UIElementBase[] subs) : this(name, classes, subs, e1, e2, e3, e4) { }
-    }
-    
-    public class UIHCol<TSelf> : UICol<TSelf> where TSelf : UIHCol<TSelf>
-    {
-        // This function is used when GrowFromChildren is true
-        public UIHCol(UIStyleData[] classes, IEvent[] events) : base(classes, events) { Tag = UIElementTag.UIHorizontalCollection; }
+        public UIHCol Out(out UIHCol text)
+        {
+            text = this;
+            return text;
+        }
+
+        public new UIHCol Class(params IStyleData[] styles) => Style(this, styles);
+
+        public UIHCol OnHoverEnter(Action<UIHCol>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIHCol OnHover(Action<UIHCol>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIHCol OnClick(Action<UIHCol>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIHCol OnHold(Action<UIHCol>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIHCol OnRelease(Action<UIHCol>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIHCol OnHoverExit(Action<UIHCol>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+
+        public new UIHCol this[params IUIChild[] subElements]
+        {
+            get { AddElements(subElements); return this; }
+        }
 
         public override void CollectionFirstPass()
         {
-            float offsetY(UIElementBase child) => child.IsTopAligned() ? Border.Y : (child.IsBottomAligned() ? Border.W : 0);
-
-            float totalWidth = Border.X;
-            float maxHeight = 0;
-            
-            HashSet<UIElementBase> percentHeightChildren = [];
-
             if (!GrowFromChildren)
             {
                 CalculateHeight();
@@ -66,59 +54,150 @@ namespace PBG.UI
             }
             else if (!Height.IsNone())
             {
-                CalculateWidth();
-            }
+                CalculateHeight();
+            }   
             
-            ForeachChildren(child =>
+            if (FitChildren)
+                HandleFitChildren();
+            else if (GrowFromChildren)
+                HandleGrowFromChildren();
+            else
+                HandleBasicFirstPass();
+        }
+
+        private void HandleBasicFirstPass()
+        {
+            float totalWidth = TotalWidth;
+
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 child.FirstPass();
                 if (!child.Visible && IgnoreInvisibleElements)
-                    return;
+                    continue;
 
-                float yOffset = offsetY(child);
+                float yOffset = OffsetY(child);
+                child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
 
-                child.CollectionOffset = (totalWidth, yOffset);
+                totalWidth += child.BaseOffset.X + child.Size.X + child.Padding.X + child.Padding.Z + Spacing;
+            };
+        }
 
-                if (GrowFromChildren)
+        /// <summary>
+        /// Calculates the width and horizontal offsets of child elements when using
+        /// a fit-children layout. Fixed-width children are allocated space first,
+        /// then remaining space is distributed between percentage-width children.
+        /// 
+        /// Percentage widths are normalized so that if multiple children use 100%,
+        /// they share the available space equally instead of overflowing.
+        /// </summary>
+        private void HandleFitChildren()
+        {
+            float availableWidth = Size.X;
+            float totalWidth = TotalWidth;
+            float totalPercent = 0;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.FirstPass();
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+                    
+                if (child.Width.IsPercent())
                 {
-                    if (child.Height.IsPercent() && Height.IsNone())
-                    {
-                        percentHeightChildren.Add(child);
-                    }
+                    totalPercent += child.Width.Value;
+                }
+                else
+                {
+                    availableWidth -= child.Size.X;
+                }
+            };
+
+            availableWidth -= (Spacing * (ChildElements.Count - 1)) + Border.X + Border.Z;
+            availableWidth = availableWidth.Max(0);
+
+            availableWidth *= 1 / totalPercent;
+
+            var sizeX = SizeX;
+            SizeX = availableWidth;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+
+                float yOffset = OffsetY(child);
+                child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
+
+                if (child.Width.IsPercent())
+                {
+                    child.CalculateWidth();
+                }
+                
+                totalWidth += child.BaseOffset.X + child.Size.X + child.Padding.X + child.Padding.Z + Spacing;
+            }
+
+            SizeX = sizeX;
+        }
+
+        private void HandleGrowFromChildren()
+        {
+            float totalWidth = TotalWidth;
+            float maxHeight = 0;
+
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.PercentAlignement = PercentAlignementType.None;
+                child.FirstPass();
+                if (!child.Visible && IgnoreInvisibleElements)
+                    continue;
+
+                float yOffset = OffsetY(child);
+                child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
+
+                if (Height.IsNone())
+                {
+                    if (child.Height.IsPercent())
+                        child.PercentAlignement = PercentAlignementType.Vertical;
                     else
-                    {
                         maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
-                    }
                 }    
                 
-                totalWidth += child.BaseOffset.X + child.Size.X + Spacing;
-            });
-            if (GrowFromChildren)
+                totalWidth += child.BaseOffset.X + child.Size.X + child.Padding.X + child.Padding.Z + Spacing;
+            };
+
+            Width = UISize.Pixels(totalWidth - Spacing + Border.Z);
+            if (Height.IsNone())
+                Height = UISize.None(maxHeight);
+                
+            CalculateWidth();
+            CalculateHeight();
+
+            for (int i = 0; i < ChildElements.Count; i++)
             {
-                Width = UISize.Pixels(totalWidth - Spacing + Border.Z);
-                if (Height.IsNone())
-                    Height = UISize.None(maxHeight);
-                    
-                CalculateWidth();
-                CalculateHeight();
-                ForeachChildren(percentHeightChildren, child =>
+                var child = ChildElements[i];
+                if (child.PercentAlignement.HasFlag(PercentAlignementType.Vertical))
                 {
                     child.Height.AddedOffset = -(Border.Y + Border.W);
                     child.CalculateHeight();
-                });
+                }
             }
         }
 
         public float GetTotalXSize()
         {
             float totalOffset = Border.X;
-            ForeachChildren(child =>
+            for (int i = 0; i < ChildElements.Count; i++)
             {
+                var child = ChildElements[i];
                 if (child.Visible || !IgnoreInvisibleElements)
                 {
                     totalOffset += child.Width.Value + Spacing;
                 }
-            });
+            };
             return totalOffset - Spacing + Border.Z;
         }
     }

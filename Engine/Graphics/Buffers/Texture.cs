@@ -1,4 +1,5 @@
 using PBG.Graphics;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
 using StbImageSharp;
 using Buffer = Silk.NET.Vulkan.Buffer;

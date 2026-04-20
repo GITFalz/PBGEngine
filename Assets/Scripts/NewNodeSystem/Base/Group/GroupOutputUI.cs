@@ -12,14 +12,14 @@ public class GroupOutputUI(
     public UIVCol _list = null!;
 
     public override UIElementBase Script() =>
-    new UICol(Class(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children), Sub(
-        new UICol(Class(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children), Sub([
-            new UIButton(Class(w_full_minus_[25], h_[30], bottom_[30]), OnClick<UIButton>(Select), OnHold<UIButton>(MoveNode)),
-            new UIText("Outputs", Class(mc_[7], fs_[1], bottom_[20], left_[5])),
-            newVCol(Class(blank_sharp_g_[30], grow_children, w_[200]), Sub(), ref _list),
-            ..Run(RegenerateOutputs)
-        ]))
-    ));
+    new UICol(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children)[
+        new UICol(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children)[
+            new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode),
+            new UIText("Outputs", mc_[7], fs_[1], bottom_[20], left_[5]),
+            new UIVCol(blank_sharp_g_[30], grow_children, w_[200]).Ref(ref _list),
+            Run(RegenerateOutputs)
+        ]
+    ];
 
     public void RegenerateOutputs()
     {
@@ -29,22 +29,22 @@ public class GroupOutputUI(
         {
             if (field.Input == null) continue;
             var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_left);
-            var text = new UIText(name, Class(mc_[18], fs_[1f], middle_right, text_align_right));
+            var text = new UIText(name, mc_[18], fs_[1f], middle_right, text_align_right);
             field.SetButton(button);
             field.SetName(name);
             field.Input.Name = name;
-            button.SetOnClick(_ => { NodeBase.Connect(field.Input); });
-            elements[i] = new UICol(Class(w_full_minus_[10], h_[30], left_[5]), OnClickCol(_ => NameClick(text, field)), Sub([
+            button.OnClick(_ => { NodeBase.Connect(field.Input); });
+            elements[i] = new UICol(w_full_minus_[10], h_[30], left_[5]).OnClick(_ => NameClick(text, field))[
                 text,
                 button
-            ]));
+            ];
             i++;
         }
-        elements[i] = new UICol(Class(w_full_minus_[10], h_[30], left_[5], top_[5]), Sub(
-            new UICol(Class(w_full, h_full_minus_[5], blank_sharp_g_[40]), OnClickCol(_ => node.AddValue("Result")), Sub(
-                new UIText("+", Class(mc_[1], fs_[1.2f], middle_center))
-            ))
-        ));
+        elements[i] = new UICol(w_full_minus_[10], h_[30], left_[5], top_[5])[
+            new UICol(w_full, h_full_minus_[5], blank_sharp_g_[40]).OnClick(_ => node.AddValue("Result"))[
+                new UIText("+", mc_[1], fs_[1.2f], middle_center)
+            ]
+        ];
         _list.DeleteChildren();
         _list.AddElements(elements);
         _list.UIController?.AddElements(elements);

@@ -11,10 +11,10 @@ public class DragBlockUI(StructureNodeManager nodeManager) : UIScript
     private UIText _blockText = null!;
 
     public override UIElementBase Script() =>
-    newCol(Class(w_[232], top_left, h_[38], blank_sharp_g_[30], depth_[50], hidden, allow_passing_mouse), OnHold(DragBlockHold), OnRelease(DragBlockEnd), Sub([
-        newImg(Class(middle_left, h_[38], w_[38], bg_white), ref _blockImg),
-        newText("block", Class(mc_[30], fs_[1], middle_left, left_[40], depth_[5]), ref _blockText)
-    ]), ref DragBlockCollection);
+    new UICol(w_[232], top_left, h_[38], blank_sharp_g_[30], depth_[50], hidden, allow_passing_mouse).OnHold(DragBlockHold).OnRelease(DragBlockEnd)[
+        new UIImg(middle_left, h_[38], w_[38], bg_white).Ref(ref _blockImg),
+        new UIText("block", mc_[30], fs_[1], middle_left, left_[40], depth_[5]).Ref(ref _blockText)
+    ].Ref(ref DragBlockCollection);
 
     public void DragBlockStart(UICol collection)
     {

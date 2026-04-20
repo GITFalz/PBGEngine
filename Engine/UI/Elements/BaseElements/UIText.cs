@@ -1,71 +1,48 @@
 using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
 using PBG.Rendering.Meshes;
-using PBG.UI.Creator;
-
 
 namespace PBG.UI
 {
-    public interface IUIText
+    public class UIText : UIElementBase
     {
-        Vector4 Color { get; set; }
-        Vector4 Transform { get; }
-        string Text { get; }
-        int? MaxCharCount { get; set; }
-        float FontSize { get; set; }
-        bool Visible { get; }
-        int MaskIndex { get; set; }
-
-        Vector2 AnimationTranslation { get; set; }
-        float AnimationScale { get; set; }
-        float AnimationRotation { get; set; }
-
-        string GetText();
-        IUIText SetText(string text);
-        UIElementBase UpdateCharacters();
-        Vector2 GetCenter();
-        TextAlign GetTextAlign();
-        TextMesh GetTextMesh();
-        UIElementBase GetElement();
-    }
-
-    public class UIText : UIText<UIText>
-    {
-        private UIText(string text, string name, Class classes, params IEvent[] events) : base(text, classes.Styles, events)
-        {
-            Name = name;
-            Tag = UIElementTag.UIImage;
-        }
-
-        // ORIGINAL PUBLIC CONSTRUCTORS
-        public UIText(params UIStyleData[] classes) : this("", "UIText", new Class(classes), []) { }
-        public UIText(Class classes) : this("", "UIText", classes, []) { }
-        public UIText(string text, params UIStyleData[] classes) : this(text, "UIText", new Class(classes), []) { }
-        public UIText(string text, Class classes) : this(text, "UIText", classes, []) { }
-        public UIText(string text, string name, params UIStyleData[] classes) : this(text, name, new Class(classes), []) { }
-        public UIText(string text, string name, Class classes) : this(text, name, classes, []) { }
-        
-        public UIText(string text, Class classes, Event<UIText> e1) : this(text, "UIText", classes, e1) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2) : this(text, "UIText", classes, e1, e2) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3) : this(text, "UIText", classes, e1, e2, e3) { }
-        public UIText(string text, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3, Event<UIText> e4) : this(text, "UIText", classes, e1, e2, e3, e4) { }
-        
-        public UIText(string text, string name, Class classes, Event<UIText> e1) : this(text, name, classes, [e1]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2) : this(text, name, classes, [e1, e2]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3) : this(text, name, classes, [e1, e2, e3]) { }
-        public UIText(string text, string name, Class classes, Event<UIText> e1, Event<UIText> e2, Event<UIText> e3, Event<UIText> e4) : this(text, name, classes, [e1, e2, e3, e4]) { }
-    }
-    public class UIText<TSelf> : UIElement<TSelf>, IUIText where TSelf : UIText<TSelf>
-    {
-        public UIText(string text, UIStyleData[] classes, IEvent[] events) : base((1, 1, 1, 1), classes, events) 
+        public UIText() : this("") { }
+        public UIText(string text) : base((1, 1, 1, 1)) 
         { 
+            Name = "UIText";
             Tag = UIElementTag.UIText; 
 
             MaxCharCount ??= text.Length;
             SetText(text);
         }
 
-        public TextAlign TextAlign = TextAlign.Left;
+        public UIText(string text, params IStyleData[] styles) : this(text)
+        { 
+            Class(styles);
+        }
+        
+        public UIText Ref(ref UIText text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIText Out(out UIText text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIText Class(params IStyleData[] styles) => Style(this, styles);
+
+        public UIText OnHoverEnter(Action<UIText>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIText OnHover(Action<UIText>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIText OnClick(Action<UIText>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIText OnHold(Action<UIText>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIText OnRelease(Action<UIText>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIText OnHoverExit(Action<UIText>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+
+        public TextAlign TextAlign { get; set; } = TextAlign.Left;
         public int? MaxCharCount { get; set; } = null;
         public float FontSize { get; set; } = 1f;
         protected string _text = "";
@@ -73,7 +50,7 @@ namespace PBG.UI
 
         protected bool _checkCursor = true;
 
-        public IUIText SetText(string text)
+        public UIText SetText(string text)
         {
             Text = ClampText(text, 0, MaxCharCount ?? 20);
             _text = Text;
@@ -101,6 +78,16 @@ namespace PBG.UI
         public float GetFloat(float replacement = 0) => Parse.Float.Parse(_text, replacement);
         public int GetInt(int replacement = 0) => Parse.Int.Parse(_text, replacement);
         public byte GetByte(byte replacement = 0) => (byte)Parse.Int.Parse(_text, replacement);
+        public bool TryGetValue<T>([NotNullWhen(true)] out T? value) where T : IParsable<T>
+        {
+            try {
+                value = T.Parse(_text, null);
+                return true;
+            } catch {
+                value = default;
+                return value != null;
+            }
+        }
 
         public void SetTextCharCount(string text)
         {

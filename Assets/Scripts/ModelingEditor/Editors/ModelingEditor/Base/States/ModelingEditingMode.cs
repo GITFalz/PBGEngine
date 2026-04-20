@@ -5,7 +5,7 @@ using PBG.UI;
 using PBG.UI.FileManager;
 using PBG.Graphics;
 using PBG.Threads;
-using Silk.NET.Input;
+
 
 public class ModelingEditingMode : ModelingBase 
 {

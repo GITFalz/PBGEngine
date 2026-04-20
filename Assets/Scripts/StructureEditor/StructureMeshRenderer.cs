@@ -7,7 +7,7 @@ using PBG.Hash;
 using PBG.Rendering;
 using PBG.Threads;
 using PBG.Voxel;
-using Silk.NET.Input;
+
 
 public class StructureMeshRenderer
 {

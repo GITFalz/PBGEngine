@@ -1,5 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using PBG.Data;
 using PBG.Graphics;
 using PBG.Rendering;
 using PBG.UI;
@@ -13,7 +15,7 @@ namespace PBG.Core
         public static Scene? CurrentlyLoadingScene = null;
         private static Scene? _sceneToBeLoaded = null;
 
-        public List<TransformNode> PendingList = [];
+        public bool AddedScripts = false;
 
         public string Name;
 
@@ -25,6 +27,17 @@ namespace PBG.Core
 
         public Camera DefaultCamera { get; private set; }
         public Camera ActiveCamera { get; private set; }
+
+
+        private ScriptCall[] OnStart = [];
+        private ScriptCall[] OnAwake = [];
+        private ScriptCall[] OnResize = [];
+        private ScriptCall[] OnFixedUpdate = [];
+        private ScriptCall[] OnUpdate = [];
+        private ScriptCall[] OnLateUpdate = [];
+        private ScriptCall[] OnRender = [];
+        private ScriptCall[] OnExit = [];
+        private ScriptCall[] OnDispose = [];
 
         public Scene(string name)
         {
@@ -54,10 +67,16 @@ namespace PBG.Core
             {
                 UIController.ClearFrameBuffer();
                 Console.WriteLine("Loading scene");
+
                 CurrentScene?.Exit();
                 CurrentScene = _sceneToBeLoaded;
                 _sceneToBeLoaded.InitComponents();
-                _sceneToBeLoaded.RootNode.InitAwake();
+
+                ScriptInfo info = new();
+                _sceneToBeLoaded.RootNode.InitAwake(info);
+                _sceneToBeLoaded.OnAwake = [..info.OnAwake];
+                info.Clear();
+
                 if (!_sceneToBeLoaded.Started)
                 {
                     _sceneToBeLoaded.Start();
@@ -96,55 +115,77 @@ namespace PBG.Core
             UIController.InitControllers(this);
         }
 
+        public void Calls(ScriptCall[] calls)
+        {
+            for (int i = 0; i < calls.Length; i++)
+                calls[i].Invoke();
+        }
+
         public void Start()
         {
             InitComponents();
-            RootNode.Start();
+            Calls(OnStart);
+            OnStart = [];
         }
 
         public void Awake()
         {
-            RootNode.Awake();
+            Calls(OnAwake);
+            OnAwake = [];
         }
 
         public void Resize()
         {
-            RootNode.Resize();
+            Calls(OnResize);
             ShouldResize = false;
         }
-        public void FixedUpdate() => RootNode.FixedUpdate();
+        public void FixedUpdate() => Calls(OnFixedUpdate);
         public void Update()
         {
-            if (PendingList.Count > 0)
+            if (AddedScripts)
             {
-                for (int i = 0; i < PendingList.Count; i++)
-                {
-                    var pending = PendingList[i];
-                    pending.InitPendingComponents();
-                }
+                InitScripts();
 
                 Start();
                 Awake();
 
-                PendingList = [];
+                AddedScripts = false;
             }
 
             UIController.HandleInputs(this);
             
-            RootNode.Update();
+            Calls(OnUpdate);
         }
         public void LateUpdate()
         {
-            RootNode.LateUpdate();
+            Calls(OnLateUpdate);
         }
         public void Render()
         {
-            RootNode.Render();
+            Calls(OnRender);
             GFX.Viewport();
         }
 
-        public void Exit() => RootNode.Exit();
-        public void Dispose() => RootNode.Dispose();
+        public void Exit() => Calls(OnExit);
+        public void Dispose() => Calls(OnDispose);
+
+        public void InitScripts()
+        {
+            ScriptInfo info = new();
+            RootNode.InitPendingComponents(info);
+
+            OnStart       = [..info.OnStart];
+            OnAwake       = [..info.OnAwake];
+            OnResize      = [..info.OnResize];
+            OnFixedUpdate = [..info.OnFixedUpdate];
+            OnUpdate      = [..info.OnUpdate];
+            OnLateUpdate  = [..info.OnLateUpdate];
+            OnRender      = [..info.OnRender];
+            OnExit        = [..info.OnExit];
+            OnDispose     = [..info.OnDispose];
+
+            info.Clear();
+        }
 
         public static void ResizeAll()
         {

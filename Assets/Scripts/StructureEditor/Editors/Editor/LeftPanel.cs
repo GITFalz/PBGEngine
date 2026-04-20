@@ -73,19 +73,18 @@ public partial class StructureEditor
         public void Save() => StructureLoader.Save(_name, editor.BoundingBoxes);
 
         public override UIElementBase Script() =>
-        new UIVCol(Class(w_full_minus_[2], h_full, blank_full_g_[20], hidden), Sub([
-            new UIVScroll(Class(w_full, h_minus_[40f, 5], spacing_[5], mask_children), [
-                new UICol(Class(w_full_minus_[10], top_center, h_[25], top_[5], blank_sharp_g_[10]), Sub(
-                    newField("", Class(mc_[20], middle_left, left_[5]), ref StructureNameField)
-                )),
-                new UICol(Class(w_full_minus_[10], top_center, h_[25], top_[5]), Sub(
-                    new UICol(Class(h_[25], w_half_minus_[2], blank_sharp_g_[25]), 
-                    OnClickCol(_ => Save()),
-                    Sub(
-                        new UIText("Save", Class(middle_center))
-                    )),
-                    new UICol(Class(h_[25], w_half_minus_[2], blank_sharp_g_[25], top_right), 
-                    OnClickCol(_ => {
+        new UIVCol(w_full_minus_[2], h_full, blank_full_g_[20], hidden)[
+            new UIVScroll(w_full, h_minus_[40f, 5], spacing_[5], mask_children)[
+                new UICol(w_full_minus_[10], top_center, h_[25], top_[5], blank_sharp_g_[10])[
+                    new UIField("", mc_[20], middle_left, left_[5]).Ref(ref StructureNameField)
+                ],
+                new UICol(w_full_minus_[10], top_center, h_[25], top_[5])[
+                    new UICol(h_[25], w_half_minus_[2], blank_sharp_g_[25])
+                    .OnClick(_ => Save())[
+                        new UIText("Save", middle_center)
+                    ],
+                    new UICol(h_[25], w_half_minus_[2], blank_sharp_g_[25], top_right)
+                    .OnClick(_ => {
                         if (StructureLoader.Load(_path, out var info) && info.StructureBoundingBoxes.Count > 0)
                         {
                             editor.BoundingBoxes = info.StructureBoundingBoxes;
@@ -95,28 +94,25 @@ public partial class StructureEditor
                             editor.LeftUIPanel.Position = editor.SelectedBoundingBox.SavePosition;
                             editor.LoadSelectedBoundingBox();
                         }
-                    }),
-                    Sub(
-                        new UIText("Load", Class(middle_center))
-                    ))
-                )),
-                new UIVScroll(Class(w_full_minus_[10], top_center, h_[300], blank_sharp_g_[10], mask_children), Sub([
-                    
-                ]))
-            ]),
-            new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-            new UIVScroll(Class(w_full, h_minus_[60f, 7], mask_children), [
-                new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("STRUCTURES", Class(fs_[1.2f], middle_left)),
-                        new UICol(Class(w_[25], h_[25], middle_right, right_[30]), [
-                            new UIImg(Class(w_full, h_full, icon_[22], bg_white), OnClickImg(img => {
+                    })[
+                        new UIText("Load", middle_center)
+                    ]
+                ],
+                new UIVScroll(w_full_minus_[10], top_center, h_[300], blank_sharp_g_[10], mask_children)
+            ],
+            new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+            new UIVScroll(w_full, h_minus_[60f, 7], mask_children)[
+                new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("STRUCTURES", fs_[1.2f], middle_left),
+                        new UICol(w_[25], h_[25], middle_right, right_[30])[
+                            new UIImg(w_full, h_full, icon_[22], bg_white).OnClick(img => {
                                 editor.ShowBoundingBoxes = !editor.ShowBoundingBoxes;
                                 img.UpdateIconIndex(editor.ShowBoundingBoxes ? 22 : 23);
-                            }))  
-                        ]),
-                        new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                            new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => {
+                            })  
+                        ],
+                        new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                            new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => {
                                 string name = "Bounding Box";
                                 HashSet<string> names = [];
                                 for (int i = 0; i < editor.BoundingBoxes.Count; i++)
@@ -140,34 +136,34 @@ public partial class StructureEditor
                                 UIController.AddElement(button);
                                 editor.BoundingBoxes.Add(box);
                                 Select(box);
-                            }))
-                        ))
-                    )),
-                    newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                        ..Foreach(editor.BoundingBoxes, BoundingBoxButton)
-                    ]), ref BoundingBoxPanel)
-                ])),
-                new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("Settings", Class(fs_[1.2f], middle_left))
-                    )),
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("Name", Class(fs_[1f], middle_left))
-                    )),
-                    new UICol(Class(w_full_minus_[10], h_[25], blank_sharp_g_[10], top_center), Sub(
-                        newField("Name", Class(mc_[20], middle_left, left_[5]), OnTextChange(f => {
+                            })
+                        ]
+                    ],
+                    new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5])[
+                        Foreach(editor.BoundingBoxes, BoundingBoxButton)
+                    ].Ref(ref BoundingBoxPanel)
+                ],
+                new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                new UIVCol(w_full, grow_children, top_[5])[
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("Settings", fs_[1.2f], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("Name", fs_[1f], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[25], blank_sharp_g_[10], top_center)[
+                        new UIField("Name", mc_[20], middle_left, left_[5]).OnTextChange(f => {
                             var text = editor.SelectedBoundingBox?.Element?.QueryElement<UIText>();
                             if (text != null && editor.SelectedBoundingBox != null)
                             {
                                 text.UpdateText(f.GetText());
                                 editor.SelectedBoundingBox.Name = f.GetText();
                             }
-                        }), ref BoundingBoxNameField)
-                    )),
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("Is Core?", Class(fs_[1f], middle_left)),
-                        newImg(Class(w_[20], h_[20], blank_sharp_g_[10], middle_right), OnClickImg(i => {
+                        }).Ref(ref BoundingBoxNameField)
+                    ],
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("Is Core?", fs_[1f], middle_left),
+                        new UIImg(w_[20], h_[20], blank_sharp_g_[10], middle_right).OnClick(i => {
                             if (editor.SelectedBoundingBox == null)
                                 return;
                                 
@@ -178,93 +174,88 @@ public partial class StructureEditor
                             }
                             editor.SelectedBoundingBox.Core = !editor.SelectedBoundingBox.Core;
                             i.UpdateColor(new Vector4(new Vector3(editor.SelectedBoundingBox.Core ? 0.3f : 0.1f), 1f));
-                        }), ref IsCoreButton)
-                    )),
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("Scale", Class(fs_[1f], middle_left))
-                    )),
-                    new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("X", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeXField)
-                            )),
-                            new ChangeElement(editor, SizeXField, 1, int.MaxValue, () => {})
-                        )),
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("Y", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeYField)
-                            )),
-                            new ChangeElement(editor, SizeYField, 1, int.MaxValue, () => {})
-                        )),
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("Z", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeZField)
-                            )),
-                            new ChangeElement(editor, SizeZField, 1, int.MaxValue, () => {})
-                        ))
-                    )),
-                    new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                        new UIText("Position", Class(fs_[1f], middle_left))
-                    )),
-                    new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("X", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionXField)
-                            )),
-                            new ChangeElement(editor, PositionXField, int.MinValue, int.MaxValue, () => {})
-                        )),
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("Y", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionYField)
-                            )),
-                            new ChangeElement(editor, PositionYField, int.MinValue, int.MaxValue, () => {})
-                        )),
-                        new UICol(Class(w_full, h_[25]), Sub(
-                            new UIText("Z", Class(middle_left, fs_[1.2f])),
-                            new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionZField)
-                            )),
-                            new ChangeElement(editor, PositionZField, int.MinValue, int.MaxValue, () => {})
-                        ))
-                    ))
-                ])),
-                new UICol(Class(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25]), 
-                OnClickCol(_ => editor.OpenScript()),
-                Sub(
-                    new UIText("Script", Class(middle_center))
-                )),
-                new UICol(Class(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25]), 
-                OnClickCol(_ => editor.GenerateStructure()),
-                Sub(
-                    new UIText("Generate", Class(middle_center))
-                )),
-                new UICol(Class(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25]), 
-                OnClickCol(_ => editor.ClearTerrain()),
-                Sub(
-                    new UIText("Clear Terrain", Class(middle_center))
-                )),
-                new UICol(Class(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25]), 
-                OnClickCol(_ => editor.GenerateTerrain()),
-                Sub(
-                    new UIText("Generate Terrain", Class(middle_center))
-                ))
-            ])
-        ]));
+                        }).Ref(ref IsCoreButton)
+                    ],
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("Scale", fs_[1f], middle_left)
+                    ],
+                    new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                        new UICol(w_full, h_[25])[
+                            new UIText("X", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeXField)
+                            ],
+                            ChangeElement(editor, SizeXField, 1, int.MaxValue, () => {})
+                        ],
+                        new UICol(w_full, h_[25])[
+                            new UIText("Y", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeYField)
+                            ],
+                            ChangeElement(editor, SizeYField, 1, int.MaxValue, () => {})
+                        ],
+                        new UICol(w_full, h_[25])[
+                            new UIText("Z", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeZField)
+                            ],
+                            ChangeElement(editor, SizeZField, 1, int.MaxValue, () => {})
+                        ]
+                    ],
+                    new UICol(w_full_minus_[10], h_[25], top_center)[
+                        new UIText("Position", fs_[1f], middle_left)
+                    ],
+                    new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                        new UICol(w_full, h_[25])[
+                            new UIText("X", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionXField)
+                            ],
+                            ChangeElement(editor, PositionXField, int.MinValue, int.MaxValue, () => {})
+                        ],
+                        new UICol(w_full, h_[25])[
+                            new UIText("Y", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionYField)
+                            ],
+                            ChangeElement(editor, PositionYField, int.MinValue, int.MaxValue, () => {})
+                        ],
+                        new UICol(w_full, h_[25])[
+                            new UIText("Z", middle_left, fs_[1.2f]),
+                            new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionZField)
+                            ],
+                            ChangeElement(editor, PositionZField, int.MinValue, int.MaxValue, () => {})
+                        ]
+                    ]
+                ],
+                new UICol(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25])
+                .OnClick(_ => editor.OpenScript())[
+                    new UIText("Script", middle_center)
+                ],
+                new UICol(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25])
+                .OnClick(_ => editor.GenerateStructure())[
+                    new UIText("Generate", middle_center)
+                ],
+                new UICol(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25])
+                .OnClick(_ => editor.ClearTerrain())[
+                    new UIText("Clear Terrain", middle_center)
+                ],
+                new UICol(h_[25], w_full, top_[5], top_center, blank_sharp_g_[25])
+                .OnClick(_ => editor.GenerateTerrain())[
+                    new UIText("Generate Terrain", middle_center)
+                ]
+            ]
+        ];
 
         private UIElementBase BoundingBoxButton(StructureData box) 
         {
-            var col = new UICol(Class(w_full_minus_[10], h_[25], top_center, blank_sharp, rgba_[0.25f, 0.25f, 0.25f, box == editor.SelectedBoundingBox ? 1 : 0]), 
-            OnClickCol(_ => Select(box)),
-            Sub(
-                new UIText(box.Name, Class(mc_[20], middle_left, left_[5])),
-                new UIImg(Class(icon_[27], w_[20], h_[20], middle_right, right_[30], bg_white), OnClickImg(_ => editor.SaveSelectedBoundingBox())),
-                new UIImg(Class(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white), OnClickImg(_ => editor.DeleteBoundingBox(box)))
-            ));
+            var col = new UICol(w_full_minus_[10], h_[25], top_center, blank_sharp, rgba_[0.25f, 0.25f, 0.25f, box == editor.SelectedBoundingBox ? 1 : 0]) 
+            .OnClick(_ => Select(box))[
+                new UIText(box.Name, mc_[20], middle_left, left_[5]),
+                new UIImg(icon_[27], w_[20], h_[20], middle_right, right_[30], bg_white).OnClick(_ => editor.SaveSelectedBoundingBox()),
+                new UIImg(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white).OnClick(_ => editor.DeleteBoundingBox(box))
+            ];
             box.Element = col;
             return col;
         }

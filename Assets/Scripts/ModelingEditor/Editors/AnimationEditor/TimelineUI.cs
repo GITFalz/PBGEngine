@@ -3,7 +3,7 @@ using PBG.Data;
 using PBG.MathLibrary;
 using PBG.UI;
 using PBG.UI.Creator;
-using Silk.NET.Input;
+
 using static PBG.UI.Styles;
 
 public class TimelineUI(
@@ -40,23 +40,21 @@ public class TimelineUI(
     public List<UIElementBase> SelectedKeyframeButtons = [];
 
     public override UIElementBase Script() =>
-    new UICol(Class(w_full_minus_[400], h_[200], max_h_full_minus_[50], min_h_[100], bottom_[50], bottom_left, border_ui_[0, 2, 0, 0], border_color_g_[BASE_BORDER], blank_full_g_[BASE_BACKGROUND]),
-    OnClick<UICol>(_ => Editor.Editor.ClickedMenu = true),
-    Sub(
-        new UICol(Class(w_[30], h_[20], blank_sharp_g_[BASE_BORDER], bottom_[10], top_center), Sub(
-            new UICol(Class(w_[26], h_[16], blank_sharp_g_[BASE_BACKGROUND], middle_center),
-            OnHold<UICol>(ScaleTimeline),
-            OnClick<UICol>(_ => Element.Height.Value = Mathf.Clampy(Element.Height.Value, 100, Game.Height - 50)),
-            Sub(
-                new UIText("=", Class(mc_[1], fs_[1], middle_center))
-            ))
-        )),
-        new UICol(Class(w_full, h_full, mask_children), Sub(
-            new UIVCol(Class(w_full, h_full), Sub(
-                new UIHCol(Class(w_full, h_[50], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER], spacing_[5]), Sub(
-                    new UICol(Class(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], left_[15], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnHoverEnter<UICol>(HoverEnter), OnHoverExit<UICol>(HoverExit),
-                    OnClick<UICol>(_ =>
+    new UICol(w_full_minus_[400], h_[200], max_h_full_minus_[50], min_h_[100], bottom_[50], bottom_left, border_ui_[0, 2, 0, 0], border_color_g_[BASE_BORDER], blank_full_g_[BASE_BACKGROUND])
+    .OnClick(_ => Editor.Editor.ClickedMenu = true)[
+        new UICol(w_[30], h_[20], blank_sharp_g_[BASE_BORDER], bottom_[10], top_center)[
+            new UICol(w_[26], h_[16], blank_sharp_g_[BASE_BACKGROUND], middle_center)
+            .OnHold(ScaleTimeline)
+            .OnClick(_ => Element.Height.Value = Mathf.Clampy(Element.Height.Value, 100, Game.Height - 50))[
+                new UIText("=", mc_[1], fs_[1], middle_center)
+            ]
+        ],
+        new UICol(w_full, h_full, mask_children)[
+            new UIVCol(w_full, h_full)[
+                new UIHCol(w_full, h_[50], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER], spacing_[5])[
+                    new UICol(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], left_[15], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnHoverEnter(HoverEnter).OnHoverExit(HoverExit)
+                    .OnClick(_ =>
                     {
                         var model = ModelManager.SelectedModel;
                         if (model?.Animation != null && !model.Animate)
@@ -64,13 +62,12 @@ public class TimelineUI(
                             Editor.Playing = true;
                             model.Animate = true;
                         }
-                    }),
-                    Sub(
-                        new UIImg(Class(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[80], slice_null, rgba_[1, 1, 1, 1]))
-                    )),
-                    new UICol(Class(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnHoverEnter<UICol>(HoverEnter), OnHoverExit<UICol>(HoverExit),
-                    OnClick<UICol>(_ =>
+                    })[
+                        new UIImg(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[80], slice_null, rgba_[1, 1, 1, 1])
+                    ],
+                    new UICol(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnHoverEnter(HoverEnter).OnHoverExit(HoverExit)
+                    .OnClick(_ =>
                     {
                         var model = ModelManager.SelectedModel;
                         if (model?.Animation != null && model.Animate)
@@ -78,54 +75,49 @@ public class TimelineUI(
                             Editor.Playing = false;
                             model.Animate = false;
                         }
-                    }),
-                    Sub(
-                        new UIImg(Class(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[81], slice_null, rgba_[1, 1, 1, 1]))
-                    )),
-                    new UICol(Class(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnHoverEnter<UICol>(HoverEnter), OnHoverExit<UICol>(HoverExit), Sub(
-                        new UIImg(Class(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[82], slice_null, rgba_[1, 1, 1, 1]))
-                    )),
-                    new UICol(Class(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnHoverEnter<UICol>(HoverEnter), OnHoverExit<UICol>(HoverExit),
-                    OnClick<UICol>(_ => MarkerPosition((Editor.CurrentFrame - 1) * TimelineCellSize - 4)),
-                    Sub(
-                        new UIImg(Class(w_full_minus_[12], h_full_minus_[12], middle_center, texture_[83], slice_null, rgba_[1, 1, 1, 1]))
-                    )),
-                    new UICol(Class(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout),
-                    OnHoverEnter<UICol>(HoverEnter), OnHoverExit<UICol>(HoverExit),
-                    OnClick<UICol>(_ => MarkerPosition((Editor.CurrentFrame + 1) * TimelineCellSize - 4)),
-                    Sub(
-                        new UIImg(Class(w_full_minus_[12], h_full_minus_[12], middle_center, texture_[84], slice_null, rgba_[1, 1, 1, 1]))
-                    )),
-                    new UICol(Class(w_[22], h_full), Sub(new UIImg(Class(w_[2], h_[30], middle_center, blank_full_g_[BASE_BORDER])))),
-                    new UICol(Class(w_[140], h_[30], middle_left, border_ui_[2, 2, 2, 2], blank_full_g_[10], border_color_g_[BASE_BORDER]), Sub(
-                        new UIText("Frame:", Class(mc_[6], fs_[1], middle_left, left_[7])),
-                        newField("0", Class(mc_[10], fs_[1f], middle_left, left_[56]),
-                        OnTextChange(f => MarkerPosition(f.GetInt() * TimelineCellSize - 4f))
-                        , ref FrameDisplay)
-                    )),
-                    new UICol(Class(w_[140], h_[30], middle_left, border_ui_[2, 2, 2, 2], blank_full_g_[10], border_color_g_[BASE_BORDER]), Sub(
-                        newText("00:00.00", Class(mc_[15], fs_[1f], middle_center, text_align_center), ref TimeDisplay)
-                    ))
-                )),
-                new UICol(Class(w_full, h_full_minus_[50]), Sub(
-                    new UICol(Class(w_[200], h_full), Sub(
-                        new UICol(Class(w_full, h_[30], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER]), Sub(
-                            new UIText("BONE HIERARCHY", Class(mc_[14], fs_[1.2f], middle_center))
-                        )),
-                        newVScroll(Class(w_full, h_full_minus_[30], mask_children, top_[30], ignore_invisible), Sub(
-
-                        ), ref BoneHierarchy)
-                    )),
-                    new UICol(Class(left_[200], w_full_minus_[200], h_full, border_ui_[2, 0, 0, 0], border_color_g_[BASE_BORDER]), Sub(
-                        new UICol(Class(w_full, h_[30], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER]), Sub(
-                            new UICol(Class(w_[200], h_full, border_ui_[0, 0, 2, 0], border_color_g_[BASE_BORDER]), Sub(
-                                new UIText("PROPERTIES", Class(mc_[10], fs_[1.2f], middle_center))
-                            )),
-                            newCol(Class(w_full_minus_[200], left_[200], h_full),
-                            OnClick<UICol>(SetMarker),
-                            OnHover<UICol>(_ =>
+                    })[
+                        new UIImg(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[81], slice_null, rgba_[1, 1, 1, 1])
+                    ],
+                    new UICol(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnHoverEnter(HoverEnter).OnHoverExit(HoverExit)[
+                        new UIImg(w_full_minus_[8], h_full_minus_[8], middle_center, texture_[82], slice_null, rgba_[1, 1, 1, 1])
+                    ],
+                    new UICol(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnHoverEnter(HoverEnter).OnHoverExit(HoverExit)
+                    .OnClick(_ => MarkerPosition((Editor.CurrentFrame - 1) * TimelineCellSize - 4))[
+                        new UIImg(w_full_minus_[12], h_full_minus_[12], middle_center, texture_[83], slice_null, rgba_[1, 1, 1, 1])
+                    ],
+                    new UICol(w_[30], h_[30], border_ui_[2, 2, 2, 2], blank_full_g_[BASE_BACKGROUND], border_color_g_[BASE_BORDER], middle_left, hover_scale_[1.2f], hover_scale_duration_[0.25f], hover_scale_easeout)
+                    .OnHoverEnter(HoverEnter).OnHoverExit(HoverExit)
+                    .OnClick(_ => MarkerPosition((Editor.CurrentFrame + 1) * TimelineCellSize - 4))[
+                        new UIImg(w_full_minus_[12], h_full_minus_[12], middle_center, texture_[84], slice_null, rgba_[1, 1, 1, 1])
+                    ],
+                    new UICol(w_[22], h_full)[new UIImg(w_[2], h_[30], middle_center, blank_full_g_[BASE_BORDER])],
+                    new UICol(w_[140], h_[30], middle_left, border_ui_[2, 2, 2, 2], blank_full_g_[10], border_color_g_[BASE_BORDER])[
+                        new UIText("Frame:", mc_[6], fs_[1], middle_left, left_[7]),
+                        new UIField("0", mc_[10], fs_[1f], middle_left, left_[56])
+                        .OnTextChange(f => MarkerPosition(f.GetInt() * TimelineCellSize - 4f))
+                        .Ref(ref FrameDisplay)
+                    ],
+                    new UICol(w_[140], h_[30], middle_left, border_ui_[2, 2, 2, 2], blank_full_g_[10], border_color_g_[BASE_BORDER])[
+                        new UIText("00:00.00", mc_[15], fs_[1f], middle_center, text_align_center).Ref(ref TimeDisplay)
+                    ]
+                ],
+                new UICol(w_full, h_full_minus_[50])[
+                    new UICol(w_[200], h_full)[
+                        new UICol(w_full, h_[30], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER])[
+                            new UIText("BONE HIERARCHY", mc_[14], fs_[1.2f], middle_center)
+                        ],
+                        new UIVScroll(w_full, h_full_minus_[30], mask_children, top_[30], ignore_invisible).Ref(ref BoneHierarchy)
+                    ],
+                    new UICol(left_[200], w_full_minus_[200], h_full, border_ui_[2, 0, 0, 0], border_color_g_[BASE_BORDER])[
+                        new UICol(w_full, h_[30], border_ui_[0, 0, 0, 2], border_color_g_[BASE_BORDER])[
+                            new UICol(w_[200], h_full, border_ui_[0, 0, 2, 0], border_color_g_[BASE_BORDER])[
+                                new UIText("PROPERTIES", mc_[10], fs_[1.2f], middle_center)
+                            ],
+                            new UICol(w_full_minus_[200], left_[200], h_full)
+                            .OnClick(SetMarker)
+                            .OnHover(_ =>
                             {
                                 float scrollDelta = Input.GetMouseScrollDelta().Y;
                                 if (scrollDelta == 0)
@@ -137,14 +129,14 @@ public class TimelineUI(
                                     TimelineZoom -= scrollDelta * 0.02f * TimelineZoom;
                                     TimelineZoom = Mathf.Clampy(TimelineZoom, 0.2f, 2f);
 
-                                    KeyframeCollection.ForeachChildren(b =>
+                                    foreach (var b in KeyframeCollection.ChildElements)
                                     {
                                         if (b.Dataset.TryGetValue("keyframe", out var obj) && obj is IndividualKeyframe keyframe)
                                         {
                                             float width = TimelineCellSize;
                                             b.BaseOffset.X = keyframe.Index * width + (width - 20) * 0.5f;
                                         }
-                                    });
+                                    }
                                     KeyframeCollection.ApplyChanges(UIChange.Transform);
                                 }
                                 else
@@ -152,19 +144,17 @@ public class TimelineUI(
                                     // Scroll sideways
                                     SetTimelineX(Editor.TimelinePosition.X - scrollDelta * 10f);
                                 }
-                            }),
-                            Sub(
-                                new UICol(Class(data_["scroll", 0f], w_[40], h_[20], depth_[10], blank_sharp_g_[BASE_BUTTON], border_ui_[2, 2, 2, 2], border_color_g_[10], top_center, bottom_[10]),
-                                OnHold<UICol>(ScrollTimeline),
-                                OnRelease<UICol>(c => { c.BaseOffset.X = 0; c.ApplyChanges(UIChange.Transform); c.Dataset["scroll"] = 0f; }),
-                                Sub(
-                                    new UIText("<=>", Class(mc_[3], fs_[1], middle_center))
-                                ))
-                            ), ref TimelineCollection)
-                        )),
-                        new UICol(Class(w_full, h_full_minus_[30], top_[30]), Sub(
-                            newVScroll(Class(w_[200], h_full, border_ui_[0, 0, 2, 0], border_color_g_[BASE_BORDER], mask_children),
-                            OnHover<UIVScroll>(c =>
+                            })[
+                                new UICol(data_["scroll", 0f], w_[40], h_[20], depth_[10], blank_sharp_g_[BASE_BUTTON], border_ui_[2, 2, 2, 2], border_color_g_[10], top_center, bottom_[10])
+                                .OnHold(ScrollTimeline)
+                                .OnRelease(c => { c.BaseOffset.X = 0; c.ApplyChanges(UIChange.Transform); c.Dataset["scroll"] = 0f; })[
+                                    new UIText("<=>", mc_[3], fs_[1], middle_center)
+                                ]
+                            ].Ref(ref TimelineCollection)
+                        ],
+                        new UICol(w_full, h_full_minus_[30], top_[30])[
+                            new UIVScroll(w_[200], h_full, border_ui_[0, 0, 2, 0], border_color_g_[BASE_BORDER], mask_children)
+                            .OnHover(c =>
                             {
                                 float oldY = Editor.TimelinePosition.Y;
                                 Editor.TimelinePosition.Y = c.ScrollPosition;
@@ -173,30 +163,25 @@ public class TimelineUI(
                                     KeyframeCollection.BaseOffset.Y = -c.ScrollPosition;
                                     KeyframeCollection.ApplyChanges(UIChange.Transform);
                                 }
-                            }),
-                            Sub(
-
-                            ), ref BoneCollection),
-                            new UICol(Class(w_full_minus_[200], left_[200], h_full, mask_children, blank_full_g_[15]), Sub(
-                                newCol(Class(), Sub(), ref KeyframeCollection)
-                            )),
-                            new UICol(Class(w_full_minus_[200], left_[200], h_full_plus_[30], bottom_[30], mask_children), Sub(
-                                newCol(Class(w_[8], h_full, data_["pos", 0], right_[4], depth_[3]),
-                                
-                                Sub(
-                                    new UIButton(Class(w_full, h_[30]),
-                                    OnClick<UIButton>(b => { if (b.ParentElement != null) b.ParentElement.Dataset["pos"] = b.ParentElement.BaseOffset.X; }),
-                                    OnHold<UIButton>(b => { if (b.ParentElement != null) MoveMarker(b.ParentElement); })),
-                                    new UIImg(Class(w_[20], h_[20], rgb_[1, 0, 0], texture_[85], slice_null, top_center, bottom_[6])),
-                                    new UIImg(Class(w_[2], h_full, top_center, rgb_[1, 0, 0], blank_full))
-                                ), ref Marker)
-                            ))
-                        ))
-                    ))
-                ))
-            ))
-        ))
-    ));
+                            }).Ref(ref BoneCollection),
+                            new UICol(w_full_minus_[200], left_[200], h_full, mask_children, blank_full_g_[15])[
+                                new UICol().Ref(ref KeyframeCollection)
+                            ],
+                            new UICol(w_full_minus_[200], left_[200], h_full_plus_[30], bottom_[30], mask_children)[
+                                new UICol(w_[8], h_full, data_["pos", 0], right_[4], depth_[3])[
+                                    new UIButton(w_full, h_[30])
+                                    .OnClick(b => { if (b.ParentElement != null) b.ParentElement.Dataset["pos"] = b.ParentElement.BaseOffset.X; })
+                                    .OnHold(b => { if (b.ParentElement != null) MoveMarker(b.ParentElement); }),
+                                    new UIImg(w_[20], h_[20], rgb_[1, 0, 0], texture_[85], slice_null, top_center, bottom_[6]),
+                                    new UIImg(w_[2], h_full, top_center, rgb_[1, 0, 0], blank_full)
+                                ].Ref(ref Marker)
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ];
 
     public void Init(Rig rig)
     {
@@ -216,12 +201,12 @@ public class TimelineUI(
             BoneIndices.Add(bone, i);
             var children = new UIVCol(w_full, grow_children, not_toggle_old_invisible, ignore_invisible);
             uiHierarchy[bone] = children;
-            var col = new UIHCol(Class(w_full, h_[30], left_[indent * 15 + 5]), Sub(
-                new UICol(Class(w_[30], h_[30], data_["visible", true]), OnClick<UICol>(c => ToggleBoneChildren(c, children)), Sub(
-                    new UIImg(Class(w_[16], h_[16], middle_center, icon_[1], slice_null, rgba_[1, 1, 1, 1]))
-                )),
-                new UIText(bone.Name, Class(mc_[bone.Name.Length], fs_[1f], middle_left))
-            ));
+            var col = new UIHCol(w_full, h_[30], left_[indent * 15 + 5])[
+                new UICol(w_[30], h_[30], data_["visible", true]).OnClick(c => ToggleBoneChildren(c, children))[
+                    new UIImg(w_[16], h_[16], middle_center, icon_[1], slice_null, rgba_[1, 1, 1, 1])
+                ],
+                new UIText(bone.Name, mc_[bone.Name.Length], fs_[1f], middle_left)
+            ];
             if (bone is ChildBone child && uiHierarchy.TryGetValue(child.Parent, out var pcol))
             {
                 pcol.AddElements(col, children);
@@ -231,27 +216,27 @@ public class TimelineUI(
                 rootBoneElement = col;
                 rootBoneChildren = children;
             }
-            var nameCol = new UICol(Class(w_full_minus_[4], top_center, h_[30], blank_full_g_[19], border_ui_[0, keyframeLines.Count == 0 ? 0 : 1, 0, 1], border_color_g_[BASE_BORDER]), Sub(
-                new UIText(bone.Name, Class(mc_[bone.Name.Length], middle_left, left_[7])))
-            );
-            var bonePosition = new UICol(Class(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER]), Sub(
-                new UICol(Class(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[PositionColor], middle_left, left_[15]), Sub(
-                    new UIText("P", Class(mc_[1], fs_[0.9f], middle_center, rgba_v4_[PositionColor]))
-                )),
-                new UIText("Position", Class(mc_[8], middle_left, left_[40])))
-            );
-            var boneRotation = new UICol(Class(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER]), Sub(
-                new UICol(Class(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[RotationColor], middle_left, left_[15]), Sub(
-                    new UIText("R", Class(mc_[1], fs_[0.9f], middle_center, rgba_v4_[RotationColor]))
-                )),
-                new UIText("Rotation", Class(mc_[8], middle_left, left_[40])))
-            );
-            var boneScale = new UICol(Class(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER]), Sub(
-                new UICol(Class(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[ScaleColor], middle_left, left_[15]), Sub(
-                    new UIText("S", Class(mc_[1], fs_[0.9f], middle_center, rgba_v4_[ScaleColor]))
-                )),
-                new UIText("Scale", Class(mc_[5], middle_left, left_[40])))
-            );
+            var nameCol = new UICol(w_full_minus_[4], top_center, h_[30], blank_full_g_[19], border_ui_[0, keyframeLines.Count == 0 ? 0 : 1, 0, 1], border_color_g_[BASE_BORDER])[
+                new UIText(bone.Name, mc_[bone.Name.Length], middle_left, left_[7])]
+            ;
+            var bonePosition = new UICol(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER])[
+                new UICol(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[PositionColor], middle_left, left_[15])[
+                    new UIText("P", mc_[1], fs_[0.9f], middle_center, rgba_v4_[PositionColor])
+                ],
+                new UIText("Position", mc_[8], middle_left, left_[40])]
+            ;
+            var boneRotation = new UICol(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER])[
+                new UICol(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[RotationColor], middle_left, left_[15])[
+                    new UIText("R", mc_[1], fs_[0.9f], middle_center, rgba_v4_[RotationColor])
+                ],
+                new UIText("Rotation", mc_[8], middle_left, left_[40])]
+            ;
+            var boneScale = new UICol(w_full_minus_[4], top_center, h_[30], blank_full_g_[17], border_ui_[0, 1, 0, 1], border_color_g_[BASE_BORDER])[
+                new UICol(h_[20], w_[20], border_ui_[2, 2, 2, 2], border_color_[ScaleColor], middle_left, left_[15])[
+                    new UIText("S", mc_[1], fs_[0.9f], middle_center, rgba_v4_[ScaleColor])
+                ],
+                new UIText("Scale", mc_[5], middle_left, left_[40])]
+            ;
 
             bones.AddRange(nameCol, bonePosition, boneRotation, boneScale);
             keyframeLines.AddRange(0, 1, 1, 1);
@@ -448,8 +433,8 @@ public class TimelineUI(
             return null;
         }
         float width = TimelineCellSize;
-        return new UICol("keyframe-" + keyframe.Index, Class(w_[20], h_[20], top_left, data_["oldP", 0], data_["color", color], data_["keyframe", keyframe], left_[frame * width + (width - 20) * 0.5f], texture_[65], top_[index * 120 + type * 30 + 35], slice_null, rgba_v4_[color], click_scale_[1.2f], click_scale_duration_[0.25f], click_scale_easeout),
-        OnClick<UICol>(c =>
+        return new UICol("keyframe-" + keyframe.Index, w_[20], h_[20], top_left, data_["oldP", 0], data_["color", color], data_["keyframe", keyframe], left_[frame * width + (width - 20) * 0.5f], texture_[65], top_[index * 120 + type * 30 + 35], slice_null, rgba_v4_[color], click_scale_[1.2f], click_scale_duration_[0.25f], click_scale_easeout)
+        .OnClick(c =>
         {
             float width = TimelineCellSize;
             c.Dataset["pos"] = c.BaseOffset.X - (width - 20) * 0.5f;
@@ -475,14 +460,14 @@ public class TimelineUI(
                 SelectedKeyframeButtons.Remove(c);
                 c.UpdateColor(color);
             }      
-        }),
-        OnHoverEnter<UICol>(c => c.UpdateColor(select)),
-        OnHoverExit<UICol>(c =>
+        })
+        .OnHoverEnter(c => c.UpdateColor(select))
+        .OnHoverExit(c =>
         {
             if (!SelectedKeyframes.ContainsKey(keyframe))
                 c.UpdateColor(color);
-        }),
-        OnHold<UICol>(c =>
+        })
+        .OnHold(c =>
         {
             Vector2 mouseDelta = Input.GetMouseDelta();
             if (mouseDelta == Vector2.Zero)
@@ -514,7 +499,6 @@ public class TimelineUI(
                 }
             }
             c.Dataset["oldP"] = index;
-        }),
-        Sub());
+        });
     }
 }

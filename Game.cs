@@ -1,17 +1,12 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using PBG.Core;
 using PBG.Data;
 using PBG.Files;
-using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Rendering;
 using PBG.Threads;
 using PBG.UI;
 using PBG.Voxel;
 using Silk.NET.Input;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace PBG;
 
@@ -67,15 +62,15 @@ public class Game : GameWindow
         //GraphicsContext.graphicsContext.window.FramesPerSecond = 20;
     }
 
-    public override void OnKeyDown(IKeyboard keyboard, Key key, int scanCode)
+    public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        Input.OnKeyDown(key);
-        UIController.InputField(key);
+        Input.OnKeyDown((Data.Key)key);
+        UIController.InputField((Data.Key)key);
     }
 
-    public override void OnKeyUp(IKeyboard keyboard, Key key, int scanCode)
+    public override void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        Input.OnKeyUp(key);
+        Input.OnKeyUp((Data.Key)key);
     }
     
     public override void OnKeyChar(IKeyboard keyboard, char c)
@@ -88,14 +83,14 @@ public class Game : GameWindow
         
     }
     
-    public override void OnMouseDown(IMouse mouse, MouseButton button)
+    public override void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        Input.OnMouseDown(button);
+        Input.OnMouseDown((Data.MouseButton)button);
     }
     
-    public override void OnMouseUp(IMouse mouse, MouseButton button)
+    public override void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        Input.OnMouseUp(button);
+        Input.OnMouseUp((Data.MouseButton)button);
     }
     
     public override void OnScroll(IMouse mouse, ScrollWheel scroll)
@@ -148,13 +143,7 @@ public class Game : GameWindow
         {
             Scene.CurrentlyLoadingScene = scene;
             scene.Load();
-
-            for (int i = 0; i < scene.PendingList.Count; i++)
-            {
-                var pending = scene.PendingList[i];
-                pending.InitPendingComponents();
-            }
-            scene.PendingList = [];
+            scene.InitScripts();
         }
         Scene.CurrentlyLoadingScene = null;
         // Load mods
@@ -211,7 +200,7 @@ public class Game : GameWindow
             float deltaTime = (float)(now - lastUpdateTime);
             lastUpdateTime = now;
 
-            Input.Update(Mouse);
+            Input.Update();
             GameTime.Update(deltaTime);
 
             Scene.CurrentScene?.Update();
@@ -236,7 +225,8 @@ public class Game : GameWindow
         Scene.CurrentScene?.Render();
 
         UIController.GlobalRender();
-        FBO.ResetAll();
+
+        Input.LateUpdate();
     }
 
     public override void OnUnload()
@@ -244,17 +234,17 @@ public class Game : GameWindow
         
     }
 
-    public static void SetCursorState(CursorMode cursorMode)
+    public static void SetCursorState(PBG.Data.CursorMode cursorMode)
     {
         Instance.CursorMode = cursorMode;
     }
 
-    public static CursorMode GetCursorState()
+    public static PBG.Data.CursorMode GetCursorState()
     {
         return Instance.CursorMode;
     }
 
-    public static bool IsCursorState(CursorMode cursorMode)
+    public static bool IsCursorState(PBG.Data.CursorMode cursorMode)
     {
         return Instance.CursorMode == cursorMode;
     }

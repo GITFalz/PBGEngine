@@ -58,9 +58,9 @@ namespace PBG.UI
         public Descriptor GetUiDescriptor()
         {
             var descriptor = UiShader.GetDescriptorSet();
-            descriptor.BindTextureArray(UiTexture, 3);
-            descriptor.BindTextureArray(IconTexture, 4);
-            descriptor.BindTextureArray(ItemTexture, 5);
+            descriptor.BindTextureArray(UiTexture, 4);
+            descriptor.BindTextureArray(IconTexture, 5);
+            descriptor.BindTextureArray(ItemTexture, 6);
             return descriptor;
         }
 

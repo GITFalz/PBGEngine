@@ -152,7 +152,7 @@ namespace PBG.Voxel
         public bool GenerateChunks = true;
 
         public bool AmbientOcclusion = true;
-        public bool RealtimeShadows = true;
+        public bool RealtimeShadows = false;
         public bool NeedsNeighborsToRender = true;
 
         private Vector3 _lightUp;
@@ -730,7 +730,7 @@ namespace PBG.Voxel
             GFX.Draw(3, 1, 0, 0);
             */
             
-            if (DataPool.Updated || Input.MouseDelta != Vector2.Zero || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
+            if (DataPool.Updated || Input.MouseMoved || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
             {
                 DataPool.Updated = false;
 

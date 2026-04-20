@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using PBG.Graphics;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
 
 public unsafe static class VRAMInfo
@@ -8,13 +9,13 @@ public unsafe static class VRAMInfo
     private static bool _started = false;
     private static PhysicalDevice _physicalDevice;
 
-    public static void Initialize()
+    public static void Initialize(VulkanInstance renderer)
     {
         if (_started)
             return;
 
         _started = true;
-        _physicalDevice = GraphicsContext.graphicsContext.physicalDevice;
+        _physicalDevice = renderer.VulkanDevice.PhysicalDevice;
 
         // check if extension is supported
         uint extCount;

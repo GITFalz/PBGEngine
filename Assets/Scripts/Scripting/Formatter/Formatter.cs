@@ -7,7 +7,7 @@ public class Formatter
 {
     public int LineIndex = 0;
     
-    public void Format(List<IUIText> texts)
+    public void Format(List<UIText> texts)
     {
         for (int i = 0; i < texts.Count; i++)
         {
@@ -17,8 +17,8 @@ public class Formatter
         }
     }
 
-    public void FormatLine(IUIText text) => FormatLine(text, text.GetText());
-    public void FormatLine(IUIText text, string line)
+    public void FormatLine(UIText text) => FormatLine(text, text.GetText());
+    public void FormatLine(UIText text, string line)
     {
         int trailingSpaces = line.TakeWhile(char.IsWhiteSpace).Count();
         line = line.Trim();
@@ -63,7 +63,7 @@ public class Formatter
         FormatTokens(text, tokens);
     }
 
-    public void FormatTokens(IUIText text, List<Token> tokens)
+    public void FormatTokens(UIText text, List<Token> tokens)
     {
         for (int i = 0; i < tokens.Count; i++)
         {

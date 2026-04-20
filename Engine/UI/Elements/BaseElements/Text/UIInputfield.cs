@@ -2,38 +2,51 @@ using System.Security.Principal;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.UI.Creator;
-using Silk.NET.Input;
+
+
 
 
 namespace PBG.UI
 {
-    public class UIField : UIField<UIField>
+    public class UIField : UIText
     {
         private bool _removeTriggered = false;
+        public bool IsActive => UIController.ActiveInputField == this;
 
-        private UIField(string text, string name, Class classes, params IEvent[] events) : base(text, classes.Styles, events)
-        {
-            Name = name;
-            Tag = UIElementTag.UIImage;
+        public UIField() : this("") {}
+        public UIField(string text) : base(text) 
+        { 
+            Name = "UIField"; 
+            Tag = UIElementTag.UIField; 
         }
 
-        // ORIGINAL PUBLIC CONSTRUCTORS
-        public UIField(params UIStyleData[] classes) : this("", "UIInputfield", new Class(classes), []) { }
-        public UIField(Class classes) : this("", "UIInputfield", classes, []) { }
-        public UIField(string text, params UIStyleData[] classes) : this(text, "UIInputfield", new Class(classes), []) { }
-        public UIField(string text, Class classes) : this(text, "UIInputfield", classes, []) { }
-        public UIField(string text, string name, params UIStyleData[] classes) : this(text, name, new Class(classes), []) { }
-        public UIField(string text, string name, Class classes) : this(text, name, classes, []) { }
+        public UIField(string text, params IStyleData[] styles) : this(text)
+        { 
+            Class(styles);
+        }
         
-        public UIField(string text, Class classes, Event<UIField> e1) : this(text, "UIInputfield", classes, e1) { }
-        public UIField(string text, Class classes, Event<UIField> e1, Event<UIField> e2) : this(text, "UIInputfield", classes, e1, e2) { }
-        public UIField(string text, Class classes, Event<UIField> e1, Event<UIField> e2, Event<UIField> e3) : this(text, "UIInputfield", classes, e1, e2, e3) { }
-        public UIField(string text, Class classes, Event<UIField> e1, Event<UIField> e2, Event<UIField> e3, Event<UIField> e4) : this(text, "UIInputfield", classes, e1, e2, e3, e4) { }
-        
-        public UIField(string text, string name, Class classes, Event<UIField> e1) : this(text, name, classes, [e1]) { }
-        public UIField(string text, string name, Class classes, Event<UIField> e1, Event<UIField> e2) : this(text, name, classes, [e1, e2]) { }
-        public UIField(string text, string name, Class classes, Event<UIField> e1, Event<UIField> e2, Event<UIField> e3) : this(text, name, classes, [e1, e2, e3]) { }
-        public UIField(string text, string name, Class classes, Event<UIField> e1, Event<UIField> e2, Event<UIField> e3, Event<UIField> e4) : this(text, name, classes, [e1, e2, e3, e4]) { }
+        public UIField Ref(ref UIField text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIField Out(out UIField text)
+        {
+            text = this;
+            return text;
+        }
+
+        public UIField Class(params IStyleData[] styles) => Style(this, styles);
+
+        public UIField OnHoverEnter(Action<UIField>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
+        public UIField OnHover(Action<UIField>? action)         { UIEventExtensions.OnHover(this, action); return this; }
+        public UIField OnClick(Action<UIField>? action)         { UIEventExtensions.OnClick(this, action); return this; }
+        public UIField OnHold(Action<UIField>? action)          { UIEventExtensions.OnHold(this, action); return this; }
+        public UIField OnRelease(Action<UIField>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
+        public UIField OnHoverExit(Action<UIField>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
+        public UIField OnTextChange(Action<UIField>? action)    { UIEventExtensions.OnTextChange(this, action); return this; }
+        public UIField OnTextEnter(Action<UIField>? action)     { UIEventExtensions.OnTextEnter(this, action); return this; }
 
         public override bool Test()
         {
@@ -60,14 +73,14 @@ namespace PBG.UI
         public UIField SetOnTextChange(Action<UIField>? action)
         {
             UIController?.SetAsInteractable(this, action != null);
-            OnTextChange = action;
+            _onTextChange = action;
             return this;
         }
 
         public UIField SetOnTextEnter(Action<UIField>? action)
         {
             UIController?.SetAsInteractable(this, action != null);
-            OnTextEnter = action;
+            _onTextEnter = action;
             return this;
         }
 
@@ -89,7 +102,7 @@ namespace PBG.UI
                 UIController?.TextMesh.SetCursor(this);
             }
             UpdateCharacters();
-            OnTextChange?.Invoke(this);
+            _onTextChange?.Invoke(this);
         }
 
         public void AddText(string text)
@@ -118,7 +131,7 @@ namespace PBG.UI
                 UIController?.TextMesh.SetCursor(this);
             }
             UpdateCharacters();
-            OnTextChange?.Invoke(this);
+            _onTextChange?.Invoke(this);
         }
 
         public void RemoveCharacter()
@@ -138,7 +151,7 @@ namespace PBG.UI
                 UIController?.TextMesh.SetCursor(this);
             }
             UpdateCharacters();
-            OnTextChange?.Invoke(this);
+            _onTextChange?.Invoke(this);
         }
 
         public void RemoveText(int start, int count, bool updateBuffers = true)
@@ -162,7 +175,7 @@ namespace PBG.UI
             if (updateBuffers)
             {
                 UpdateCharacters();
-                OnTextChange?.Invoke(this);
+                _onTextChange?.Invoke(this);
             }
         }
 
@@ -173,16 +186,11 @@ namespace PBG.UI
         }
 
         public override bool IsInteractable() => true;   
-    }
-    
-    public class UIField<TSelf> : UIText<UIField> where TSelf : UIField<TSelf>
-    {
+
         public PBG.UI.TextInputType TextType = PBG.UI.TextInputType.Any;
 
-        public Action<TSelf>? OnTextChange = null;
-        public Action<TSelf>? OnTextEnter = null;
-
-        public UIField(string text, UIStyleData[] classes, IEvent[] events) : base(text, classes, events) {}
+        public Action<UIField>? _onTextChange = null;
+        public Action<UIField>? _onTextEnter = null;
 
         public void SetTextType(PBG.UI.TextInputType textType)
         {

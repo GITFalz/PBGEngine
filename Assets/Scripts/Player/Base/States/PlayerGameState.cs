@@ -2,7 +2,7 @@ using PBG.Data;
 using PBG.MathLibrary;
 using PBG.Physics;
 using PBG.Voxel;
-using Silk.NET.Input;
+
 using CameraMode = PBG.Rendering.CameraMode;
 
 public class PlayerGameState : PlayerBaseState

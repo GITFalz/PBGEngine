@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
@@ -79,7 +80,9 @@ public unsafe class GPUBuffer<T> : GPUBufferBase where T : unmanaged
             HelperFunctions.MemCpyTo<T>(data, (byte*)_mapped + offsetInBytes, sizeInBytes, sizeInBytes);
         }
         else
+        {
             GFX.UpdateBuffer(data, Buffer, offsetInBytes, sizeInBytes);
+        }
     }
 
     public void UpdateSlice(T[] data, ulong offsetInBytes, ulong sizeInBytes)
@@ -112,17 +115,29 @@ public unsafe class GPUBuffer<T> : GPUBufferBase where T : unmanaged
             GFX.UpdateBufferRange(data, Buffer, offsetInBytes, sizeInBytes);
     }
 
-    public void Renew(T[] data, bool hostVisible = false)
+    public void Renew(T[] data, bool hostVisible)
     {
         Destroy();
         _settings.HostVisible = hostVisible;
         Create(data);
     }
 
-    public void Renew(uint count, bool hostVisible = false)
+    public void Renew(uint count, bool hostVisible)
     {
         Destroy();
         _settings.HostVisible = hostVisible;
+        Create(count);
+    }
+
+    public void Renew(T[] data)
+    {
+        Destroy();
+        Create(data);
+    }
+
+    public void Renew(uint count)
+    {
+        Destroy();
         Create(count);
     }
 

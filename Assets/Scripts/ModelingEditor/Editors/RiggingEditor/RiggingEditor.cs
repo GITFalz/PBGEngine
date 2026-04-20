@@ -4,7 +4,7 @@ using PBG.MathLibrary;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.UI.FileManager;
-using Silk.NET.Input;
+
 
 public class RiggingEditor : BaseEditor
 {

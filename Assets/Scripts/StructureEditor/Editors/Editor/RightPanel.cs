@@ -14,74 +14,74 @@ public partial class StructureEditor
         }
 
         public override UIElementBase Script() =>
-        new UICol(Class(w_full, h_full, invisible), [
-            newCol(Class(w_full, h_full, not_toggle_old_invisible),[
-                new UICol(Class(w_[70], h_[70], top_right, right_[230], blank_sharp_g_[30], depth_[-40]), [
-                    newImg(Class(w_[60], h_[60], middle_left, item_["test_block"], bg_white), ref CurrentBlockImg)
-                ]),
-                newVScroll(Class(w_[70], h_full_minus_[70], bottom_right, right_[240], spacing_[10], border_[0, 10, 0, 10], mask_children, depth_[-40], scroll_speed_[30]), 
-                OnClickVScroll(_ => { }), // empty event to make the hovering element update
+        new UICol(w_full, h_full, invisible)[
+            new UICol(w_full, h_full, not_toggle_old_invisible)[
+                new UICol(w_[70], h_[70], top_right, right_[230], blank_sharp_g_[30], depth_[-40])[
+                    new UIImg(w_[60], h_[60], middle_left, item_["test_block"], bg_white).Ref(ref CurrentBlockImg)
+                ],
+                new UIVScroll(w_[70], h_full_minus_[70], bottom_right, right_[240], spacing_[10], border_[0, 10, 0, 10], mask_children, depth_[-40], scroll_speed_[30])
+                .OnClick(_ => { }) // empty event to make the hovering element update
                 [
-                    ..Foreach(ItemDataManager.AllItems, (name, item) =>
+                    Foreach(ItemDataManager.AllItems, (name, item) =>
                     {
                         if (item is BlockItemData blockItem)
                         {
-                            return new UICol(Class(left_[30], w_[100], h_[60], blank_sharp_g_[20], hover_translation_[(-20, 0)], hover_translation_duration_[0.3f], hover_translation_easeout, hover_color_[(0.2f, 0.2f, 0.2f, 1), (0.3f, 0.3f, 0.3f, 1)], hover_color_duration_[0.3f], hover_color_easeout), 
-                            OnClickCol(_ => editor.SetBlock(name)), [
-                                new UIImg(Class(w_[50], h_[50], middle_left, left_[5], item_[name], gray_[80]))
-                            ]);
+                            return new UICol(left_[30], w_[100], h_[60], blank_sharp_g_[20], hover_translation_[(-20, 0)], hover_translation_duration_[0.3f], hover_translation_easeout, hover_color_[(0.2f, 0.2f, 0.2f, 1), (0.3f, 0.3f, 0.3f, 1)], hover_color_duration_[0.3f], hover_color_easeout)
+                            .OnClick(_ => editor.SetBlock(name))[
+                                new UIImg(w_[50], h_[50], middle_left, left_[5], item_[name], gray_[80])
+                            ];
                         }
                         return null;
                     })
-                ], ref BlockCollection),
-            ], ref BlockSelectionPanel),
-            new UIVScroll(Class(w_full_minus_[2], h_full, blank_full_g_[20], top_right, mask_children, scroll_speed_[20], ignore_invisible), Sub(
-                new UIVCol(Class(w_full, grow_children, top_[5], border_[5, 0, 5, 0], spacing_[5]), [
-                    new UICol(Class(w_full_minus_[10], h_[20], blank_full_g_[30]), 
-                    OnClickCol(_ => SwitchPanel(SettingsSection)), [
-                        new UIText("SETTINGS", Class(left_[5], middle_left))
-                    ]),
-                    new UICol(Class(w_full_minus_[10], h_[20], blank_full_g_[30]), 
-                    OnClickCol(_ => SwitchPanel(BoundingBoxSection)), [
-                        new UIText("BOUNDING BOXES", Class(left_[5], middle_left))
-                    ]),
-                    new UICol(Class(w_full_minus_[10], h_[20], blank_full_g_[30]), 
-                    OnClickCol(_ => SwitchPanel(ExtendersSection)), [
-                        new UIText("EXTENTION BOXES", Class(left_[5], middle_left))
-                    ]),
-                    new UICol(Class(w_full_minus_[10], h_[20], blank_full_g_[30]), 
-                    OnClickCol(_ => SwitchPanel(ConnectionPointSection)), [
-                        new UIText("CONNECTION POINTS", Class(left_[5], middle_left))
-                    ]),
-                    new UICol(Class(w_full_minus_[10], h_[20], blank_full_g_[30]), 
-                    OnClickCol(_ => SwitchPanel(RulesetPointSection)), [
-                        new UIText("RULESET POINTS", Class(left_[5], middle_left))
-                    ])
-                ]),
-                newVCol(Class(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children), [
-                    new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Camera Speed", Class(fs_[1.2f], middle_left))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UICol(Class(w_[100f], h_full, blank_sharp_g_[10], top_right), Sub(
-                                    new UIField(""+editor.Camera.SPEED, Class(mc_[5], middle_left, left_[5]), OnTextChange(f => {
+                ].Ref(ref BlockCollection)
+            ].Ref(ref BlockSelectionPanel),
+            new UIVScroll(w_full_minus_[2], h_full, blank_full_g_[20], top_right, mask_children, scroll_speed_[20], ignore_invisible)[
+                new UIVCol(w_full, grow_children, top_[5], border_[5, 0, 5, 0], spacing_[5])[
+                    new UICol(w_full_minus_[10], h_[20], blank_full_g_[30])
+                    .OnClick(_ => SwitchPanel(SettingsSection))[
+                        new UIText("SETTINGS", left_[5], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[20], blank_full_g_[30])
+                    .OnClick(_ => SwitchPanel(BoundingBoxSection))[
+                        new UIText("BOUNDING BOXES", left_[5], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[20], blank_full_g_[30])
+                    .OnClick(_ => SwitchPanel(ExtendersSection))[
+                        new UIText("EXTENTION BOXES", left_[5], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[20], blank_full_g_[30])
+                    .OnClick(_ => SwitchPanel(ConnectionPointSection))[
+                        new UIText("CONNECTION POINTS", left_[5], middle_left)
+                    ],
+                    new UICol(w_full_minus_[10], h_[20], blank_full_g_[30])
+                    .OnClick(_ => SwitchPanel(RulesetPointSection))[
+                        new UIText("RULESET POINTS", left_[5], middle_left)
+                    ]
+                ],
+                new UIVCol(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children)[
+                    new UIVCol(w_full, grow_children, top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Camera Speed", fs_[1.2f], middle_left)
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UICol(w_[100f], h_full, blank_sharp_g_[10], top_right)[
+                                    new UIField(""+editor.Camera.SPEED, mc_[5], middle_left, left_[5]).OnTextChange(f => {
                                         var value = f.GetFloat();
                                         value.ClampSety(0.01f, 100);
                                         editor.Camera.SetCameraSpeed(value);
-                                    }))
-                                ))
-                            ))
-                        ))
-                    ]))
-                ], ref SettingsSection),
-                newVCol(Class(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children), [
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("BOUNDING BOXES", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => {
+                                    })
+                                ]
+                            ]
+                        ]
+                    ]
+                ].Ref(ref SettingsSection),
+                new UIVCol(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children)[
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("BOUNDING BOXES", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => {
                                     if (editor.SelectedBoundingBox == null)
                                         return;
 
@@ -91,78 +91,78 @@ public partial class StructureEditor
                                     UIController.AddElement(button);
                                     editor.SelectedBoundingBox.BoundingBoxes.Add(boundingBox);
                                     SelectBoundingBox(boundingBox);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                            ..Foreach(editor.SelectedBoundingBox?.BoundingBoxes ?? [], BoundingBoxButton)
-                        ]), ref BoundingBoxPanel)
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Settings", Class(fs_[1.2f], middle_left))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Scale", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeXField)
-                                )),
-                                new ChangeElement(editor, SizeXField, 1, int.MaxValue, UpdateBoundingBoxData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Y", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeYField)
-                                )),
-                                new ChangeElement(editor, SizeYField, 1, int.MaxValue, UpdateBoundingBoxData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("1", Class(mc_[20], middle_left, left_[5]), ref SizeZField)
-                                )),
-                                new ChangeElement(editor, SizeZField, 1, int.MaxValue, UpdateBoundingBoxData)
-                            ))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Position", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionXField)
-                                )),
-                                new ChangeElement(editor, PositionXField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Y", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionYField)
-                                )),
-                                new ChangeElement(editor, PositionYField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref PositionZField)
-                                )),
-                                new ChangeElement(editor, PositionZField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
-                            ))
-                        ))
-                    ])),
-                ], ref BoundingBoxSection),
-                newVCol(Class(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children), [
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("EXTENSION BOXES", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => {
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5])[
+                            Foreach(editor.SelectedBoundingBox?.BoundingBoxes ?? [], BoundingBoxButton)
+                        ].Ref(ref BoundingBoxPanel)
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, grow_children, top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Settings", fs_[1.2f], middle_left)
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Scale", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeXField)
+                                ],
+                                ChangeElement(editor, SizeXField, 1, int.MaxValue, UpdateBoundingBoxData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Y", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeYField)
+                                ],
+                                ChangeElement(editor, SizeYField, 1, int.MaxValue, UpdateBoundingBoxData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref SizeZField)
+                                ],
+                                ChangeElement(editor, SizeZField, 1, int.MaxValue, UpdateBoundingBoxData)
+                            ]
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Position", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionXField)
+                                ],
+                                ChangeElement(editor, PositionXField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Y", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionYField)
+                                ],
+                                ChangeElement(editor, PositionYField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref PositionZField)
+                                ],
+                                ChangeElement(editor, PositionZField, int.MinValue, int.MaxValue, UpdateBoundingBoxData)
+                            ]
+                        ]
+                    ]
+                ].Ref(ref BoundingBoxSection),
+                new UIVCol(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children)[
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("EXTENSION BOXES", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => {
                                     if (editor.SelectedBoundingBox == null)
                                         return;
 
@@ -172,71 +172,71 @@ public partial class StructureEditor
                                     UIController.AddElement(button);
                                     editor.SelectedBoundingBox.Extenders.Add(extender);
                                     SelectExtender(extender);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                            ..Foreach(editor.SelectedBoundingBox?.Extenders ?? [], ExtenderButton)
-                        ]), ref ExtendersPanel)
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Settings", Class(fs_[1.2f], middle_left))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Scale", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("1", Class(mc_[20], middle_left, left_[5]), ref ExtenderSizeXField)
-                                )),
-                                new ChangeElement(editor, ExtenderSizeXField, 1, int.MaxValue, UpdateExtenderData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("1", Class(mc_[20], middle_left, left_[5]), ref ExtenderSizeZField)
-                                )),
-                                new ChangeElement(editor, ExtenderSizeZField, 1, int.MaxValue, UpdateExtenderData)
-                            ))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Position", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ExtenderPositionXField)
-                                )),
-                                new ChangeElement(editor, ExtenderPositionXField, int.MinValue, int.MaxValue, UpdateExtenderData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Y", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ExtenderPositionYField)
-                                )),
-                                new ChangeElement(editor, ExtenderPositionYField, int.MinValue, int.MaxValue, UpdateExtenderData)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ExtenderPositionZField)
-                                )),
-                                new ChangeElement(editor, ExtenderPositionZField, int.MinValue, int.MaxValue, UpdateExtenderData)
-                            ))
-                        ))
-                    ])),
-                ], ref ExtendersSection),
-                newVCol(Class(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children), [
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("CONNECTION POINTS", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg("test", Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => {
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5])[
+                            Foreach(editor.SelectedBoundingBox?.Extenders ?? [], ExtenderButton)
+                        ].Ref(ref ExtendersPanel)
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, grow_children, top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Settings", fs_[1.2f], middle_left)
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Scale", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref ExtenderSizeXField)
+                                ],
+                                ChangeElement(editor, ExtenderSizeXField, 1, int.MaxValue, UpdateExtenderData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("1", mc_[20], middle_left, left_[5]).Ref(ref ExtenderSizeZField)
+                                ],
+                                ChangeElement(editor, ExtenderSizeZField, 1, int.MaxValue, UpdateExtenderData)
+                            ]
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Position", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ExtenderPositionXField)
+                                ],
+                                ChangeElement(editor, ExtenderPositionXField, int.MinValue, int.MaxValue, UpdateExtenderData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Y", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ExtenderPositionYField)
+                                ],
+                                ChangeElement(editor, ExtenderPositionYField, int.MinValue, int.MaxValue, UpdateExtenderData)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ExtenderPositionZField)
+                                ],
+                                ChangeElement(editor, ExtenderPositionZField, int.MinValue, int.MaxValue, UpdateExtenderData)
+                            ]
+                        ]
+                    ]
+                ].Ref(ref ExtendersSection),
+                new UIVCol(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children)[
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("CONNECTION POINTS", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg("test", w_full, h_full, icon_[16], bg_white).OnClick(_ => {
                                     if (editor.SelectedBoundingBox == null)
                                         return;
 
@@ -249,77 +249,77 @@ public partial class StructureEditor
                                     UIController.AddElement(button);
                                     editor.SelectedBoundingBox.ConnectionPoints.Add(name, connection);
                                     SelectConnectionPoint(connection);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                            ..Foreach(editor.SelectedBoundingBox?.ConnectionPoints ?? [], ConnectionPointButton)
-                        ]), ref ConnectionPointsPanel)
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                        new UIVCol(Class(w_full_minus_[10], h_[55], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UICol(Class(w_[32f], h_full, top_left, blank_sharp_g_[20]), OnClickCol(_ => SetSide(0)), Sub(
-                                    new UIText("Front", Class(middle_center))
-                                )),
-                                new UICol(Class(w_[32f], h_full, top_center, blank_sharp_g_[20]), OnClickCol(_ => SetSide(1)), Sub(
-                                    new UIText("Right", Class(middle_center))
-                                )),
-                                new UICol(Class(w_[32f], h_full, top_right, blank_sharp_g_[20]), OnClickCol(_ => SetSide(2)), Sub(
-                                    new UIText("Top", Class(middle_center))
-                                ))
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UICol(Class(w_[32f], h_full, top_left, blank_sharp_g_[20]), OnClickCol(_ => SetSide(3)), Sub(
-                                    new UIText("Left", Class(middle_center))
-                                )),
-                                new UICol(Class(w_[32f], h_full, top_center, blank_sharp_g_[20]), OnClickCol(_ => SetSide(4)), Sub(
-                                    new UIText("Bottom", Class(middle_center))
-                                )),
-                                new UICol(Class(w_[32f], h_full, top_right, blank_sharp_g_[20]), OnClickCol(_ => SetSide(5)), Sub(
-                                    new UIText("Back", Class(middle_center))
-                                ))
-                            ))
-                        )),
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Position", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ConnectionPositionXField)
-                                )),
-                                new ChangeElement(editor, ConnectionPositionXField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Y", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ConnectionPositionYField)
-                                )),
-                                new ChangeElement(editor, ConnectionPositionYField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref ConnectionPositionZField)
-                                )),
-                                new ChangeElement(editor, ConnectionPositionZField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
-                            ))
-                        ))
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("CATEGORIES", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => { 
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5])[
+                            Foreach(editor.SelectedBoundingBox?.ConnectionPoints ?? [], ConnectionPointButton)
+                        ].Ref(ref ConnectionPointsPanel)
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, grow_children, top_[5])[
+                        new UIVCol(w_full_minus_[10], h_[55], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UICol(w_[32f], h_full, top_left, blank_sharp_g_[20]).OnClick(_ => SetSide(0))[
+                                    new UIText("Front", middle_center)
+                                ],
+                                new UICol(w_[32f], h_full, top_center, blank_sharp_g_[20]).OnClick(_ => SetSide(1))[
+                                    new UIText("Right", middle_center)
+                                ],
+                                new UICol(w_[32f], h_full, top_right, blank_sharp_g_[20]).OnClick(_ => SetSide(2))[
+                                    new UIText("Top", middle_center)
+                                ]
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UICol(w_[32f], h_full, top_left, blank_sharp_g_[20]).OnClick(_ => SetSide(3))[
+                                    new UIText("Left", middle_center)
+                                ],
+                                new UICol(w_[32f], h_full, top_center, blank_sharp_g_[20]).OnClick(_ => SetSide(4))[
+                                    new UIText("Bottom", middle_center)
+                                ],
+                                new UICol(w_[32f], h_full, top_right, blank_sharp_g_[20]).OnClick(_ => SetSide(5))[
+                                    new UIText("Back", middle_center)
+                                ]
+                            ]
+                        ],
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Position", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ConnectionPositionXField)
+                                ],
+                                ChangeElement(editor, ConnectionPositionXField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Y", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ConnectionPositionYField)
+                                ],
+                                ChangeElement(editor, ConnectionPositionYField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref ConnectionPositionZField)
+                                ],
+                                ChangeElement(editor, ConnectionPositionZField, int.MinValue, int.MaxValue, UpdateConnectionPosition)
+                            ]
+                        ]
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("CATEGORIES", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => { 
                                     if (SelectedConnection == null)
                                         return;
 
                                     var name = GetUniqueCategoryName(SelectedConnection);
-                                    var field = new UIField(name, Class(top_[5], left_[5], mc_[20]), OnTextChange(_ => {
+                                    var field = new UIField(name, top_[5], left_[5], mc_[20]).OnTextChange(_ => {
                                         if (SelectedConnection == null)
                                             return;
 
@@ -329,25 +329,24 @@ public partial class StructureEditor
                                             if (CategoriesPanel.ChildElements[i] is UIField f)
                                                 SelectedConnection.Categories.Add(f.GetTrimmedText());
                                         }
-                                    }));
+                                    });
                                     CategoriesPanel.AddElement(field);
                                     UIController.AddElement(field);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                        ]), ref CategoriesPanel)
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("CATEGORIES TO AVOID", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => { 
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]).Ref(ref CategoriesPanel)
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("CATEGORIES TO AVOID", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => { 
                                     if (SelectedConnection == null)
                                         return;
 
-                                    var field = new UIField("category", Class(top_[5], left_[5], mc_[20]), OnTextChange(_ => {
+                                    var field = new UIField("category", top_[5], left_[5], mc_[20]).OnTextChange(_ => {
                                         if (SelectedConnection == null)
                                             return;
 
@@ -357,22 +356,21 @@ public partial class StructureEditor
                                             if (AvoidPanel.ChildElements[i] is UIField f)
                                                 SelectedConnection.Avoid.Add(f.GetTrimmedText());
                                         }
-                                    }));
+                                    });
                                     AvoidPanel.AddElement(field);
                                     UIController.AddElement(field);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                        ]), ref AvoidPanel)
-                    ])),
-                ], ref ConnectionPointSection),
-                newVCol(Class(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children), [
-                    new UIVCol(Class(w_full, h_[300], spacing_[5], top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("RULESETS", Class(fs_[1.2f], middle_left)),
-                            new UICol(Class(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f]), Sub(
-                                new UIImg(Class(w_full, h_full, icon_[16], bg_white), OnClickImg(_ => {
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]).Ref(ref AvoidPanel)
+                    ]
+                ].Ref(ref ConnectionPointSection),
+                new UIVCol(w_full, top_[5], hidden, not_toggle_old_invisible, grow_children)[
+                    new UIVCol(w_full, h_[300], spacing_[5], top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("RULESETS", fs_[1.2f], middle_left),
+                            new UICol(w_[25], h_[25], middle_right, blank_sharp_g_[25], hover_scale_easeout_[1.2f, 0.2f])[
+                                new UIImg(w_full, h_full, icon_[16], bg_white).OnClick(_ => {
                                     if (editor.SelectedBoundingBox == null)
                                         return;
 
@@ -384,45 +382,45 @@ public partial class StructureEditor
                                     UIController.AddElement(button);
                                     editor.SelectedBoundingBox.RulesetPoints.Add(name, rulseset);
                                     SelectRulesetPoint(rulseset);
-                                }))
-                            ))
-                        )),
-                        newVScroll(Class(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5]), Sub([
-                            ..Foreach(editor.SelectedBoundingBox?.RulesetPoints ?? [], RulesetPointButton)
-                        ]), ref RulesetPointsPanel)
-                    ])),
-                    new UIImg(Class(w_full, h_[2], blank_full_g_[30], top_[5])),
-                    new UIVCol(Class(w_full, grow_children, top_[5]), Sub([
-                        new UICol(Class(w_full_minus_[10], h_[25], top_center), Sub(
-                            new UIText("Position", Class(fs_[1f], middle_left))
-                        )),
-                        new UIVCol(Class(w_full_minus_[10], h_[85], spacing_[5], top_center), Sub(
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("X", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref RulesetPositionXField)
-                                )),
-                                new ChangeElement(editor, RulesetPositionXField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Y", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref RulesetPositionYField)
-                                )),
-                                new ChangeElement(editor, RulesetPositionYField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
-                            )),
-                            new UICol(Class(w_full, h_[25]), Sub(
-                                new UIText("Z", Class(middle_left, fs_[1.2f])),
-                                new UICol(Class(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65]), Sub(
-                                    newField("0", Class(mc_[20], middle_left, left_[5]), ref RulesetPositionZField)
-                                )),
-                                new ChangeElement(editor, RulesetPositionZField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
-                            ))
-                        ))
-                    ]))
-                ], ref RulesetPointSection)
-            ))
-        ]);
+                                })
+                            ]
+                        ],
+                        new UIVScroll(w_full_minus_[10], h_full_minus_[30], top_center, blank_sharp_g_[10], mask_children, border_[5, 5, 5, 5], spacing_[5])[
+                            Foreach(editor.SelectedBoundingBox?.RulesetPoints ?? [], RulesetPointButton)
+                        ].Ref(ref RulesetPointsPanel)
+                    ],
+                    new UIImg(w_full, h_[2], blank_full_g_[30], top_[5]),
+                    new UIVCol(w_full, grow_children, top_[5])[
+                        new UICol(w_full_minus_[10], h_[25], top_center)[
+                            new UIText("Position", fs_[1f], middle_left)
+                        ],
+                        new UIVCol(w_full_minus_[10], h_[85], spacing_[5], top_center)[
+                            new UICol(w_full, h_[25])[
+                                new UIText("X", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref RulesetPositionXField)
+                                ],
+                                ChangeElement(editor, RulesetPositionXField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Y", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref RulesetPositionYField)
+                                ],
+                                ChangeElement(editor, RulesetPositionYField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
+                            ],
+                            new UICol(w_full, h_[25])[
+                                new UIText("Z", middle_left, fs_[1.2f]),
+                                new UICol(w_[60f], h_full, blank_sharp_g_[10], top_right, right_[65])[
+                                    new UIField("0", mc_[20], middle_left, left_[5]).Ref(ref RulesetPositionZField)
+                                ],
+                                ChangeElement(editor, RulesetPositionZField, int.MinValue, int.MaxValue, UpdateRulesetPosition)
+                            ]
+                        ]
+                    ]
+                ].Ref(ref RulesetPointSection)
+            ]
+        ];
 
         private void SwitchPanel(UIVCol element)
         { 
@@ -487,11 +485,9 @@ public partial class StructureEditor
 
         private UIElementBase BoundingBoxButton(int index, StructureBoundingBox boundingBox) 
         {
-            var col = new UICol(Class(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]), 
-            OnClickCol(_ => SelectBoundingBox(boundingBox)),
-            Sub(
-                new UIText(""+index, Class(mc_[20], middle_left, left_[5])),
-                new UIImg(Class(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white), OnClickImg(c =>
+            var col = new UICol(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]).OnClick(_ => SelectBoundingBox(boundingBox))[
+                new UIText(""+index, mc_[20], middle_left, left_[5]),
+                new UIImg(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white).OnClick(c =>
                 {
                     if (editor.SelectedBoundingBox == null)
                         return;
@@ -502,8 +498,8 @@ public partial class StructureEditor
                         SelectedBoundingBox = null;
 
                     RegenerateBoundingBoxes();
-                }))
-            ));
+                })
+            ];
             boundingBox.Element = col;
             return col;
         }
@@ -526,11 +522,9 @@ public partial class StructureEditor
 
         private UIElementBase ExtenderButton(int index, StructureExtender extender) 
         {
-            var col = new UICol(Class(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]), 
-            OnClickCol(_ => SelectExtender(extender)),
-            Sub(
-                new UIText(""+index, Class(mc_[20], middle_left, left_[5])),
-                new UIImg(Class(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white), OnClickImg(c =>
+            var col = new UICol(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]).OnClick(_ => SelectExtender(extender))[
+                new UIText(""+index, mc_[20], middle_left, left_[5]),
+                new UIImg(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white).OnClick(c =>
                 {
                     if (editor.SelectedBoundingBox == null)
                         return;
@@ -541,8 +535,8 @@ public partial class StructureEditor
                         SelectedExtender = null;
 
                     RegenerateExtenders();
-                }))
-            ));
+                })
+            ];
             extender.Element = col;
             return col;
         }
@@ -564,12 +558,10 @@ public partial class StructureEditor
 
         private UIElementBase ConnectionPointButton(string name, ConnectionPoint connection) 
         {
-            var text = new UIText(name, Class(mc_[20], middle_left, left_[5]));
-            var col = new UICol(Class(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]), 
-            OnClickCol(_ => SelectConnectionPoint(connection)),
-            Sub(
+            var text = new UIText(name, mc_[20], middle_left, left_[5]);
+            var col = new UICol(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]).OnClick(_ => SelectConnectionPoint(connection))[
                 text,
-                new UIImg(Class(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white), OnClickImg(c =>
+                new UIImg(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white).OnClick(c =>
                 {
                     if (editor.SelectedBoundingBox == null)
                         return;
@@ -579,8 +571,8 @@ public partial class StructureEditor
                         SelectedConnection = null;
 
                     RegenerateConnectionPoints();
-                }))
-            ));
+                })
+            ];
             connection.Element = col;
             return col;
         }
@@ -602,12 +594,11 @@ public partial class StructureEditor
 
         private UIElementBase RulesetPointButton(string name, RulesetPoint ruleset) 
         {
-            var text = new UIText(name, Class(mc_[20], middle_left, left_[5]));
-            var col = new UICol(Class(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10]), 
-            OnClickCol(_ => SelectRulesetPoint(ruleset)),
-            Sub(
+            var text = new UIText(name, mc_[20], middle_left, left_[5]);
+            var col = new UICol(w_full_minus_[10], h_[25], top_center, blank_sharp_g_[10])
+            .OnClick(_ => SelectRulesetPoint(ruleset))[
                 text,
-                new UIImg(Class(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white), OnClickImg(c =>
+                new UIImg(icon_[18], w_[20], h_[20], middle_right, right_[5], bg_white).OnClick(c =>
                 {
                     if (editor.SelectedBoundingBox == null)
                         return;
@@ -617,8 +608,8 @@ public partial class StructureEditor
                         SelectedRuleset = null;
 
                     RegenerateRulesetPoints();
-                }))
-            ));
+                })
+            ];
             ruleset.Element = col;
             return col;
         }
@@ -733,7 +724,7 @@ public partial class StructureEditor
             {
                 var cat = SelectedConnection.Categories[i];
 
-                var field = new UIField(cat, Class(top_[5], left_[5], mc_[20]), OnTextChange(_ => {
+                var field = new UIField(cat, top_[5], left_[5], mc_[20]).OnTextChange(_ => {
                     if (SelectedConnection == null)
                         return;
 
@@ -743,7 +734,7 @@ public partial class StructureEditor
                         if (CategoriesPanel.ChildElements[i] is UIField f)
                             SelectedConnection.Categories.Add(f.GetTrimmedText());
                     }
-                }));
+                });
                 CategoriesPanel.AddElement(field);
                 UIController.AddElement(field);
             }
@@ -752,7 +743,7 @@ public partial class StructureEditor
             {
                 var cat = SelectedConnection.Avoid[i];
 
-                var field = new UIField(cat, Class(top_[5], left_[5], mc_[20]), OnTextChange(_ => {
+                var field = new UIField(cat, top_[5], left_[5], mc_[20]).OnTextChange(_ => {
                     if (SelectedConnection == null)
                         return;
 
@@ -762,7 +753,7 @@ public partial class StructureEditor
                         if (AvoidPanel.ChildElements[i] is UIField f)
                             SelectedConnection.Avoid.Add(f.GetTrimmedText());
                     }
-                }));
+                });
                 AvoidPanel.AddElement(field);
                 UIController.AddElement(field);
             }

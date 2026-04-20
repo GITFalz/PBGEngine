@@ -14,8 +14,7 @@ namespace PBG.Core
             name = GetUniqueName(name);
             var node = new TransformNode(name, Scene);
             Children.Add(node);
-            if (!Scene.PendingList.Contains(node))
-                Scene.PendingList.Add(node);
+            Scene.AddedScripts = true;
             return node;
         }
 
@@ -27,85 +26,19 @@ namespace PBG.Core
             return nodes;
         }
 
-        public void Resize()
+        internal void InitAwake(ScriptInfo info)
         {
             for (int i = 0; i < Children.Count; i++)
             {
-                var child = Children[i];
-                child.Resize();
+                Children[i].InitAwake(info);
             }
         }
 
-        public void Start()
+        internal void InitPendingComponents(ScriptInfo info)
         {
             for (int i = 0; i < Children.Count; i++)
             {
-                var child = Children[i];
-                child.Start();
-            }
-        }
-
-        public void Awake()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.Awake();
-            }
-        }
-
-        public void Update()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.Update();
-            }
-        }
-
-        public void FixedUpdate()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.FixedUpdate();
-                
-            }
-        }
-
-        public void Render()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.Render();
-            }
-        }
-
-        public void LateUpdate()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.LateUpdate();
-            }
-        }
-
-        public void Exit()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.Exit();
-            }
-        }
-
-        public void Dispose()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                var child = Children[i];
-                child.Dispose();
+                Children[i].InitPendingComponents(info);
             }
         }
     }

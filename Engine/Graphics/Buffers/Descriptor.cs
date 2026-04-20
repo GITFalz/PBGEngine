@@ -41,16 +41,16 @@ public unsafe class Descriptor : BufferBase, IResizeable
         _uniformAttributes = uniformAttributes;
         _pipelineLayout = pipelineLayout;
 
-        _uniformBuffers = new Buffer[GraphicsContext.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
-        _uniformBuffersMemory = new DeviceMemory[GraphicsContext.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
-        _uniformBuffersMapped = new void*[GraphicsContext.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
+        _uniformBuffers = new Buffer[GFX.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
+        _uniformBuffersMemory = new DeviceMemory[GFX.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
+        _uniformBuffersMapped = new void*[GFX.MAX_FRAMES_IN_FLIGHT * uniformBindings.Length];
 
         for (int i = 0; i < uniformBindings.Length; i++)
         {
             var size = uniformBindings[i].Size;
-            for (int j = 0; j < GraphicsContext.MAX_FRAMES_IN_FLIGHT; j++) 
+            for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
             {
-                int a = i * GraphicsContext.MAX_FRAMES_IN_FLIGHT + j;
+                int a = i * GFX.MAX_FRAMES_IN_FLIGHT + j;
                 GFX.CreateBuffer(size, BufferUsageFlags.UniformBufferBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, out _uniformBuffers[a], out _uniformBuffersMemory[a]);
                 GFX.MapMemory(_uniformBuffersMemory[a], 0, size, 0, ref _uniformBuffersMapped[a]);
             }
@@ -59,11 +59,11 @@ public unsafe class Descriptor : BufferBase, IResizeable
         for (int i = 0; i < uniformBindings.Length; i++)
         {
             var layout = uniformBindings[i];
-            for (int j = 0; j < GraphicsContext.MAX_FRAMES_IN_FLIGHT; j++) 
+            for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
             {
                 DescriptorBufferInfo bufferInfo = new()
                 {
-                    Buffer = _uniformBuffers[i * GraphicsContext.MAX_FRAMES_IN_FLIGHT + j],
+                    Buffer = _uniformBuffers[i * GFX.MAX_FRAMES_IN_FLIGHT + j],
                     Offset = 0,
                     Range = layout.Size
                 };
@@ -99,7 +99,7 @@ public unsafe class Descriptor : BufferBase, IResizeable
         if (location >= 0 && location < _uniformAttributes.Length)
         {
             var attribute = _uniformAttributes[location];
-            var bufferPtr = (byte*)_uniformBuffersMapped[attribute.Index * GraphicsContext.MAX_FRAMES_IN_FLIGHT + GFX.CurrentFrame];
+            var bufferPtr = (byte*)_uniformBuffersMapped[attribute.Index * GFX.MAX_FRAMES_IN_FLIGHT + GFX.CurrentFrame];
             var dest = bufferPtr + attribute.Offset;
             *(T*)dest = value;
         }
@@ -117,7 +117,7 @@ public unsafe class Descriptor : BufferBase, IResizeable
             return;
 
         var attr = _uniformAttributes[location];
-        var bufferPtr = (byte*)_uniformBuffersMapped[attr.Index * GraphicsContext.MAX_FRAMES_IN_FLIGHT + GFX.CurrentFrame];
+        var bufferPtr = (byte*)_uniformBuffersMapped[attr.Index * GFX.MAX_FRAMES_IN_FLIGHT + GFX.CurrentFrame];
         var dest = bufferPtr + attr.Offset;
         HelperFunctions.MemCpyTo(values, dest, values.Length * Marshal.SizeOf<T>(), values.Length * Marshal.SizeOf<T>());
     }
@@ -178,7 +178,7 @@ public unsafe class Descriptor : BufferBase, IResizeable
             _bufferBarriers = [.._bufferBarriers, buffer.GetMemoryBarrier()];
         }
 
-        for (int j = 0; j < GraphicsContext.MAX_FRAMES_IN_FLIGHT; j++) 
+        for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
         {
             DescriptorBufferInfo bufferInfo = new()
             {
@@ -209,7 +209,7 @@ public unsafe class Descriptor : BufferBase, IResizeable
 
     private void BindSampler(ImageView imageView, Sampler sampler, DescriptorType descriptorType, ImageLayout imageLayout, uint binding)
     {
-        for (int j = 0; j < GraphicsContext.MAX_FRAMES_IN_FLIGHT; j++) 
+        for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
         {
             DescriptorImageInfo imageInfo = new()
             {
@@ -227,8 +227,8 @@ public unsafe class Descriptor : BufferBase, IResizeable
                 DescriptorType = descriptorType,
                 DescriptorCount = 1,
                 PBufferInfo = null,
-                PImageInfo = &imageInfo, // Optional
-                PTexelBufferView = null // Optional
+                PImageInfo = &imageInfo,
+                PTexelBufferView = null
             };
 
             GFX.UpdateDescriptorSets(1, &descriptorWrite, 0, null);
@@ -352,13 +352,13 @@ public unsafe class Descriptor : BufferBase, IResizeable
 
     public void Bind()
     {
-        GFX.Vk.CmdBindDescriptorSets(GFX.CommandBuffer, PipelineBindPoint.Graphics, _pipelineLayout, 0, 1, ref _descriptorSets[GraphicsContext.graphicsContext.currentFrame], 0, null);
+        GFX.Vk.CmdBindDescriptorSets(GFX.CommandBuffer, PipelineBindPoint.Graphics, _pipelineLayout, 0, 1, ref _descriptorSets[GFX.CurrentFrame], 0, null);
     }
 
     public void Bind(CommandBuffer commandBuffer) => Bind(commandBuffer, PipelineBindPoint.Graphics);
     public void Bind(CommandBuffer commandBuffer, PipelineBindPoint pipelineBindPoint)
     {
-        GFX.Vk.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, _pipelineLayout, 0, 1, ref _descriptorSets[GraphicsContext.graphicsContext.currentFrame], 0, null);
+        GFX.Vk.CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, _pipelineLayout, 0, 1, ref _descriptorSets[GFX.CurrentFrame], 0, null);
     }
 
     public ImageMemoryBarrier[] GetImageBarriers() => _imageBarriers;

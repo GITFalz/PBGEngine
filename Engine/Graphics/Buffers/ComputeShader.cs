@@ -1,9 +1,7 @@
-using System.Runtime.InteropServices;
-using PBG.MathLibrary;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
 using static ShaderCompiler;
-using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace PBG.Graphics;
 
@@ -74,19 +72,19 @@ public unsafe class ComputeShader : BufferBase, IShader
     
     public void Compile()
     {
-        ShaderData computeData = GraphicsContext.graphicsContext.shaderCompiler.CompileAndReflect(_shaderInfo.ComputeShaderPath, ShaderKind.ComputeShader);
+        ShaderData computeData = _shaderCompiler.CompileAndReflect(_shaderInfo.ComputeShaderPath, ShaderKind.ComputeShader);
 
         ShaderModule computeModule = CreateShaderModule(computeData.SpirV);
 
         // === Unfiorm Mapping ===
         int uniformBindingsIndex = 0;
         Dictionary<uint, int> uniformBindingsMap = [];
-        _uniformBindings = new UniformBufferLayout[GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings.Count];
+        _uniformBindings = new UniformBufferLayout[_shaderCompiler.UniformBufferBindings.Count];
         List<UniformBufferAttribute> uniformBufferAttributes = [];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.UniformBufferAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes[i];
+            var attribute = _shaderCompiler.UniformBufferAttributes[i];
             uint size;
             if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
@@ -101,7 +99,7 @@ public unsafe class ComputeShader : BufferBase, IShader
             }
             else
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings[attribute.Binding];
+                var layout = _shaderCompiler.UniformBufferBindings[attribute.Binding];
                 attribute.Index = (uint)uniformBindingsIndex;
                 size = layout.Size;
 
@@ -122,14 +120,14 @@ public unsafe class ComputeShader : BufferBase, IShader
         // === Storage Mapping ===
         int storageBindingsIndex = 0;
         Dictionary<uint, int> storageBindingsMap = [];
-        StorageBufferLayout[] storageBindings = new StorageBufferLayout[GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings.Count];
+        StorageBufferLayout[] storageBindings = new StorageBufferLayout[_shaderCompiler.StorageBufferBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.StorageBufferAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes[i];
+            var attribute = _shaderCompiler.StorageBufferAttributes[i];
             if (!storageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings[attribute.Binding];
+                var layout = _shaderCompiler.StorageBufferBindings[attribute.Binding];
                 storageBindings[storageBindingsIndex] = layout;
                 storageBindingsMap.Add(attribute.Binding, storageBindingsIndex);
                 storageBindingsIndex++;
@@ -140,14 +138,14 @@ public unsafe class ComputeShader : BufferBase, IShader
         // === Sampled Image Mapping ===
         int imageBindingsIndex = 0;
         Dictionary<uint, int> imageBindingsMap = [];
-        SampledImageLayout[] imageBindings = new SampledImageLayout[GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings.Count];
+        SampledImageLayout[] imageBindings = new SampledImageLayout[_shaderCompiler.SampledImageBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.SampledImageAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes[i];
+            var attribute = _shaderCompiler.SampledImageAttributes[i];
             if (!imageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings[attribute.Binding];
+                var layout = _shaderCompiler.SampledImageBindings[attribute.Binding];
                 imageBindings[imageBindingsIndex] = layout;
                 imageBindingsMap.Add(attribute.Binding, imageBindingsIndex);
                 imageBindingsIndex++;
@@ -158,14 +156,14 @@ public unsafe class ComputeShader : BufferBase, IShader
         // === Storage Image Mapping ===
         int storageImageBindingsIndex = 0;
         Dictionary<uint, int> storageImageBindingsMap = [];
-        SampledImageLayout[] storageImageBindings = new SampledImageLayout[GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings.Count];
+        SampledImageLayout[] storageImageBindings = new SampledImageLayout[_shaderCompiler.StorageImageBindings.Count];
 
-        for (int i = 0; i < GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes.Count; i++)
+        for (int i = 0; i < _shaderCompiler.StorageImageAttributes.Count; i++)
         {
-            var attribute = GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes[i];
+            var attribute = _shaderCompiler.StorageImageAttributes[i];
             if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
-                var layout = GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings[attribute.Binding];
+                var layout = _shaderCompiler.StorageImageBindings[attribute.Binding];
                 storageImageBindings[storageImageBindingsIndex] = layout;
                 storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
                 storageImageBindingsIndex++;
@@ -215,17 +213,17 @@ public unsafe class ComputeShader : BufferBase, IShader
         }
         // === End ===
         
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.UniformBufferBindings = [];
+        _shaderCompiler.UniformBufferAttributes = [];
+        _shaderCompiler.UniformBufferBindings = [];
 
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageBufferBindings = [];
+        _shaderCompiler.StorageBufferAttributes = [];
+        _shaderCompiler.StorageBufferBindings = [];
 
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.SampledImageBindings = [];
+        _shaderCompiler.SampledImageAttributes = [];
+        _shaderCompiler.SampledImageBindings = [];
 
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageAttributes = [];
-        GraphicsContext.graphicsContext.shaderCompiler.StorageImageBindings = [];
+        _shaderCompiler.StorageImageAttributes = [];
+        _shaderCompiler.StorageImageBindings = [];
 
         PipelineLayoutCreateInfo pipelineLayoutInfo = new()
         {
@@ -248,7 +246,7 @@ public unsafe class ComputeShader : BufferBase, IShader
             SType = StructureType.PipelineShaderStageCreateInfo,
             Stage = ShaderStageFlags.ComputeBit,
             Module = computeModule,
-            PName = GraphicsContext.graphicsContext.mainPtr
+            PName = _mainPtr
         };
 
         var pipelineInfo = new ComputePipelineCreateInfo
@@ -270,7 +268,7 @@ public unsafe class ComputeShader : BufferBase, IShader
 
     public Descriptor GetDescriptorSet()
     {
-        GraphicsContext.graphicsContext.shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
+        _shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
         return new(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
     }
 

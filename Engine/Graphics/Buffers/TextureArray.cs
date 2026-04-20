@@ -1,5 +1,6 @@
 using PBG;
 using PBG.Graphics;
+using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
 using StbImageSharp;
 using Buffer = Silk.NET.Vulkan.Buffer;
@@ -113,7 +114,7 @@ public unsafe class TextureArray : ImageBuffer
             AddressModeV = info.SamplerMode,
             AddressModeW = info.SamplerMode,
 
-            AnisotropyEnable = true,
+            AnisotropyEnable = false,
         };
 
         PhysicalDeviceProperties properties = new();

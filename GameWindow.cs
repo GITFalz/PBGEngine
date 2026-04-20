@@ -2,16 +2,25 @@ using PBG.Graphics;
 using PBG.MathLibrary;
 using Silk.NET.Input;
 
+
 public abstract class GameWindow
 {
     private VulkanInstance instance;
 
     public IMouse Mouse;
     public IKeyboard Keyboard;
-    public CursorMode CursorMode
+    private PBG.Data.CursorMode _cursorMode;
+    public PBG.Data.CursorMode CursorMode
     {
-        get => Mouse.Cursor.CursorMode;
-        set => Mouse.Cursor.CursorMode = value;
+        get => _cursorMode;
+        set
+        {
+            if (_cursorMode == value)
+                return;
+
+            _cursorMode = value;
+            Mouse.Cursor.CursorMode = (CursorMode)value;
+        }
     }
 
     public GameWindow(int width, int height)

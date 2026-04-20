@@ -4,7 +4,7 @@ using PBG.Assets.Scripts.NoiseNodes;
 using PBG.Data;
 using PBG.LoaderConfig;
 using PBG.UI;
-using Silk.NET.Input;
+
 
 public abstract class NodeBase
 {

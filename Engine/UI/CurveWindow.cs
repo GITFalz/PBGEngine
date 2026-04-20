@@ -4,7 +4,7 @@ using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
-using Silk.NET.Input;
+
 using static PBG.UI.Styles;
 
 public class CurveWindow

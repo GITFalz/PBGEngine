@@ -186,36 +186,36 @@ public class StructureUI(
     private UICol? _type = null;
 
     public override UIElementBase Script() =>
-    new UICol(Class(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children), Sub(
-        new UICol(Class(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children), Sub([
-            new UIButton(Class(w_full_minus_[25], h_[30], bottom_[30]), OnClick(Select), OnHold(MoveNode)),
-            new UIText($"Structure", Class(mc_[6], fs_[1], bottom_[20], left_[5])),
-            new UIText("X", Class(top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]), OnClick(DeleteNode)),
-            new UICol(Class(grow_children), Sub(
-                new UIVCol(Class(blank_sharp_g_[30], grow_children), Sub(
-                    new UIVCol(Class(border_[5, 5, 5, 5], grow_children, spacing_[5]), Sub([
-                        new UIHCol(Class(grow_children), Sub(
-                            new UIVCol(Class(grow_children), Sub([
-                                ..Run(() => {
+    new UICol(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children)[
+        new UICol(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children)[
+            new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode),
+            new UIText($"Structure", mc_[6], fs_[1], bottom_[20], left_[5]),
+            new UIText("X", top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]).OnClick(DeleteNode),
+            new UICol(grow_children)[
+                new UIVCol(blank_sharp_g_[30], grow_children)[
+                    new UIVCol(border_[5, 5, 5, 5], grow_children, spacing_[5])[
+                        new UIHCol(grow_children)[
+                            new UIVCol(grow_children)[
+                                Run(() => {
                                     var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[color], middle_left);
                                     var field = new NodeInputField(button, node, new() { Name = "Height", Type = "float" });
                                     node.InputFields.Add("Height", field);
                                     button.Dataset["field"] = field;
-                                    return new CustomNodeUIInput("Height", button, field);
+                                    return CustomNodeUI.CustomNodeUIInput("Height", button, field);
                                 })
-                            ]))
-                        )),
-                        new UICol(Class(w_full, h_[30]), Sub(
-                            new UICol(Class(w_[50], h_full, blank_sharp_g_[10], middle_right), Sub(
-                                new UIField(""+node.OutputPriority, Class(mc_[5], middle_right, right_[5]), OnTextChange(f => node.OutputPriority = f.GetInt()))
-                            )),
-                            new UIText("Priority", Class(middle_left))
-                        ))
-                    ]))
-                ))
-            ))
-        ]))
-    ));
+                            ]
+                        ],
+                        new UICol(w_full, h_[30])[
+                            new UICol(w_[50], h_full, blank_sharp_g_[10], middle_right)[
+                                new UIField(""+node.OutputPriority, mc_[5], middle_right, right_[5]).OnTextChange(f => node.OutputPriority = f.GetInt())
+                            ],
+                            new UIText("Priority", middle_left)
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ];
 
     public void Select(UIButton _) => NodeManager.Select(node);
 
