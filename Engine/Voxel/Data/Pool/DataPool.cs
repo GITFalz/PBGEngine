@@ -96,13 +96,13 @@ public class GPUChunkDataPool : IDisposable
     private Descriptor[] _blankDescriptors;
     private Descriptor[] _prePassDescriptors;
 
-    private IDBO<DrawCommand>[] _indirectSSBOs;
-    private DrawCommand[][] _drawCommands;
+    private IDBO<DrawCommand>[][] _indirectSSBOs;
+    private DrawCommand[][][] _drawCommands;
 
     private SSBO<Matrix4> _matrixSSBO;
     private Matrix4[] _matrices;
 
-    private int[] _chunkCounts  = new int[PASS_COUNT];
+    private int[][] _chunkCounts;
     private int[] _visibleChunks = new int[PASS_COUNT];
 
     private bool _updateChunkData = false;
@@ -122,7 +122,7 @@ public class GPUChunkDataPool : IDisposable
         _chunkSize = size;
         SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector4i>();
 
-        MeshSSBO = new(count * size, false);
+        MeshSSBO = new(count * size, true);
 
         Allocations.Add(new() { DataPool = this, Offset = 0, Size = count });
 
@@ -130,11 +130,25 @@ public class GPUChunkDataPool : IDisposable
         _blankDescriptors   = new Descriptor[PASS_COUNT];
         _prePassDescriptors = new Descriptor[PASS_COUNT];
 
-        _indirectSSBOs      = new IDBO<DrawCommand>[PASS_COUNT];
-        _drawCommands       = new DrawCommand[PASS_COUNT][];
+        _indirectSSBOs      = new IDBO<DrawCommand>[GFX.MAX_FRAMES_IN_FLIGHT][];
+        _drawCommands       = new DrawCommand[GFX.MAX_FRAMES_IN_FLIGHT][][];
+        _chunkCounts        = new int[GFX.MAX_FRAMES_IN_FLIGHT][];
 
         _matrixSSBO         = new(count);
         _matrices           = new Matrix4[count];
+
+        for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            _indirectSSBOs[i] = new IDBO<DrawCommand>[PASS_COUNT];
+            _drawCommands[i] = new DrawCommand[PASS_COUNT][];
+            _chunkCounts[i] = new int[PASS_COUNT];
+
+            for (int j = 0; j < PASS_COUNT; j++)
+            {
+                _indirectSSBOs[i][j] = new(count, true);
+                _drawCommands[i][j] = new DrawCommand[count];
+            }
+        }
 
         for (int i = 0; i < PASS_COUNT; i++)
         {
@@ -145,9 +159,6 @@ public class GPUChunkDataPool : IDisposable
             _descriptors[i] = descriptor;
             _blankDescriptors[i] = blankDescriptor;
             _prePassDescriptors[i] = prePassDescriptor;
-
-            _indirectSSBOs[i] = new(count, true);
-            _drawCommands[i] = new DrawCommand[count];
 
             descriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             descriptor.BindSSBO(MeshSSBO, 1);
@@ -284,12 +295,12 @@ public class GPUChunkDataPool : IDisposable
             var newVertexCount = Mathf.Max(vertexCount - _chunkSize, 0);
             
             var visibleChunks = _visibleChunks[passIndex];
-            var drawCommand = _drawCommands[passIndex][visibleChunks];
+            var drawCommand = _drawCommands[GFX.CurrentFrame][passIndex][visibleChunks];
             drawCommand.InstanceCount = 1;
             drawCommand.Count = ((uint)vertexCount - (uint)newVertexCount) * 6;
             drawCommand.First = (uint)(alloc.Offset + i) * _chunkSize * 6;
             drawCommand.BaseInstance = alloc.Offset + (uint)i;
-            _drawCommands[passIndex][visibleChunks] = drawCommand;
+            _drawCommands[GFX.CurrentFrame][passIndex][visibleChunks] = drawCommand;
 
             vertexCount = (int)newVertexCount;
             _visibleChunks[passIndex]++;
@@ -301,11 +312,11 @@ public class GPUChunkDataPool : IDisposable
         var visibleChunks = _visibleChunks[passIndex];
         if (visibleChunks == 0)
         {
-            _chunkCounts[passIndex] = 0;
+            _chunkCounts[GFX.CurrentFrame][passIndex] = 0;
             return;
         }
         
-        _indirectSSBOs[passIndex].Update(_drawCommands[passIndex], 0, (uint)visibleChunks * (uint)Marshal.SizeOf<DrawCommand>());
+        _indirectSSBOs[GFX.CurrentFrame][passIndex].Update(_drawCommands[GFX.CurrentFrame][passIndex], 0, (uint)visibleChunks * (uint)Marshal.SizeOf<DrawCommand>());
         if (_updateChunkData && _updateEnd > _updateStart)
         {
             _matrixSSBO.UpdateSlice(_matrices, _updateStart * Matrix4.ByteSize, (_updateEnd - _updateStart) * Matrix4.ByteSize);
@@ -315,7 +326,7 @@ public class GPUChunkDataPool : IDisposable
             _updateEnd = 0;
         }
 
-        _chunkCounts[passIndex] = visibleChunks;
+        _chunkCounts[GFX.CurrentFrame][passIndex] = visibleChunks;
         _visibleChunks[passIndex] = 0;
     }
 
@@ -326,7 +337,7 @@ public class GPUChunkDataPool : IDisposable
 
     public void RenderPrePass(IVoxelRenderer renderer, int passIndex = 0)
     {
-        if (_chunkCounts[passIndex] == 0)
+        if (_chunkCounts[GFX.CurrentFrame][passIndex] == 0)
             return;
 
         var prePassDescriptor = _prePassDescriptors[passIndex];
@@ -336,12 +347,12 @@ public class GPUChunkDataPool : IDisposable
         prePassDescriptor.Uniform(VoxelRenderer.PrePassView, cam.ViewMatrix);
         prePassDescriptor.Uniform(VoxelRenderer.PrePassProjection, cam.ProjectionMatrix);
 
-        GFX.DrawIndirect(_indirectSSBOs[passIndex].Buffer, 0, (uint)_chunkCounts[passIndex], (uint)Marshal.SizeOf<DrawCommand>());
+        GFX.DrawIndirect(_indirectSSBOs[GFX.CurrentFrame][passIndex].Buffer, 0, (uint)_chunkCounts[GFX.CurrentFrame][passIndex], (uint)Marshal.SizeOf<DrawCommand>());
     }
 
     public void Render(IVoxelRenderer renderer, int passIndex = 0)
     {
-        if (_chunkCounts[passIndex] == 0)
+        if (_chunkCounts[GFX.CurrentFrame][passIndex] == 0)
             return;
 
         var descriptor = _descriptors[passIndex];
@@ -349,13 +360,13 @@ public class GPUChunkDataPool : IDisposable
         descriptor.Bind();
         renderer.UpdateUniforms(descriptor);
 
-        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[passIndex].Buffer, 0, (uint)_chunkCounts[passIndex], (uint)Marshal.SizeOf<DrawCommand>());
+        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[GFX.CurrentFrame][passIndex].Buffer, 0, (uint)_chunkCounts[GFX.CurrentFrame][passIndex], (uint)Marshal.SizeOf<DrawCommand>());
     }
 
 
     public void RenderBlank(Matrix4 view, Matrix4 projection, int passIndex = 0)
     {
-        if (_chunkCounts[passIndex] == 0)
+        if (_chunkCounts[GFX.CurrentFrame][passIndex] == 0)
             return;
 
         var descriptor = _blankDescriptors[passIndex];
@@ -364,17 +375,22 @@ public class GPUChunkDataPool : IDisposable
         descriptor.UniformMatrix4(VoxelRenderer.BlankWorldViewLocation, view);
         descriptor.UniformMatrix4(VoxelRenderer.BlankWorldProjectionLocation, projection);
 
-        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[passIndex].Buffer, 0, (uint)_chunkCounts[passIndex], (uint)Marshal.SizeOf<DrawCommand>());
+        GFX.Vk.CmdDrawIndirect(GFX.CommandBuffer, _indirectSSBOs[GFX.CurrentFrame][passIndex].Buffer, 0, (uint)_chunkCounts[GFX.CurrentFrame][passIndex], (uint)Marshal.SizeOf<DrawCommand>());
     }
     
     public void Dispose()
     {
         MeshSSBO.Dispose();
         _matrixSSBO.Dispose();
+
+        for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int j = 0; j < PASS_COUNT; j++)
+        {
+            _indirectSSBOs[i][j].Dispose();
+        }
         
         for (int i = 0; i < PASS_COUNT; i++)
         {
-            _indirectSSBOs[i].Dispose();
             _descriptors[i].Dispose();
             _prePassDescriptors[i].Dispose();
         }  

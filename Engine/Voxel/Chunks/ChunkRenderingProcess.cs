@@ -1,6 +1,7 @@
 using PBG.MathLibrary;
 using PBG.Threads;
 using PBG.Data;
+using System.Diagnostics;
 
 namespace PBG.Voxel
 {
@@ -20,6 +21,7 @@ namespace PBG.Voxel
         public List<Vector4i> VertexData = [];
 
         public static RollingAverageTimer Timer = new();
+        public Stopwatch timer;
 
         public DefaultChunkRenderingProcess(VoxelChunk chunk)
         {
@@ -37,11 +39,11 @@ namespace PBG.Voxel
                 return true;
             }
 
-            Timer.Start();
-            //var result = VoxelChunkGenerator.GenerateGreedyMeshNew(this, Chunk.WorldPosition, Chunk.Blocks, Chunk.Renderer, _handler);
+            timer = Stopwatch.StartNew();
             var result = VoxelChunkGenerator.GenerateIndirectMesh(this, Chunk.WorldPosition, Chunk.Blocks);
-            Timer.End();
-
+            timer.Stop();
+            Timer.AddSample(timer.Elapsed.Milliseconds);
+            Info.AverageRenderingSpeed = Timer.GetAverageMs();
             return result;
         }
 
@@ -85,30 +87,6 @@ namespace PBG.Voxel
                 {
                     Console.WriteLine("Couldn't find a available data pool");
                 }
-
-                /*
-                if (VertexData.Count == 0)
-                {
-                    Chunk.HasBlocks = false;
-                    Chunk.Renderer.VisibleChunks.Remove(Chunk);
-                }
-                else
-                {
-                    Chunk.GenerateChunkMesh(VertexData);
-
-                    if (!Chunk.HasBlocks)
-                        Chunk.Renderer.VisibleChunks.Add(Chunk);
-
-                    Chunk.HasBlocks = VertexData.Count > 0; 
-                }
-                */
-
-                /*
-                Chunk.GenerateChunkMesh(_handler);
-                Chunk.AmbientOcclusionTexture?.DeleteBuffer();
-                Chunk.AmbientOcclusionTexture = new(1156, 34, ambientOcclusionData, TextureType.Nearest, PixelInternalFormat.R8ui, PixelFormat.RedInteger);
-                Chunk.Restart = false;
-                */
             }
             catch (Exception e)
             {

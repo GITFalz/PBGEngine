@@ -491,6 +491,16 @@ namespace PBG.Voxel
         public static Vector3i BlockToRelative(Vector3i position) => (position.X & 31, position.Y & 31, position.Z & 31);
         public static Vector3i BlockToChunkRelative(Vector3i position) => (position.X >> 5, position.Y >> 5, position.Z >> 5);
         public static Vector3i ChunkRelative(Vector3i position) => BlockToChunkRelative(position);
+
+        public static int BlockToChunk(int axis) => axis & ~31;
+        public static int BlockToRelative(int axis) => axis & 31;
+        public static int BlockToChunkRelative(int axis) => axis >> 5;
+        public static int ChunkRelative(int axis) => BlockToChunkRelative(axis);
+
+        public static int BTC(this int axis) => axis & ~31;
+        public static int BTR(this int axis) => axis & 31;
+        public static int BTCR(this int axis) => axis >> 5;
+        public static int CR(this int axis) => BlockToChunkRelative(axis);
     }
 
     public struct Hit

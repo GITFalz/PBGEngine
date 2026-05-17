@@ -36,8 +36,6 @@ public unsafe class GFX
     private static VulkanFramebuffer _vulkanFramebuffer = null!;
     private static VulkanSyncObject _vulkanSyncObject = null!;
 
-    private static bool _started = false;
-
     private static (int x, int y, uint width, uint height) _viewport;
 
     public GFX(
@@ -53,9 +51,6 @@ public unsafe class GFX
         VulkanFramebuffer vulkanFramebuffer,
         VulkanSyncObject vulkanSyncObject
     ) {
-        if (_started)
-            return;
-
         _renderer = renderer;
 
         _vulkanDevice = vulkanDevice;
@@ -69,8 +64,6 @@ public unsafe class GFX
         _vulkanDepthBuffer = vulkanDepthBuffer;
         _vulkanFramebuffer = vulkanFramebuffer;
         _vulkanSyncObject = vulkanSyncObject;
-
-        _started = true;
     }
 
     #region Device

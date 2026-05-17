@@ -39,6 +39,7 @@ namespace PBG.Voxel
         }
 
         public Block Get(Vector3i position) => Get(GetIndex(position));
+        public Block Get(int x, int y, int z) => _blocks[GetIndex(x, y, z)];
         public Block GetInner(Vector3i position) => Get(GetIndexInner(position.X, position.Y, position.Z));
         public Block Get(int index)
         {

@@ -15,7 +15,7 @@ public class GroupInputUI(
     new UICol(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children)[
         new UICol(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children)[
             new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode),
-            new UIText("Inputs", mc_[6], fs_[1], bottom_[20], left_[5]),
+            new UIText("Inputs", mc_[6], fs_[1.5f], bottom_[20], left_[5]),
             new UIVCol(blank_sharp_g_[30], grow_children, w_[200]).Ref(ref _list),
             Run(RegenerateInputs)
         ]
@@ -28,7 +28,7 @@ public class GroupInputUI(
         foreach (var (name, field) in node.OutputFields)
         {
             var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_right);
-            var text = new UIText(name, mc_[18], fs_[1f], middle_left);
+            var text = new UIText(name, mc_[18], fs_[1.5f], middle_left);
             field.SetButton(button);
             field.SetName(name);
             field.Output.Name = name;

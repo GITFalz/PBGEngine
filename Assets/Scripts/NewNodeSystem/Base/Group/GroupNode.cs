@@ -377,55 +377,11 @@ public class GroupNodeUI(
     public override UIElementBase Script() =>
     new UICol(blank_round, rgba_[0, 0, 0, 0], left_[position.X], top_[position.Y], border_[5, 5, 5, 5], grow_children)[
         new UICol(blank_round, rgb_v3_[color], border_[0, 30, 0, 0], grow_children)[
-            new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(MoveNode)
-            .OnHoverEnter(_ => 
-            {
-                if (GroupDisplay.connectionRenderer != null)
-                    return;
-
-                GroupDisplay.connectionRenderer = data.Nodes.ConnectionRenderer;
-                data.GroupNodeDisplayCollection.UIController!.Transform.Disabled = false;
-                data.GroupNodeDisplayCollection.SetVisible(true);
-
-                if (data.Nodes.Nodes.Count > 0)
-                {
-                    Vector2 min = (float.MaxValue, float.MaxValue);
-                    Vector2 max = (float.MinValue, float.MinValue);
-                    int count = 0;
-                    for (int i = 0; i < data.Nodes.Nodes.Count; i++)
-                    {
-                        var n = data.Nodes.Nodes[i];
-                        if (n.Collection != null)
-                        {
-                            min.MinSet(min, n.Collection.TopLeft);
-                            max.MaxSet(max, n.Collection.BottomRight);
-                            count++;
-                        }
-                    }
-                    Vector2 size = max - min;
-
-                    int left = (int)min.X - 25;
-                    int top = (int)min.Y - 25;
-
-                    data.GroupNodeDisplayCollection.BaseOffset = (left, top);
-                    data.GroupNodeDisplayCollection.Width = (int)size.X + 50;
-                    data.GroupNodeDisplayCollection.Height = (int)size.Y + 50;
-                    data.GroupNodeDisplayCollection.Border = (-left, -top, 0, 0);
-                    data.GroupNodeDisplayCollection.ApplyChanges(UIChange.Scale);
-
-                    if (count > 0)
-                    {
-                        Vector2 pos = (-min - size * 0.5f) * 0.4f + new Vector2(StructureNodeManager.NodePanelWidth, StructureNodeManager.NodePanelHeight) * 0.5f;
-                        NodeManager.GroupDisplayController.SetScale(0.4f, (0, 0, 0));
-                        NodeManager.GroupDisplayController.SetPosition((pos.X, pos.Y, 0));
-                    }
-
-                    GroupDisplay.UpdateDisplay(data.Nodes);
-                }
-            })
-            .OnHoverExit(_ =>  { GroupDisplay.connectionRenderer = null; data.GroupNodeDisplayCollection.SetVisible(false); } )
+            new UIButton(w_full_minus_[25], h_[30], bottom_[30]).OnClick(Select).OnHold(b => { MoveNode(b); })
+            .OnHoverExit(_ =>  { HideGroupInfo(); } )
             .OnHover(_ => 
             { 
+                HandleViewGroup();
                 var delta = Input.ScrollDelta.Y;
                 if (delta != 0)
                 {
@@ -450,8 +406,8 @@ public class GroupNodeUI(
                     Console.WriteLine("---- End ----");
                 }
             }),
-            new UIText($"Group {node.GroupName}", mc_[node.GroupName.Length + 6], fs_[1], bottom_[20], left_[5]),
-            new UIText("X", top_right, mc_[1], fs_[1.2f], bottom_[20], right_[5]).OnClick(DeleteNode),
+            new UIText($"Group {node.GroupName}", mc_[node.GroupName.Length + 6], fs_[1.5f], bottom_[20], left_[5]),
+            new UIText("X", top_right, mc_[1], fs_[1.5f], bottom_[20], right_[5]).OnClick(DeleteNode),
             new UIVCol(blank_sharp_g_[30], grow_children)[
                 new UIVCol(border_[5, 5, 5, 5], grow_children)[
                     new UIHCol(grow_children)[
@@ -464,7 +420,7 @@ public class GroupNodeUI(
                                 return new UIVCol(h_[30], grow_children)[
                                     new UIHCol(h_[30], spacing_[5], w_[130])[
                                         button,
-                                        new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left)
+                                        new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1.5f], middle_left)
                                     ],
                                     field.Value.GetInputFields()
                                 ];
@@ -477,7 +433,7 @@ public class GroupNodeUI(
                                 button.OnClick(_ => NodeBase.Connect(field.Output));
                                 node.OutputFields.Add(name, field);
                                 return new UICol(h_[30], spacing_[5], w_[130], top_left)[
-                                    new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left),
+                                    new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1.5f], middle_left),
                                     button
                                 ];
                             })
@@ -487,6 +443,66 @@ public class GroupNodeUI(
             ]
         ]
     ];
+
+    public void HideGroupInfo()
+    {
+        GroupDisplay.connectionRenderer = null; data.GroupNodeDisplayCollection.SetVisible(false);
+    }
+
+    public void HandleViewGroup()
+    {
+        if (Input.IsKeyReleased(Key.Tab))
+        {
+            HideGroupInfo();
+            return;
+        }
+
+        if (Input.IsKeyPressed(Key.Tab))
+        {
+            if (GroupDisplay.connectionRenderer != null)
+                return;
+
+            GroupDisplay.connectionRenderer = data.Nodes.ConnectionRenderer;
+            data.GroupNodeDisplayCollection.UIController!.Transform.Disabled = false;
+            data.GroupNodeDisplayCollection.SetVisible(true);
+
+            if (data.Nodes.Nodes.Count > 0)
+            {
+                Vector2 min = (float.MaxValue, float.MaxValue);
+                Vector2 max = (float.MinValue, float.MinValue);
+                int count = 0;
+                for (int i = 0; i < data.Nodes.Nodes.Count; i++)
+                {
+                    var n = data.Nodes.Nodes[i];
+                    if (n.Collection != null)
+                    {
+                        min.MinSet(min, n.Collection.TopLeft);
+                        max.MaxSet(max, n.Collection.BottomRight);
+                        count++;
+                    }
+                }
+                Vector2 size = max - min;
+
+                int left = (int)min.X - 25;
+                int top = (int)min.Y - 25;
+
+                data.GroupNodeDisplayCollection.BaseOffset = (left, top);
+                data.GroupNodeDisplayCollection.Width = (int)size.X + 50;
+                data.GroupNodeDisplayCollection.Height = (int)size.Y + 50;
+                data.GroupNodeDisplayCollection.Border = (-left, -top, 0, 0);
+                data.GroupNodeDisplayCollection.ApplyChanges(UIChange.Scale);
+
+                if (count > 0)
+                {
+                    Vector2 pos = (-min - size * 0.5f) * 0.6f + new Vector2(StructureNodeManager.NodePanelWidth, StructureNodeManager.NodePanelHeight) * 0.5f;
+                    NodeManager.GroupDisplayController.SetScale(0.6f, (0, 0, 0));
+                    NodeManager.GroupDisplayController.SetPosition((pos.X, pos.Y, 0));
+                }
+
+                GroupDisplay.UpdateDisplay(data.Nodes);
+            }
+        }
+    }
 
     public void Select(UIButton _) => NodeManager.Select(node);
 

@@ -98,7 +98,7 @@ public class NodeValue_Float(NodeBase node, float value) : NodeValue(node)
     public override string GetGLSLType() => "float";
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(Value.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(Value.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref Value, i, _defaultValue, Index));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref Value, i, NodeHelper.SlideSpeed, Index));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1));
@@ -152,7 +152,7 @@ public class NodeValue_Int(NodeBase node, int value) : NodeValue(node)
 
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(Value.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(Value.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref Value, i, _defaultValue, Index));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref Value, i, NodeHelper.SlideSpeed, Index));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1));
@@ -215,10 +215,10 @@ public class NodeValue_Vector2(NodeBase node, float x, float y) : NodeValue(node
 
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref X, i, _defaultX, Index1));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref X, i, NodeHelper.SlideSpeed, Index1));
-        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input2.OnTextChange(i => NodeHelper.SetValue(ref Y, i, _defaultY, Index2));
         input2.OnHold(i => NodeHelper.SetSlideValue(ref Y, i, NodeHelper.SlideSpeed, Index2));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1), NodeValue.DefaultInput(input2));
@@ -297,10 +297,10 @@ public class NodeValue_Vector2Int(NodeBase node, int x, int y) : NodeValue(node)
 
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref X, i, _defaultX, Index1));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref X, i, NodeHelper.SlideSpeed, Index1));
-        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input2.OnTextChange(i => NodeHelper.SetValue(ref Y, i, _defaultY, Index2));
         input2.OnHold(i => NodeHelper.SetSlideValue(ref Y, i, NodeHelper.SlideSpeed, Index2));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1), NodeValue.DefaultInput(input2));
@@ -386,13 +386,13 @@ public class NodeValue_Vector3(NodeBase node, float x, float y, float z) : NodeV
 
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref X, i, _defaultX, Index1));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref X, i, NodeHelper.SlideSpeed, Index1));
-        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input2.OnTextChange(i => NodeHelper.SetValue(ref Y, i, _defaultY, Index2));
         input2.OnHold(i => NodeHelper.SetSlideValue(ref Y, i, NodeHelper.SlideSpeed, Index2));
-        input3 = new UIField(Z.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input3 = new UIField(Z.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input3.OnTextChange(i => NodeHelper.SetValue(ref Z, i, _defaultZ, Index3));
         input3.OnHold(i => NodeHelper.SetSlideValue(ref Z, i, NodeHelper.SlideSpeed, Index3));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1), NodeValue.DefaultInput(input2), NodeValue.DefaultInput(input3));
@@ -487,13 +487,13 @@ public class NodeValue_Vector3Int(NodeBase node, int x, int y, int z) : NodeValu
 
     public override UIElementBase GetInputFields()
     {
-        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input1 = new UIField(X.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input1.OnTextChange(i => NodeHelper.SetValue(ref X, i, _defaultX, Index1));
         input1.OnHold(i => NodeHelper.SetSlideValue(ref X, i, NodeHelper.SlideSpeed, Index1));
-        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input2 = new UIField(Y.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input2.OnTextChange(i => NodeHelper.SetValue(ref Y, i, _defaultY, Index2));
         input2.OnHold(i => NodeHelper.SetSlideValue(ref Y, i, NodeHelper.SlideSpeed, Index2));
-        input3 = new UIField(Z.ToString(), mc_[8], middle_left, left_[5], fs_[1]);
+        input3 = new UIField(Z.ToString(), mc_[8], middle_left, left_[5], fs_[1.5f]);
         input3.OnTextChange(i => NodeHelper.SetValue(ref Z, i, _defaultZ, Index3));
         input3.OnHold(i => NodeHelper.SetSlideValue(ref Z, i, NodeHelper.SlideSpeed, Index3));
         return NodeValue.DefaultParent(NodeValue.DefaultInput(input1), NodeValue.DefaultInput(input2), NodeValue.DefaultInput(input3));

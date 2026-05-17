@@ -27,7 +27,7 @@ public class RollingAverageTimer
         AddSample(_stopwatch.Elapsed.Milliseconds);
     }
 
-    private void AddSample(long ms)
+    public void AddSample(long ms)
     {
         lock(_lock)
         {

@@ -42,7 +42,22 @@ namespace PBG.UI
             IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest});
             ItemTexture = ItemDataManager.Image;
 
-            TextShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag") });
+            ShaderInfo textShaderInfo = new() 
+            { 
+                VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), 
+                FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag") 
+            };
+
+            textShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;
+            textShaderInfo.ColorBlendAttachment.BlendEnable = true;
+            textShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.One;
+            textShaderInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            textShaderInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+            textShaderInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+            textShaderInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            textShaderInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+            TextShader = new Shader(textShaderInfo);
             TextShader.Compile();
 
             TextTexture = new TextureArray(new("TextAtlas.png", 14, 18) { Filter = Filter.Linear, SamplerMode = SamplerAddressMode.ClampToEdge }); 

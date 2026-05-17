@@ -62,6 +62,7 @@ namespace PBG.Voxel
         }
 
         public Block Get(Vector3i position) => Blocks?.Get(position) ?? Block.Air;
+        public Block Get(int x, int y, int z) => Blocks?.Get(x, y, z) ?? Block.Air;
         public Block Get(int index) => Blocks?.Get(index) ?? Block.Air;
 
         public Block GetInner(Vector3i position) => Blocks?.GetInner(position) ?? Block.Air;

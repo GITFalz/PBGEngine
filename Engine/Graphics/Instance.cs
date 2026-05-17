@@ -173,6 +173,8 @@ public unsafe class VulkanInstance
         VulkanDepthBuffer = new VulkanDepthBuffer(VulkanDevice, VulkanSwapchain, VulkanImage);
         _vulkanImageViews = new VulkanImageViews(VulkanDevice, VulkanImage, VulkanSwapchain);
         _vulkanFramebuffer = new VulkanFramebuffer(VulkanDevice, VulkanSwapchain, _vulkanImageViews, VulkanDepthBuffer, LoadRenderPass);
+
+        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject);  
     }
 
     private void OnRender(double deltaSeconds)
@@ -242,8 +244,7 @@ public unsafe class VulkanInstance
         CommandBufferBeginInfo beginInfo = new()
         {
             SType = StructureType.CommandBufferBeginInfo,
-            Flags = 0, // Optional
-            PInheritanceInfo = null // Optional
+            Flags = CommandBufferUsageFlags.OneTimeSubmitBit
         };
 
         if (VulkanDevice.Vk.BeginCommandBuffer(commandBuffer, &beginInfo) != Result.Success) {

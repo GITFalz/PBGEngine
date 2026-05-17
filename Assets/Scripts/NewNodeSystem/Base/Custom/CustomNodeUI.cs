@@ -44,7 +44,7 @@ public class CustomNodeUI(
                 If(node.IsOutput, () => 
                 new UICol(w_full, h_[30])[
                     new UICol(w_[50], h_full, blank_sharp_g_[10], middle_right)[
-                        new UIField(""+node.OutputPriority, mc_[5], middle_right, right_[5]).OnTextChange(f => node.OutputPriority = f.GetInt())
+                        new UIField(""+node.OutputPriority, mc_[5], middle_right, right_[5], fs_[1.5f]).OnTextChange(f => node.OutputPriority = f.GetInt())
                     ],
                     new UIText("Priority", middle_left)
                 ])
@@ -56,14 +56,14 @@ public class CustomNodeUI(
         new UIVCol(h_[30], grow_children)[
             new UIHCol(h_[30], spacing_[5], w_[130])[
                 Run(() => button?.SetOnClick(_ => { if (field.Input != null) NodeBase.Connect(field.Input); })),
-                new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1], middle_left)
+                new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Max(name.Length, 10)], fs_[1.5f], middle_left)
             ],
             field.Value.GetInputFields()
         ];
 
     public static UIElementBase CustomNodeUIOutput(CustomNode node, NodeOutputParam output, string name) =>
         new UICol(h_[30], spacing_[5], w_[130], top_left)[
-            new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1], middle_left),
+            new UIText(name.Length <= 10 ? name : name[..10], mc_[Mathf.Min(name.Length, 10)], fs_[1.5f], middle_left),
             Run(() => {
                 var button = new UIButton(w_[15], h_[15], blank_sharp, rgb_v3_[node.Color], middle_right);
                 var field = new NodeOutputField(button, node, output);

@@ -112,6 +112,13 @@ namespace PBG.Voxel
             public readonly static int Model = BlankShader.GetLocation("uModel");
         }
         */
+
+        public struct RawChunkAllocationData
+        {
+            public Allocation Allocation;
+            public Vector3 Center;
+            public bool ForceDisabled;
+        }
     
 
         public HashSet<VoxelChunk> VoxelChunkInstances = [];
@@ -120,6 +127,7 @@ namespace PBG.Voxel
         public HashSet<Vector3i> ChunkRelativePositions = [];
         public List<VoxelChunk> Chunks = [];
         public List<VoxelChunk> VisibleChunks = [];
+        public List<RawChunkAllocationData> RawVisibleChunkData = [];
 
         public HashSet<VoxelChunk> RerenderMap = [];
         public HashSet<VoxelChunk> FreedMap = [];
@@ -135,8 +143,8 @@ namespace PBG.Voxel
         public int RenderDistance = 16;
         public int MaxVerticalChunks = 8;
 
-        public int MaxChunkGenerationPerFrame = 7;
-        public int MaxChunkBuildingPerFrame = 7;
+        public int MaxChunkGenerationPerFrame = 20;
+        public int MaxChunkBuildingPerFrame = 10;
 
         public VoxelRendererGenerator ChunkGenerator = new BaseVoxelRendererGenerator();
 
@@ -181,8 +189,6 @@ namespace PBG.Voxel
         public int RenderedChunks = 0;
 
         public int Counter = 0;
-
-        public RollingAverageTimer RenderingTimer = new();
 
         public VoxelRenderer()
         {
