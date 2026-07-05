@@ -190,6 +190,12 @@ namespace PBG.Voxel
 
         public int Counter = 0;
 
+
+
+        public static Dictionary<Vector3i, uint[]> DebugAOMasks = [];
+
+
+
         public VoxelRenderer()
         {
             Init();
@@ -735,6 +741,8 @@ namespace PBG.Voxel
 
             GFX.Draw(3, 1, 0, 0);
             */
+
+            ChunkDebugger.Render(Camera);
             
             if (DataPool.Updated || Input.MouseMoved || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
             {

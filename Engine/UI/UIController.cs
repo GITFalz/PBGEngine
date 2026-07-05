@@ -406,6 +406,13 @@ namespace PBG.UI
 
         void Update()
         {
+            if (Input.IsKeyPressed(Key.R))
+            {
+                Console.WriteLine("Refresh");
+                GFX.DeviceWaitIdle();
+                UIData.LinearUI.UiShader?.RenewDescriptors();
+                UIData.PixelPerfectUI.UiShader?.RenewDescriptors();
+            }
             HandleAnimations();
             GenerateBuffers();
 

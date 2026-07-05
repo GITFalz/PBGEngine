@@ -16,12 +16,15 @@ public struct ComputeShaderInfo
 
 public unsafe class ComputeShader : BufferBase, IShader
 {
+    private HashSet<Descriptor> _boundDescriptors = [];
+
+    private Dictionary<string, int> _locations = [];
+    private UniformBufferAttribute[] _uniformAttribues = [];
     private UniformBufferLayout[] _uniformBindings = [];
-
     public DescriptorSetLayout descriptorSetLayout;
-
     public PipelineLayout pipelineLayout;
     public Pipeline pipeline;
+
 
     public ComputeShaderInfo _shaderInfo;
 
@@ -29,9 +32,6 @@ public unsafe class ComputeShader : BufferBase, IShader
     {
         _shaderInfo = info;
     }
-
-    private Dictionary<string, int> _locations = [];
-    private UniformBufferAttribute[] _uniformAttribues = [];
 
     public string GetPath() => _shaderInfo.ComputeShaderPath;
 
@@ -72,192 +72,14 @@ public unsafe class ComputeShader : BufferBase, IShader
     
     public void Compile()
     {
-        ShaderData computeData = _shaderCompiler.CompileAndReflect(_shaderInfo.ComputeShaderPath, ShaderKind.ComputeShader);
+        _shaderCompiler.CompileComputeShader(_shaderInfo, out PBGComputeShaderModule module);
 
-        ShaderModule computeModule = CreateShaderModule(computeData.SpirV);
-
-        // === Unfiorm Mapping ===
-        int uniformBindingsIndex = 0;
-        Dictionary<uint, int> uniformBindingsMap = [];
-        _uniformBindings = new UniformBufferLayout[_shaderCompiler.UniformBufferBindings.Count];
-        List<UniformBufferAttribute> uniformBufferAttributes = [];
-
-        for (int i = 0; i < _shaderCompiler.UniformBufferAttributes.Count; i++)
-        {
-            var attribute = _shaderCompiler.UniformBufferAttributes[i];
-            uint size;
-            if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
-            {
-                var layout = _uniformBindings[index];
-                attribute.Index = (uint)index;
-                size = layout.Size;     
-
-                _locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
-
-                uniformBufferAttributes.Add(attribute);
-                _uniformBindings[index] = layout; 
-            }
-            else
-            {
-                var layout = _shaderCompiler.UniformBufferBindings[attribute.Binding];
-                attribute.Index = (uint)uniformBindingsIndex;
-                size = layout.Size;
-
-                _locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
-
-                uniformBufferAttributes.Add(attribute);
-                _uniformBindings[uniformBindingsIndex] = layout;
-                uniformBindingsMap.Add(attribute.Binding, uniformBindingsIndex);
-
-                uniformBindingsIndex++;
-            }
-        }
-
-        _uniformAttribues = [.. uniformBufferAttributes];
-        // === End ===
-
-        
-        // === Storage Mapping ===
-        int storageBindingsIndex = 0;
-        Dictionary<uint, int> storageBindingsMap = [];
-        StorageBufferLayout[] storageBindings = new StorageBufferLayout[_shaderCompiler.StorageBufferBindings.Count];
-
-        for (int i = 0; i < _shaderCompiler.StorageBufferAttributes.Count; i++)
-        {
-            var attribute = _shaderCompiler.StorageBufferAttributes[i];
-            if (!storageBindingsMap.TryGetValue(attribute.Binding, out var index))
-            {
-                var layout = _shaderCompiler.StorageBufferBindings[attribute.Binding];
-                storageBindings[storageBindingsIndex] = layout;
-                storageBindingsMap.Add(attribute.Binding, storageBindingsIndex);
-                storageBindingsIndex++;
-            }
-        }
-        // === End ===
-
-        // === Sampled Image Mapping ===
-        int imageBindingsIndex = 0;
-        Dictionary<uint, int> imageBindingsMap = [];
-        SampledImageLayout[] imageBindings = new SampledImageLayout[_shaderCompiler.SampledImageBindings.Count];
-
-        for (int i = 0; i < _shaderCompiler.SampledImageAttributes.Count; i++)
-        {
-            var attribute = _shaderCompiler.SampledImageAttributes[i];
-            if (!imageBindingsMap.TryGetValue(attribute.Binding, out var index))
-            {
-                var layout = _shaderCompiler.SampledImageBindings[attribute.Binding];
-                imageBindings[imageBindingsIndex] = layout;
-                imageBindingsMap.Add(attribute.Binding, imageBindingsIndex);
-                imageBindingsIndex++;
-            }
-        }
-        // === End ===
-
-        // === Storage Image Mapping ===
-        int storageImageBindingsIndex = 0;
-        Dictionary<uint, int> storageImageBindingsMap = [];
-        SampledImageLayout[] storageImageBindings = new SampledImageLayout[_shaderCompiler.StorageImageBindings.Count];
-
-        for (int i = 0; i < _shaderCompiler.StorageImageAttributes.Count; i++)
-        {
-            var attribute = _shaderCompiler.StorageImageAttributes[i];
-            if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
-            {
-                var layout = _shaderCompiler.StorageImageBindings[attribute.Binding];
-                storageImageBindings[storageImageBindingsIndex] = layout;
-                storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
-                storageImageBindingsIndex++;
-            }
-        }
-        // === End ===
-
-
-        // === Create bindings ===
-        DescriptorSetLayoutBinding[] layoutBindings = new DescriptorSetLayoutBinding[_uniformBindings.Length + storageBindings.Length + imageBindings.Length + storageImageBindings.Length];
-        
-        for (int i = 0; i < _uniformBindings.Length; i++)
-        {
-            var layout = _uniformBindings[i];
-            layoutBindings[i] = layout.LayoutBinding;
-        }
-
-        for (int i = 0; i < storageBindings.Length; i++)
-        {
-            var layout = storageBindings[i];
-            layoutBindings[_uniformBindings.Length + i] = layout.LayoutBinding;
-        }
-
-        for (int i = 0; i < imageBindings.Length; i++)
-        {
-            var layout = imageBindings[i];
-            layoutBindings[_uniformBindings.Length + storageBindings.Length + i] = layout.LayoutBinding;
-        }
-
-        for (int i = 0; i < storageImageBindings.Length; i++)
-        {
-            var layout = storageImageBindings[i];
-            layoutBindings[_uniformBindings.Length + storageBindings.Length + imageBindings.Length + i] = layout.LayoutBinding;
-        }
-
-        DescriptorSetLayoutCreateInfo layoutInfo = new()
-        {
-            SType = StructureType.DescriptorSetLayoutCreateInfo,
-            BindingCount = (uint)layoutBindings.Length
-        };
-
-        fixed (DescriptorSetLayoutBinding* pLayoutBindings = layoutBindings)
-        layoutInfo.PBindings = pLayoutBindings;
-
-        if (GFX.CreateDescriptorSetLayout(&layoutInfo, null, out descriptorSetLayout) != Result.Success) {
-            throw new InvalidOperationException("failed to create descriptor set layout!");
-        }
-        // === End ===
-        
-        _shaderCompiler.UniformBufferAttributes = [];
-        _shaderCompiler.UniformBufferBindings = [];
-
-        _shaderCompiler.StorageBufferAttributes = [];
-        _shaderCompiler.StorageBufferBindings = [];
-
-        _shaderCompiler.SampledImageAttributes = [];
-        _shaderCompiler.SampledImageBindings = [];
-
-        _shaderCompiler.StorageImageAttributes = [];
-        _shaderCompiler.StorageImageBindings = [];
-
-        PipelineLayoutCreateInfo pipelineLayoutInfo = new()
-        {
-            SType = StructureType.PipelineLayoutCreateInfo,
-            SetLayoutCount = 1,
-            PushConstantRangeCount = 0, // Optional
-            PPushConstantRanges = null, // Optional
-        };
-
-        fixed (DescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
-        pipelineLayoutInfo.PSetLayouts = pDescriptorSetLayout;
-
-        if (GFX.CreatePipelineLayout(&pipelineLayoutInfo, null, out pipelineLayout) != Result.Success) {
-            throw new InvalidOperationException("failed to create pipeline layout!");
-        }
-        
-
-        PipelineShaderStageCreateInfo computeShaderStageInfo = new()
-        {
-            SType = StructureType.PipelineShaderStageCreateInfo,
-            Stage = ShaderStageFlags.ComputeBit,
-            Module = computeModule,
-            PName = _mainPtr
-        };
-
-        var pipelineInfo = new ComputePipelineCreateInfo
-        {
-            SType  = StructureType.ComputePipelineCreateInfo,
-            Stage  = computeShaderStageInfo,
-            Layout = pipelineLayout
-        };
-
-        GFX.Vk.CreateComputePipelines(GFX.Device, default, 1, &pipelineInfo, null, out pipeline);
-        GFX.DestroyShaderModule(computeModule);
+        _locations = module.Locations;
+        _uniformAttribues = module.UniformAttribues;
+        _uniformBindings = module.UniformBindings;
+        descriptorSetLayout = module.DescriptorSetLayout;
+        pipelineLayout = module.PipelineLayout;
+        pipeline = module.Pipeline;
     }
 
     public void Renew()
@@ -269,10 +91,52 @@ public unsafe class ComputeShader : BufferBase, IShader
     public Descriptor GetDescriptorSet()
     {
         _shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
-        return new(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+        var descriptor = new Descriptor(this, pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+        _boundDescriptors.Add(descriptor);
+        return descriptor;
     }
 
-    private ShaderModule CreateShaderModule(byte[] code)
+    public void RenewDescriptors()
+    {
+        try
+        {
+            _shaderCompiler.CompileComputeShader(_shaderInfo, out PBGComputeShaderModule module);
+
+            Destroy();
+        
+            _locations = module.Locations;
+            _uniformAttribues = module.UniformAttribues;
+            _uniformBindings = module.UniformBindings;
+            descriptorSetLayout = module.DescriptorSetLayout;
+            pipelineLayout = module.PipelineLayout;
+            pipeline = module.Pipeline;
+
+            RenewDescriptorSets();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] : Failed to reload shader {_shaderInfo.ComputeShaderPath}, {ex.Message}");
+            return;
+        }
+    }
+
+    private void RenewDescriptorSets()
+    {
+        foreach (var descriptor in _boundDescriptors)
+        {
+            descriptor.BaseDispose();
+            _shaderBuffer.AllocateDescriptorLayout(descriptorSetLayout, out var descriptorSets, out var descriptorPool);
+            descriptor.Create(pipelineLayout, descriptorPool, descriptorSets, _uniformBindings, _uniformAttribues);
+            descriptor.RebindAll();
+        }
+    }
+
+    public bool RemoveDescriptorSet(Descriptor descriptor)
+    {
+        return _boundDescriptors.Remove(descriptor);
+    }
+
+    public static ShaderModule CreateShaderModule(byte[] code)
     {
         ShaderModuleCreateInfo createInfo = new()
         {

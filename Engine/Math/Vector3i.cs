@@ -1,3 +1,5 @@
+using PBG.Voxel;
+
 namespace PBG.MathLibrary;
 
 public struct Vector3i
@@ -105,4 +107,18 @@ public struct Vector3i
     {
         return HashCode.Combine(X, Y, Z);
     }
+
+    /// <summary>
+    /// From block position in world to relative block position in chunk
+    /// </summary>
+    /// <param name="position"></param>
+    /// <returns></returns>
+    public readonly Vector3i ToRelative() => VoxelData.BlockToRelative(X, Y, Z);
+
+    /// <summary>
+    /// The relative position of the chunk of the block position (used internally)
+    /// </summary>
+    /// <param name="position"></param>
+    /// <returns></returns>
+    public readonly Vector3i ToChunkRelative() => VoxelData.BlockToChunkRelative(X, Y, Z);
 }

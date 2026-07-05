@@ -25,13 +25,14 @@ public class WorldScene : Scene
         
         var worldManager = new WorldManager();
         var skybox = new Skybox();
+        var playerUI = new UIController();
         skybox.Day = new Vector3(0.41f, 0.62f, 0.78f);
         skybox.Night = new Vector3(0.05f, 0.07f, 0.24f);
         var voxelRenderer = new VoxelRenderer();
         voxelRenderer.ChunkGenerator = new WorldGenerator();
         var LODVoxelRenderer = new LODVoxelRenderer();
 
-        worldNode.AddComponent(worldManager, skybox, voxelRenderer, LODVoxelRenderer);
+        worldNode.AddComponent(worldManager, skybox, playerUI, voxelRenderer, LODVoxelRenderer);
 
         // UI
         var uiNode = mainNode.AddChild("UI");

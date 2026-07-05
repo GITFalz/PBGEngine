@@ -73,6 +73,8 @@ namespace PBG.UI
             float scrollDelta = -Input.GetMouseScrollDelta().Y;
             if (scrollDelta == 0 || scrollView.ContainsHoveringScrollView())
                 return;
+            
+            Console.WriteLine("Scrolling: " + scrollDelta);
 
             var smallestSize = scrollView.GetMaskedSize();
 

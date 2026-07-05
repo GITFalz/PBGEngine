@@ -8,6 +8,8 @@ using PBG.Rendering;
 using PBG.UI;
 using PBG.Voxel;
 
+using static PBG.UI.Styles;
+
 
 public class PlayerController : ScriptingNode
 {
@@ -63,6 +65,8 @@ public class PlayerController : ScriptingNode
 
     private bool _showSettings = false;
 
+    private UIController _playerUI;
+
     public PlayerController()
     {
         AdminState = new PlayerAdminState(this);
@@ -84,6 +88,16 @@ public class PlayerController : ScriptingNode
         var worldNode = Scene.GetNode("Root/World");
         World = worldNode.GetComponent<VoxelRenderer>();
         Skybox = worldNode.GetComponent<Skybox>();
+
+        _playerUI = worldNode.GetComponent<UIController>();
+        _playerUI.AddElement(new UICol(w_full, h_full)[
+            new UIImg(middle_center, w_[20], h_[4], blank_full, bg_black),
+            new UIImg(middle_center, w_[4], h_[20], blank_full, bg_black),
+            new UICol(middle_center)[
+                new UIImg(middle_center, w_[20], h_[2], blank_full, bg_white),
+                new UIImg(middle_center, w_[2], h_[20], blank_full, bg_white)
+            ]
+        ]);
 
         Info.SetPlayerPosition(Scene.DefaultCamera.Position);
         _oldPlayerPosition = Transform.Position;

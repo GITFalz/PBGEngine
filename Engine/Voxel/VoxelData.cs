@@ -487,10 +487,65 @@ namespace PBG.Voxel
             return offsets.Count > 0;
         }
 
+        /// <summary>
+        /// The world position of the chunk from the block position
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public static Vector3i BlockToChunk(Vector3i position) => (position.X & ~31, position.Y & ~31, position.Z & ~31);
+        
+        /// <summary>
+        /// From block position in world to relative block position in chunk
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public static Vector3i BlockToRelative(Vector3i position) => (position.X & 31, position.Y & 31, position.Z & 31);
+
+        /// <summary>
+        /// The relative position of the chunk of the block position (used internally)
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public static Vector3i BlockToChunkRelative(Vector3i position) => (position.X >> 5, position.Y >> 5, position.Z >> 5);
+
+        /// <summary>
+        /// The relative position of the chunk from the world position of the chunk (used internally)
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public static Vector3i ChunkRelative(Vector3i position) => BlockToChunkRelative(position);
+
+
+
+        /// <summary>
+        /// The world position of the chunk from the block position
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public static Vector3i BlockToChunk(int x, int y, int z) => (x & ~31, y & ~31, z & ~31);
+
+        /// <summary>
+        /// From block position in world to relative block position in chunk
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public static Vector3i BlockToRelative(int x, int y, int z) => (x & 31, y & 31, z & 31);
+
+        /// <summary>
+        /// The relative position of the chunk of the block position (used internally)
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public static Vector3i BlockToChunkRelative(int x, int y, int z) => (x >> 5, y >> 5, z >> 5);
+
+        /// <summary>
+        /// The relative position of the chunk from the world position of the chunk (used internally)
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
+        public static Vector3i ChunkRelative(int x, int y, int z) => BlockToChunkRelative(x, y, z);
+
+        
 
         public static int BlockToChunk(int axis) => axis & ~31;
         public static int BlockToRelative(int axis) => axis & 31;

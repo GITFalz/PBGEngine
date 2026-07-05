@@ -8,7 +8,8 @@ namespace PBG.Graphics;
 public unsafe class Descriptor : BufferBase, IResizeable
 {
     public readonly Guid ID = Guid.NewGuid();
-
+    
+    private Dictionary<GPUBufferBase, uint> _boundBuffers = [];
     private Dictionary<Texture, uint> _boundTextures = [];
     private Dictionary<TextureArray, uint> _boundTextureArrays = [];
     private Dictionary<FBO, (uint? colorBinding, uint? depthBinding)> _boundFramebuffers = [];
@@ -36,6 +37,11 @@ public unsafe class Descriptor : BufferBase, IResizeable
     public Descriptor(IShader shader, PipelineLayout pipelineLayout, DescriptorPool descriptorPool, DescriptorSet[] descriptorSets, UniformBufferLayout[] uniformBindings, UniformBufferAttribute[] uniformAttributes)
     {
         _shader = shader;
+        Create(pipelineLayout, descriptorPool, descriptorSets, uniformBindings, uniformAttributes);
+    }
+
+    public void Create(PipelineLayout pipelineLayout, DescriptorPool descriptorPool, DescriptorSet[] descriptorSets, UniformBufferLayout[] uniformBindings, UniformBufferAttribute[] uniformAttributes)
+    {
         _descriptorSets = descriptorSets;
         _descriptorPool = descriptorPool;
         _uniformAttributes = uniformAttributes;
@@ -172,7 +178,12 @@ public unsafe class Descriptor : BufferBase, IResizeable
         }
         else
         {
-            buffer.OnDispose += _ => DisposeBuffer(buffer);
+            buffer.OnDispose += _ => 
+            { 
+                DisposeBuffer(buffer); 
+                _boundBuffers.Remove(buffer);
+            };
+            _boundBuffers.Add(buffer, binding);
             _bufferIndices.Add(buffer, _bufferBarriers.Length);
             _indexBuffers.Add(_bufferBarriers.Length, buffer);
             _bufferBarriers = [.._bufferBarriers, buffer.GetMemoryBarrier()];
@@ -319,24 +330,37 @@ public unsafe class Descriptor : BufferBase, IResizeable
         BindSampler(framebuffer.depthView, framebuffer.sampler, DescriptorType.CombinedImageSampler, ImageLayout.ShaderReadOnlyOptimal, binding);
     }
 
+    public void UnbindBuffer(GPUBufferBase buffer)
+    {
+        DisposeBuffer(buffer);
+        _boundBuffers.Remove(buffer);
+    }
+
     public void UnbindTexture(Texture texture)
     {
         DisposeImage(texture);
         _boundTextures.Remove(texture);
     }
+
     public void UnbindTextureArray(TextureArray texture)
     {
         DisposeImage(texture);
         _boundTextureArrays.Remove(texture);
     }
+
     public void UnbindFramebuffer(FBO framebuffer)
     {
         _boundFramebuffers.Remove(framebuffer);
     }
 
 
-    public void Resize(uint width, uint height)
+    public void Resize(uint width, uint height) => RebindAll();
+
+    public void RebindAll()
     {
+        foreach (var (buffer, binding) in _boundBuffers)
+            BindBuffer(buffer, binding);
+
         foreach (var (texture, binding) in _boundTextures)
             BindTexture(texture, binding);
 
@@ -363,8 +387,8 @@ public unsafe class Descriptor : BufferBase, IResizeable
 
     public ImageMemoryBarrier[] GetImageBarriers() => _imageBarriers;
     public BufferMemoryBarrier[] GetBufferBarriers() => _bufferBarriers;
-    
-    protected override void Destroy()
+
+    public void BaseDispose()
     {
         for (int i = 0; i < _uniformBuffers.Length; i++) 
         {
@@ -375,4 +399,11 @@ public unsafe class Descriptor : BufferBase, IResizeable
         fixed (DescriptorSet* pDescriptorSets = _descriptorSets)
         GFX.FreeDescriptorSets(_descriptorPool, (uint)_descriptorSets.Length, pDescriptorSets);
     }
+    
+    protected override void Destroy()
+    {
+        BaseDispose();
+        _shader.RemoveDescriptorSet(this);
+    }
+    
 }

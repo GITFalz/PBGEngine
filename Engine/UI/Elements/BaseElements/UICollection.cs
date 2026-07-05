@@ -308,10 +308,9 @@ namespace PBG.UI
                 var child = ChildElements[i];
                 if (child is UICol col)
                 {
-                    if (child.Hovering)
-                        return true;
                     if (col is UIVScroll && child.Hovering)
                         return true;
+
                     if (col.ContainsHoveringScrollView())
                         return true;
                 }

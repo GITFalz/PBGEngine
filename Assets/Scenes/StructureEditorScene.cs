@@ -69,6 +69,9 @@ public class StructureEditorScene : Scene
         // Editor
         var editorNode = structureNode.AddChild("Editor");
 
+        var bitMaskDebugger = new BitMaskDebugger();
+        var bitMaskController = new UIController();
+
         var voxelSettings = new VoxelRendererSettings()
         {
             GenerationType = VoxelRendererGenerationType.Cube,
@@ -90,7 +93,7 @@ public class StructureEditorScene : Scene
             BlockBoundingBox = blockBoundingBox
         };
 
-        editorNode.AddComponent(voxelRenderer, structureEngineManager, structureNodeManager);
+        editorNode.AddComponent(voxelRenderer, structureEngineManager, structureNodeManager, bitMaskDebugger, bitMaskController);
 
         // Build bounding box
         var buildNode = structureNode.AddChild("Build Bounding Box");

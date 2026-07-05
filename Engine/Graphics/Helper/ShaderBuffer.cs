@@ -98,6 +98,6 @@ public unsafe class ShaderBuffer
         if (_disposed) return;
         foreach (var descriptorPool in _descriptorPools)
             GFX.DestroyDescriptorPool(descriptorPool);
-        _disposed = false;
+        _disposed = true;
     }
 }

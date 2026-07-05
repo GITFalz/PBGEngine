@@ -66,101 +66,229 @@ namespace PBG.Voxel
             0, 1, 1, 2, 1, 2, 3, 3
         ];
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ChunkDir(int v) => v < 0 ? -1 : v >= 32 ? 1 : 0;
+
         public static bool GenerateIndirectMesh(DefaultChunkRenderingProcess process, Vector3i worldPosition, ChunkBlocks blocks)
         {
-            Stopwatch sw = Stopwatch.StartNew();
+            //uint[] bitMap = new uint[32*32*32];
 
-            long setupTime = 0;
-            long neighbourTime = 0;
-            long faceTime = 0;
-            long internalFaceTime = 0;
+            //Stopwatch sw = Stopwatch.StartNew();
 
             var renderer = process.Chunk.Renderer;
 
-            // setup
-            long t = sw.ElapsedTicks;
             VoxelChunk emptyChunk = new VoxelChunk(renderer, (0, 0, 0));
             VoxelChunk[] sideChunks = new VoxelChunk[27];
             for (int i = 0; i < 27; i++)
                 sideChunks[i] = renderer.GetChunk(process.Chunk.RelativePosition + _neighbourOffsets[i]) ?? emptyChunk;
-            setupTime += sw.ElapsedTicks - t;
+
+            int count = 0;
+
+            int ti = 0;
+            uint sideBlockMask = 0;
+
+            for (int y = -1; y <= 1; y++)
+            for (int z = -1; z <= 1; z++)
+            for (int x = -1; x <= 1; x++)
+            { 
+                Block sideBlock;
+                if ((uint)x < 32 && (uint)y < 32 && (uint)z < 32)
+                {
+                    sideBlock = blocks.Get(x, y, z);
+                }
+                else
+                {
+                    int cx = x < 0 ? -1 : 0;
+                    int cy = y < 0 ? -1 : 0;
+                    int cz = z < 0 ? -1 : 0;
+                    int chunkIdx = (cy + 1) * 9 + (cz + 1) * 3 + (cx + 1);
+
+                    sideBlock = sideChunks[chunkIdx]?.Get(x & 31, y & 31, z & 31) ?? Block.Air;
+                }
+
+                uint aoBit = sideBlock.IsAir() ? 0u : 1u;
+                sideBlockMask |= aoBit << ti;
+                ti++;
+            }
+
+            uint sideBlockXMask = sideBlockMask;
 
             for (int x = 0; x < 32; x++)
-            for (int y = 0; y < 32; y++)
-            for (int z = 0; z < 32; z++)
             {
-                var block = blocks.Get(x, y, z);
-                if (block.IsAir())
-                    continue;
-
-                int ti = 0;
-                uint sideBlockMask = 0;
-
-                // neighbour sampling
-                t = sw.ElapsedTicks;
-                for (int y1 = -1; y1 <= 1; y1++)
-                for (int z1 = -1; z1 <= 1; z1++)
-                for (int x1 = -1; x1 <= 1; x1++)
-                { 
-                    int nx = x + x1;
-                    int ny = y + y1;
-                    int nz = z + z1;
-
-                    Block sideBlock;
-                    if ((uint)(x + x1) < 32 && (uint)(y + y1) < 32 && (uint)(z + z1) < 32)
-                    {
-                        sideBlock = blocks.Get(x + x1, y + y1, z + z1);
-                    }
-                    else
-                    {
-                        int cx = nx < 0 ? -1 : nx >= 32 ? 1 : 0;
-                        int cy = ny < 0 ? -1 : ny >= 32 ? 1 : 0;
-                        int cz = nz < 0 ? -1 : nz >= 32 ? 1 : 0;
-                        int chunkIdx = (cy + 1) * 9 + (cz + 1) * 3 + (cx + 1);
-
-                        sideBlock = sideChunks[chunkIdx]?.Get(nx & 31, ny & 31, nz & 31) ?? Block.Air;
-                    }
-
-                    uint aoBit = sideBlock.IsAir() ? 0u : 1u;
-                    sideBlockMask |= aoBit << ti;
-                    ti++;
-                }
-                neighbourTime += sw.ElapsedTicks - t;
-
-                var definition = block.Definition();
-                int pos = x | (y << 5) | (z << 10);
-
-                // visible faces
-                t = sw.ElapsedTicks;
-                
-                HandleFrontFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-                HandleRightFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-                HandleTopFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-                HandleLeftFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-                HandleBottomFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-                HandleBackFaceAO(process, definition, sideChunks, sideBlockMask, pos, x, y, z);
-
-                faceTime += sw.ElapsedTicks - t;
-
-                // internal faces
-                t = sw.ElapsedTicks;
-                var iFaces = definition.NewBlockFaces[0].InternalFaces;
-                for (int i = 0; i < iFaces.Length; i++)
+                if (x > 0)
                 {
-                    var face = iFaces[i];
-                    process.VertexData.Add(new(face.GeometryIndex, pos, 0, 0));
+                    sideBlockXMask &= 0x6DB6DB6; //00000110110110110110110110110110 ( y mask )
+                    sideBlockXMask >>= 1;
+
+                    int tx = (x + 1) & 31;
+                    int cx = x < 32 ? 1 : 2;
+
+                    uint xside = 0;
+
+                    xside |= (sideChunks[cx]?.Get(tx, 31, 31) ?? Block.Air).IsAir() ? 0 : 0b100u;
+                    xside |= (sideChunks[cx+3]?.Get(tx, 31, 0) ?? Block.Air).IsAir() ? 0 : 0b100000u;
+                    xside |= (sideChunks[cx+3]?.Get(tx, 31, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+
+                    xside |= (sideChunks[cx+9]?.Get(tx, 0, 31) ?? Block.Air).IsAir() ? 0 : 0b100000000000u;
+                    xside |= (sideChunks[cx+12]?.Get(tx, 0, 0) ?? Block.Air).IsAir() ? 0 : 0b100000000000000u;
+                    xside |= (sideChunks[cx+12]?.Get(tx, 0, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000u;
+
+                    xside |= (sideChunks[cx+9]?.Get(tx, 1, 31) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000u;
+                    xside |= (sideChunks[cx+12]?.Get(tx, 1, 0) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000u;
+                    xside |= (sideChunks[cx+12]?.Get(tx, 1, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000000u;
+
+                    sideBlockXMask |= xside;
                 }
-                internalFaceTime += sw.ElapsedTicks - t;
+
+                uint sideBlockYMask = sideBlockXMask;
+
+                for (int y = 0; y < 32; y++)
+                {
+                    if (y > 0)
+                    {
+                        sideBlockYMask &= 0x7FFFE00; //00000111111111111111111000000000 ( y mask )
+                        sideBlockYMask >>= 9;
+
+                        int ty = (y + 1) & 31;
+
+                        int cxa = ChunkDir(x - 1) + 1;
+                        int cxb = ChunkDir(x)     + 1;
+                        int cxc = ChunkDir(x + 1) + 1;
+
+                        int cy = y < 31 ? 9 : 18;
+
+                        uint yside = 0;
+
+                        yside |= (sideChunks[cxa + cy + 0]?.Get((x-1) & 31, ty, 31) ?? Block.Air).IsAir() ? 0 : 0b1u;
+                        yside |= (sideChunks[cxb + cy + 0]?.Get( x,         ty, 31) ?? Block.Air).IsAir() ? 0 : 0b10u;
+                        yside |= (sideChunks[cxc + cy + 0]?.Get((x+1) & 31, ty, 31) ?? Block.Air).IsAir() ? 0 : 0b100u;
+
+                        yside |= (sideChunks[cxa + cy + 3]?.Get((x-1) & 31, ty,  0) ?? Block.Air).IsAir() ? 0 : 0b1000u;
+                        yside |= (sideChunks[cxb + cy + 3]?.Get( x,         ty,  0) ?? Block.Air).IsAir() ? 0 : 0b10000u;
+                        yside |= (sideChunks[cxc + cy + 3]?.Get((x+1) & 31, ty,  0) ?? Block.Air).IsAir() ? 0 : 0b100000u;
+
+                        yside |= (sideChunks[cxa + cy + 3]?.Get((x-1) & 31, ty,  1) ?? Block.Air).IsAir() ? 0 : 0b1000000u;
+                        yside |= (sideChunks[cxb + cy + 3]?.Get( x,         ty,  1) ?? Block.Air).IsAir() ? 0 : 0b10000000u;
+                        yside |= (sideChunks[cxc + cy + 3]?.Get((x+1) & 31, ty,  1) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+
+                        sideBlockYMask |= yside << 18;
+                    }
+
+                    uint sideBlockMaskMem = sideBlockYMask;
+
+                    for (int z = 0; z < 32; z++)
+                    {
+                        var block = blocks.Get(x, y, z);
+                        
+                        if (z > 0)
+                        {
+                            sideBlockMaskMem &= 0x7E3F1F8; //00000111111000111111000111111000 ( z mask )
+                            sideBlockMaskMem >>= 3;
+
+                            bool interior = x > 0 && x < 31 && y > 0 && y < 31 && z < 31;
+
+                            if (interior)
+                            {
+                                sideBlockMaskMem |= (blocks.Get(x - 1, y - 1, z + 1).IsAir() ? 0u : 0b1000000u);
+                                sideBlockMaskMem |= (blocks.Get(x,     y - 1, z + 1).IsAir() ? 0u : 0b10000000u);
+                                sideBlockMaskMem |= (blocks.Get(x + 1, y - 1, z + 1).IsAir() ? 0u : 0b100000000u);
+                                
+                                sideBlockMaskMem |= (blocks.Get(x - 1, y    , z + 1).IsAir() ? 0u : 0b1000000000000000u);
+                                sideBlockMaskMem |= (blocks.Get(x,     y    , z + 1).IsAir() ? 0u : 0b10000000000000000u);
+                                sideBlockMaskMem |= (blocks.Get(x + 1, y    , z + 1).IsAir() ? 0u : 0b100000000000000000u);
+
+                                sideBlockMaskMem |= (blocks.Get(x - 1, y + 1, z + 1).IsAir() ? 0u : 0b1000000000000000000000000u);
+                                sideBlockMaskMem |= (blocks.Get(x,     y + 1, z + 1).IsAir() ? 0u : 0b10000000000000000000000000u);
+                                sideBlockMaskMem |= (blocks.Get(x + 1, y + 1, z + 1).IsAir() ? 0u : 0b100000000000000000000000000u);
+                            }
+                            else
+                            {
+                                int tx1 = x == 0 ? 0 : 1;
+                                int tx2 = x < 31 ? 1 : 2;
+
+                                int ty1 = y == 0 ? 0 : 9;
+                                int ty2 = y < 31 ? 9 :18;
+
+                                int tz = z == 31 ? 6 : 3;
+
+                                // better for next step i guess, no negative number
+                                int mx = x + 32;
+                                int my = y + 32;
+                                int mz = z + 32;
+
+                                int nx1 = (mx - 1) & 31;
+                                int nx2 = (mx + 1) & 31;
+
+                                int ny1 = (my - 1) & 31;
+                                int ny2 = (my + 1) & 31;
+
+                                int nz = (mz + 1) & 31;
+
+                                
+
+                                sideBlockMaskMem |= (sideChunks[tx1 + ty1 + tz]?.Get(nx1, ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b1000000u;
+                                sideBlockMaskMem |= (sideChunks[  1 + ty1 + tz]?.Get( x , ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b10000000u;
+                                sideBlockMaskMem |= (sideChunks[tx2 + ty1 + tz]?.Get(nx2, ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+
+                                sideBlockMaskMem |= (sideChunks[tx1 +   9 + tz]?.Get(nx1,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b1000000000000000u;
+                                sideBlockMaskMem |= (sideChunks[  1 +   9 + tz]?.Get( x ,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b10000000000000000u;
+                                sideBlockMaskMem |= (sideChunks[tx2 +   9 + tz]?.Get(nx2,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000u;
+
+                                sideBlockMaskMem |= (sideChunks[tx1 + ty2 + tz]?.Get(nx1, ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b1000000000000000000000000u;
+                                sideBlockMaskMem |= (sideChunks[  1 + ty2 + tz]?.Get( x , ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b10000000000000000000000000u;
+                                sideBlockMaskMem |= (sideChunks[tx2 + ty2 + tz]?.Get(nx2, ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000000u;
+                            }  
+                        }
+
+                        if (block.IsAir())
+                            continue;
+
+                        count++;
+
+                        var definition = block.Definition();
+                        int pos = x | (y << 5) | (z << 10);
+
+                        HandleFrontFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        HandleRightFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        HandleTopFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        HandleLeftFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        HandleBottomFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        HandleBackFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+
+                        var iFaces = definition.NewBlockFaces[0].InternalFaces;
+                        for (int i = 0; i < iFaces.Length; i++)
+                        {
+                            var face = iFaces[i];
+                            process.VertexData.Add(new(face.GeometryIndex, pos, 0, 0));
+                        }
+                    }
+                }
             }
 
 
-            Console.WriteLine($"Setup:          {setupTime / (double)Stopwatch.Frequency:F6}s");
-            Console.WriteLine($"Neighbour AO:   {neighbourTime / (double)Stopwatch.Frequency:F6}s");
-            Console.WriteLine($"Face gen:       {faceTime / (double)Stopwatch.Frequency:F6}s");
-            Console.WriteLine($"Internal faces: {internalFaceTime / (double)Stopwatch.Frequency:F6}s");
-            Console.WriteLine($"Total:          {sw.Elapsed.TotalSeconds:F6}s");
+            //Console.WriteLine($"Setup:          {setupTime / (double)Stopwatch.Frequency:F6}s");
+            //Console.WriteLine($"Neighbour AO:   {neighbourTime / (double)Stopwatch.Frequency:F6}s");
+            //Console.WriteLine($"Face gen:       {faceTime / (double)Stopwatch.Frequency:F6}s");
+            //Console.WriteLine($"Internal faces: {internalFaceTime / (double)Stopwatch.Frequency:F6}s");
+            /*
+            Console.WriteLine($"Count: {count}, Total:          {sw.Elapsed.TotalSeconds:F6}s");
+
+            VoxelRenderer.DebugAOMasks[process.Chunk.RelativePosition] = bitMap;
+            */
 
             return true;
+        }
+
+        public static string BitsToString(uint mask)
+        {
+            string s = "";
+            for (int i = 31; i >= 0; i--)
+            {
+                s += (mask >> i) & 1;
+                if (i <= 26 && i % 3 == 0 && i > 0) s += "|";
+                else if (i == 27) s += " ";
+            }
+            return s;
         }
 
         private static void HandleFrontFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)

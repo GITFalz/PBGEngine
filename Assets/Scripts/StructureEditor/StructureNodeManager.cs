@@ -112,10 +112,10 @@ public class StructureNodeManager : ScriptingNode
 
     void Start()
     {
-        StructureEditor = new(this);
+        StructureEditor = new StructureEditor(this);
         
-        dragBlockUI = new(this);
-        structureNodeUI = new(this);
+        dragBlockUI = new DragBlockUI(this);
+        structureNodeUI = new StructureNodeUI(this);
 
         var controller = Transform.ParentNode!.GetNode("WorldUI").GetComponent<UIController>();
 

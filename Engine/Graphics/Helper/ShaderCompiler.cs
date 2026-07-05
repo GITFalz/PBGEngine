@@ -6,6 +6,7 @@ using CrossCompiler = Silk.NET.SPIRV.Cross.Compiler;
 using Silk.NET.SPIRV;
 using System.Runtime.InteropServices;
 using PBG;
+using PBG.Graphics;
 
 public unsafe class ShaderCompiler
 {
@@ -28,6 +29,8 @@ public unsafe class ShaderCompiler
     public Dictionary<uint, SampledImageLayout> StorageImageBindings = [];
     public List<SampledImageAttribute> StorageImageAttributes = [];
 
+    private readonly byte* _mainPtr = (byte*)"main".ToPtr();
+
     public ShaderCompiler()
     {
         _shaderc = Shaderc.GetApi();
@@ -47,6 +50,547 @@ public unsafe class ShaderCompiler
         public byte[] SpirV;
         public ShaderKind Kind;
         public VertexAttribute[] VertexAttributes;
+    }
+
+
+    public void CompileShader(Shader shader, ShaderInfo shaderInfo, out PBGShaderModule module)
+    {
+        module = new();
+
+        ShaderData vertexData = CompileAndReflect(shaderInfo.VertexShaderPath, ShaderKind.VertexShader);
+        ShaderData? fragmentData = null;
+        if (shaderInfo.FragmentShaderPath != null)
+        {
+            fragmentData = CompileAndReflect(shaderInfo.FragmentShaderPath, ShaderKind.FragmentShader);
+        }
+
+        ShaderModule vertModule = Shader.CreateShaderModule(vertexData.SpirV);
+        ShaderModule? fragModule = null;
+        if (fragmentData != null)
+        {
+            fragModule = Shader.CreateShaderModule(fragmentData.Value.SpirV);
+        }
+
+        // === Vertex buffer ===
+        VertexInputAttributeDescription[] attributeDescriptions = new VertexInputAttributeDescription[vertexData.VertexAttributes.Length];
+        VertexInputBindingDescription[] vertexBindings = [..shader.VertexBindings];
+        for (int i = 0; i < vertexData.VertexAttributes.Length; i++)
+        {
+            var attribute = vertexData.VertexAttributes[i];
+            //if (!_attributes.TryGetValue(attribute.Name, out var att))
+                //throw new KeyNotFoundException($"[Error] : was not able to find attribute {attribute.Name} while creating the shader");
+
+            attributeDescriptions[i].Location = (uint)attribute.Location;
+            attributeDescriptions[i].Binding = 0;
+            attributeDescriptions[i].Format = attribute.Format;
+            attributeDescriptions[i].Offset = attribute.Offset;
+        }
+        // === End ===
+
+        // === Unfiorm Mapping ===
+        int uniformBindingsIndex = 0;
+        Dictionary<uint, int> uniformBindingsMap = [];
+        module.UniformBindings = new UniformBufferLayout[UniformBufferBindings.Count];
+        List<UniformBufferAttribute> uniformBufferAttributes = [];
+
+        for (int i = 0; i < UniformBufferAttributes.Count; i++)
+        {
+            var attribute = UniformBufferAttributes[i];
+            uint size;
+            if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = module.UniformBindings[index];
+                attribute.Index = (uint)index;
+                size = layout.Size;     
+
+                module.Locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
+
+                uniformBufferAttributes.Add(attribute);
+                module.UniformBindings[index] = layout; 
+            }
+            else
+            {
+                var layout = UniformBufferBindings[attribute.Binding];
+                attribute.Index = (uint)uniformBindingsIndex;
+                size = layout.Size;
+
+                module.Locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
+
+                uniformBufferAttributes.Add(attribute);
+                module.UniformBindings[uniformBindingsIndex] = layout;
+                uniformBindingsMap.Add(attribute.Binding, uniformBindingsIndex);
+
+                uniformBindingsIndex++;
+            }
+        }
+
+        module.UniformAttribues = [.. uniformBufferAttributes];
+        // === End ===
+
+        
+        // === Storage Mapping ===
+        int storageBindingsIndex = 0;
+        Dictionary<uint, int> storageBindingsMap = [];
+        StorageBufferLayout[] storageBindings = new StorageBufferLayout[StorageBufferBindings.Count];
+
+        for (int i = 0; i < StorageBufferAttributes.Count; i++)
+        {
+            var attribute = StorageBufferAttributes[i];
+            if (!storageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = StorageBufferBindings[attribute.Binding];
+                storageBindings[storageBindingsIndex] = layout;
+                storageBindingsMap.Add(attribute.Binding, storageBindingsIndex);
+                storageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+        // === Sampled Image Mapping ===
+        int imageBindingsIndex = 0;
+        Dictionary<uint, int> imageBindingsMap = [];
+        SampledImageLayout[] imageBindings = new SampledImageLayout[SampledImageBindings.Count];
+
+        for (int i = 0; i < SampledImageAttributes.Count; i++)
+        {
+            var attribute = SampledImageAttributes[i];
+            if (!imageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = SampledImageBindings[attribute.Binding];
+                imageBindings[imageBindingsIndex] = layout;
+                imageBindingsMap.Add(attribute.Binding, imageBindingsIndex);
+                imageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+        // === Storage Image Mapping ===
+        int storageImageBindingsIndex = 0;
+        Dictionary<uint, int> storageImageBindingsMap = [];
+        SampledImageLayout[] storageImageBindings = new SampledImageLayout[StorageImageBindings.Count];
+
+        for (int i = 0; i < StorageImageAttributes.Count; i++)
+        {
+            var attribute = StorageImageAttributes[i];
+            if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = StorageImageBindings[attribute.Binding];
+                storageImageBindings[storageImageBindingsIndex] = layout;
+                storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
+                storageImageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+
+        // === Create bindings ===
+        DescriptorSetLayoutBinding[] layoutBindings = new DescriptorSetLayoutBinding[module.UniformBindings.Length + storageBindings.Length + imageBindings.Length + storageImageBindings.Length];
+        
+        for (int i = 0; i < module.UniformBindings.Length; i++)
+        {
+            var layout = module.UniformBindings[i];
+            layoutBindings[i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < storageBindings.Length; i++)
+        {
+            var layout = storageBindings[i];
+            layoutBindings[module.UniformBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < imageBindings.Length; i++)
+        {
+            var layout = imageBindings[i];
+            layoutBindings[module.UniformBindings.Length + storageBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < storageImageBindings.Length; i++)
+        {
+            var layout = storageImageBindings[i];
+            layoutBindings[module.UniformBindings.Length + storageBindings.Length + imageBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        DescriptorSetLayoutCreateInfo layoutInfo = new()
+        {
+            SType = StructureType.DescriptorSetLayoutCreateInfo,
+            BindingCount = (uint)layoutBindings.Length
+        };
+
+        fixed (DescriptorSetLayoutBinding* pLayoutBindings = layoutBindings)
+        layoutInfo.PBindings = pLayoutBindings;
+
+        if (GFX.CreateDescriptorSetLayout(&layoutInfo, null, out var descriptorSetLayout) != Silk.NET.Vulkan.Result.Success) {
+            throw new InvalidOperationException("failed to create descriptor set layout!");
+        }
+        // === End ===
+        
+        Clear();
+
+        PipelineShaderStageCreateInfo vertShaderStageInfo = new()
+        {
+            SType = StructureType.PipelineShaderStageCreateInfo,
+            Stage = ShaderStageFlags.VertexBit,
+            Module = vertModule,
+            PName = _mainPtr
+        };
+
+        List<PipelineShaderStageCreateInfo> preShaderStages = [vertShaderStageInfo];
+
+        if (fragModule != null)
+        {
+            PipelineShaderStageCreateInfo fragShaderStageInfo = new()
+            {
+                SType = StructureType.PipelineShaderStageCreateInfo,
+                Stage = ShaderStageFlags.FragmentBit,
+                Module = fragModule.Value,
+                PName = _mainPtr
+            };
+
+            preShaderStages.Add(fragShaderStageInfo);
+        }
+
+        PipelineShaderStageCreateInfo[] shaderStages = [.. preShaderStages];
+
+        PipelineVertexInputStateCreateInfo vertexInputInfo = new()
+        {
+            SType = StructureType.PipelineVertexInputStateCreateInfo,
+            VertexBindingDescriptionCount = 0,
+            PVertexBindingDescriptions = null, // Optional
+            VertexAttributeDescriptionCount = 0,
+            PVertexAttributeDescriptions = null // Optional
+        };
+
+        if (vertexBindings.Length > 0)
+        {
+            vertexInputInfo.VertexBindingDescriptionCount = (uint)vertexBindings.Length;
+
+            fixed (VertexInputBindingDescription* PBGertexBindings = vertexBindings)
+            vertexInputInfo.PVertexBindingDescriptions = PBGertexBindings;
+        }
+
+        if (attributeDescriptions.Length > 0)
+        {
+            vertexInputInfo.VertexAttributeDescriptionCount = (uint)attributeDescriptions.Length;
+
+            fixed (VertexInputAttributeDescription* pAttributeDescriptions = attributeDescriptions)
+            vertexInputInfo.PVertexAttributeDescriptions = pAttributeDescriptions;
+        }
+
+        var inputAssembly = shaderInfo.InputAssembly;
+
+        // == Viewport Settings ==
+        Viewport viewport = new()
+        {
+            X = 0.0f,
+            Y = 0.0f,
+            Width = (float)GFX.SwapChainExtent.Width,
+            Height = (float)GFX.SwapChainExtent.Height,
+            MinDepth = 0.0f,
+            MaxDepth = 1.0f
+        };
+
+        Rect2D scissor = new()
+        {
+            Offset = new Offset2D(0, 0),
+            Extent = GFX.SwapChainExtent
+        };
+
+        DynamicState[] dynamicStates = [
+            DynamicState.Viewport,
+            DynamicState.Scissor
+        ];
+
+        PipelineDynamicStateCreateInfo dynamicState = new()
+        {
+            SType = StructureType.PipelineDynamicStateCreateInfo,
+            DynamicStateCount = (uint)dynamicStates.Length,    
+        };
+
+        fixed(DynamicState* pDynamicStates = dynamicStates)
+        dynamicState.PDynamicStates = pDynamicStates;
+
+        PipelineViewportStateCreateInfo viewportState = new()
+        {
+            SType = StructureType.PipelineViewportStateCreateInfo,
+            ViewportCount = 1,
+            ScissorCount = 1,
+            PViewports = &viewport,
+            PScissors = &scissor
+        };
+
+        var rasterizer = shaderInfo.Rasterizer;
+
+        PipelineMultisampleStateCreateInfo multisampling = new()
+        {
+            SType = StructureType.PipelineMultisampleStateCreateInfo,
+            SampleShadingEnable = false,
+            RasterizationSamples = SampleCountFlags.Count1Bit,
+            MinSampleShading = 1.0f, // Optional
+            PSampleMask = null, // Optional
+            AlphaToCoverageEnable = false, // Optional
+            AlphaToOneEnable = false // Optional
+        };
+
+        var colorBlendAttachment = shaderInfo.ColorBlendAttachment;
+
+        PipelineColorBlendStateCreateInfo colorBlending = new()
+        {
+            SType = StructureType.PipelineColorBlendStateCreateInfo,
+            LogicOpEnable = false,
+            LogicOp = LogicOp.Copy, // Optional
+            AttachmentCount = 1,
+            PAttachments = &colorBlendAttachment
+        };
+        colorBlending.BlendConstants[0] = 0.0f; // Optional
+        colorBlending.BlendConstants[1] = 0.0f; // Optional
+        colorBlending.BlendConstants[2] = 0.0f; // Optional
+        colorBlending.BlendConstants[3] = 0.0f; // Optional
+
+        PipelineLayoutCreateInfo pipelineLayoutInfo = new()
+        {
+            SType = StructureType.PipelineLayoutCreateInfo,
+            SetLayoutCount = 1,
+            PushConstantRangeCount = 0, // Optional
+            PPushConstantRanges = null, // Optional
+        };
+
+        pipelineLayoutInfo.PSetLayouts = &descriptorSetLayout;
+
+        if (GFX.CreatePipelineLayout(&pipelineLayoutInfo, null, out var pipelineLayout) != Silk.NET.Vulkan.Result.Success) {
+            throw new InvalidOperationException("failed to create pipeline layout!");
+        }
+
+        var depthStencil = shaderInfo.DepthStencil;
+
+        GraphicsPipelineCreateInfo pipelineInfo = new()
+        {
+            SType = StructureType.GraphicsPipelineCreateInfo,
+            StageCount = (uint)shaderStages.Length,
+            PVertexInputState = &vertexInputInfo,
+            PInputAssemblyState = &inputAssembly,
+            PViewportState = &viewportState,
+            PRasterizationState = &rasterizer,
+            PMultisampleState = &multisampling,
+            PDepthStencilState = &depthStencil,
+            PColorBlendState = &colorBlending,
+            PDynamicState = &dynamicState,
+            Layout = pipelineLayout,
+            RenderPass = shaderInfo.RenderPass,
+            Subpass = 0,
+            BasePipelineHandle = default, // Optional
+            BasePipelineIndex = -1 // Optional
+        };
+
+        fixed (PipelineShaderStageCreateInfo* pShaderStages = shaderStages)
+        pipelineInfo.PStages = pShaderStages;
+
+        if (GFX.CreateGraphicsPipelines(default, 1, &pipelineInfo, null, out var pipeline) != Silk.NET.Vulkan.Result.Success) {
+            throw new InvalidOperationException("failed to create graphics pipeline!");
+        }
+
+        GFX.DestroyShaderModule(vertModule);
+        if (fragModule != null)
+            GFX.DestroyShaderModule(fragModule.Value);
+
+        module.DescriptorSetLayout = descriptorSetLayout;
+        module.PipelineLayout = pipelineLayout;
+        module.Pipeline = pipeline;
+    }
+
+
+
+    public void CompileComputeShader(ComputeShaderInfo shaderInfo, out PBGComputeShaderModule module)
+    {
+        module = new();
+
+        ShaderData computeData = CompileAndReflect(shaderInfo.ComputeShaderPath, ShaderKind.ComputeShader);
+
+        ShaderModule computeModule = ComputeShader.CreateShaderModule(computeData.SpirV);
+
+        // === Unfiorm Mapping ===
+        int uniformBindingsIndex = 0;
+        Dictionary<uint, int> uniformBindingsMap = [];
+        module.UniformBindings = new UniformBufferLayout[UniformBufferBindings.Count];
+        List<UniformBufferAttribute> uniformBufferAttributes = [];
+
+        for (int i = 0; i < UniformBufferAttributes.Count; i++)
+        {
+            var attribute = UniformBufferAttributes[i];
+            uint size;
+            if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = module.UniformBindings[index];
+                attribute.Index = (uint)index;
+                size = layout.Size;     
+
+                module.Locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
+
+                uniformBufferAttributes.Add(attribute);
+                module.UniformBindings[index] = layout; 
+            }
+            else
+            {
+                var layout = UniformBufferBindings[attribute.Binding];
+                attribute.Index = (uint)uniformBindingsIndex;
+                size = layout.Size;
+
+                module.Locations.Add(layout.Name + "." + attribute.Name, uniformBufferAttributes.Count);
+
+                uniformBufferAttributes.Add(attribute);
+                module.UniformBindings[uniformBindingsIndex] = layout;
+                uniformBindingsMap.Add(attribute.Binding, uniformBindingsIndex);
+
+                uniformBindingsIndex++;
+            }
+        }
+
+        module.UniformAttribues = [.. uniformBufferAttributes];
+        // === End ===
+
+        
+        // === Storage Mapping ===
+        int storageBindingsIndex = 0;
+        Dictionary<uint, int> storageBindingsMap = [];
+        StorageBufferLayout[] storageBindings = new StorageBufferLayout[StorageBufferBindings.Count];
+
+        for (int i = 0; i < StorageBufferAttributes.Count; i++)
+        {
+            var attribute = StorageBufferAttributes[i];
+            if (!storageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = StorageBufferBindings[attribute.Binding];
+                storageBindings[storageBindingsIndex] = layout;
+                storageBindingsMap.Add(attribute.Binding, storageBindingsIndex);
+                storageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+        // === Sampled Image Mapping ===
+        int imageBindingsIndex = 0;
+        Dictionary<uint, int> imageBindingsMap = [];
+        SampledImageLayout[] imageBindings = new SampledImageLayout[SampledImageBindings.Count];
+
+        for (int i = 0; i < SampledImageAttributes.Count; i++)
+        {
+            var attribute = SampledImageAttributes[i];
+            if (!imageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = SampledImageBindings[attribute.Binding];
+                imageBindings[imageBindingsIndex] = layout;
+                imageBindingsMap.Add(attribute.Binding, imageBindingsIndex);
+                imageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+        // === Storage Image Mapping ===
+        int storageImageBindingsIndex = 0;
+        Dictionary<uint, int> storageImageBindingsMap = [];
+        SampledImageLayout[] storageImageBindings = new SampledImageLayout[StorageImageBindings.Count];
+
+        for (int i = 0; i < StorageImageAttributes.Count; i++)
+        {
+            var attribute = StorageImageAttributes[i];
+            if (!storageImageBindingsMap.TryGetValue(attribute.Binding, out var index))
+            {
+                var layout = StorageImageBindings[attribute.Binding];
+                storageImageBindings[storageImageBindingsIndex] = layout;
+                storageImageBindingsMap.Add(attribute.Binding, storageImageBindingsIndex);
+                storageImageBindingsIndex++;
+            }
+        }
+        // === End ===
+
+
+        // === Create bindings ===
+        DescriptorSetLayoutBinding[] layoutBindings = new DescriptorSetLayoutBinding[module.UniformBindings.Length + storageBindings.Length + imageBindings.Length + storageImageBindings.Length];
+        
+        for (int i = 0; i < module.UniformBindings.Length; i++)
+        {
+            var layout = module.UniformBindings[i];
+            layoutBindings[i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < storageBindings.Length; i++)
+        {
+            var layout = storageBindings[i];
+            layoutBindings[module.UniformBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < imageBindings.Length; i++)
+        {
+            var layout = imageBindings[i];
+            layoutBindings[module.UniformBindings.Length + storageBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        for (int i = 0; i < storageImageBindings.Length; i++)
+        {
+            var layout = storageImageBindings[i];
+            layoutBindings[module.UniformBindings.Length + storageBindings.Length + imageBindings.Length + i] = layout.LayoutBinding;
+        }
+
+        DescriptorSetLayoutCreateInfo layoutInfo = new()
+        {
+            SType = StructureType.DescriptorSetLayoutCreateInfo,
+            BindingCount = (uint)layoutBindings.Length
+        };
+
+        fixed (DescriptorSetLayoutBinding* pLayoutBindings = layoutBindings)
+        layoutInfo.PBindings = pLayoutBindings;
+
+        if (GFX.CreateDescriptorSetLayout(&layoutInfo, null, out var descriptorSetLayout) != Silk.NET.Vulkan.Result.Success) {
+            throw new InvalidOperationException("failed to create descriptor set layout!");
+        }
+        // === End ===
+        
+        UniformBufferAttributes = [];
+        UniformBufferBindings = [];
+
+        StorageBufferAttributes = [];
+        StorageBufferBindings = [];
+
+        SampledImageAttributes = [];
+        SampledImageBindings = [];
+
+        StorageImageAttributes = [];
+        StorageImageBindings = [];
+
+        PipelineLayoutCreateInfo pipelineLayoutInfo = new()
+        {
+            SType = StructureType.PipelineLayoutCreateInfo,
+            SetLayoutCount = 1,
+            PushConstantRangeCount = 0, // Optional
+            PPushConstantRanges = null, // Optional
+            PSetLayouts = &descriptorSetLayout
+        };
+
+        if (GFX.CreatePipelineLayout(&pipelineLayoutInfo, null, out var pipelineLayout) != Silk.NET.Vulkan.Result.Success) {
+            throw new InvalidOperationException("failed to create pipeline layout!");
+        }
+        
+
+        PipelineShaderStageCreateInfo computeShaderStageInfo = new()
+        {
+            SType = StructureType.PipelineShaderStageCreateInfo,
+            Stage = ShaderStageFlags.ComputeBit,
+            Module = computeModule,
+            PName = _mainPtr
+        };
+
+        var pipelineInfo = new ComputePipelineCreateInfo
+        {
+            SType  = StructureType.ComputePipelineCreateInfo,
+            Stage  = computeShaderStageInfo,
+            Layout = pipelineLayout
+        };
+
+        GFX.Vk.CreateComputePipelines(GFX.Device, default, 1, &pipelineInfo, null, out var pipeline);
+        GFX.DestroyShaderModule(computeModule);
+
+        module.DescriptorSetLayout = descriptorSetLayout;
+        module.PipelineLayout = pipelineLayout;
+        module.Pipeline = pipeline;
     }
 
     public byte[] Compile(string path, ShaderKind kind)
