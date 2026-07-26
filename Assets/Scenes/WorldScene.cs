@@ -1,6 +1,7 @@
 using PBG.Core;
 using PBG.Data;
 using PBG.MathLibrary;
+using PBG.PBGConsole;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
@@ -49,6 +50,14 @@ public class WorldScene : Scene
 
         playerNode.AddComponent(physicsBody, playerController);
         playerNode.Position = (0, 300, 0);
+
+        // Console
+        var console = new PBGConsole();
+        var consoleUI = new UIController();
+
+        var consoleNode = mainNode.AddChild("Console");
+
+        consoleNode.AddComponent(console, consoleUI);
 
         // Entity
         var entityNode = mainNode.AddChild("Entity");

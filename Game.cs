@@ -231,7 +231,7 @@ public class Game : GameWindow
 
     public override void OnUnload()
     {
-        
+        PBGConsole.PBGConsole.Save();
     }
 
     public static void SetCursorState(PBG.Data.CursorMode cursorMode)

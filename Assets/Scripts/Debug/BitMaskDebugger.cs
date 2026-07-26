@@ -130,7 +130,7 @@ public class BitMaskDebugger : ScriptingNode
     }
 
     UIElementBase GetUI() =>
-    new UIVCol(light_sharp_g_[20], middle_center, grow_children).Out(out _textWindow)[
+    new UIVCol(light_sharp_g_[20], bottom_right, grow_children).Out(out _textWindow)[
         new UIButton(w_full, h_[20], light_sharp_g_[30]).OnHold(MoveInfo),
         new UIVCol(grow_children, spacing_[10], border_[20, 20, 20, 20])[
             new UIText("X: 0", mc_[10]).Out(out _xText),

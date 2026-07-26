@@ -74,8 +74,6 @@ namespace PBG.UI
             if (scrollDelta == 0 || scrollView.ContainsHoveringScrollView())
                 return;
             
-            Console.WriteLine("Scrolling: " + scrollDelta);
-
             var smallestSize = scrollView.GetMaskedSize();
 
             float max = Mathf.Max(0, scrollView.GetTotalYSize() - smallestSize.Y + (scrollView.AllowScrollingToTop ? scrollView.Size.Y : 0));
@@ -92,6 +90,25 @@ namespace PBG.UI
             scrollView.SecondPass();
             scrollView.UpdateTransform();
             scrollView.ScrollAction?.Invoke(scrollView);
+        }
+
+        public void ScrollToTop()
+        {
+            var smallestSize = GetMaskedSize();
+
+            float max = Mathf.Max(0, GetTotalYSize() - smallestSize.Y + (AllowScrollingToTop ? Size.Y : 0));
+            float oldScrollPosition = ScrollPosition;
+            ScrollPosition = max;
+            float delta = ScrollPosition - oldScrollPosition;
+            for (int i = 0; i < ChildElements.Count; i++)
+            {
+                var child = ChildElements[i];
+                child.CollectionOffset.Y -= delta;
+            };
+
+            SecondPass();
+            UpdateTransform();
+            ScrollAction?.Invoke(this);
         }
     }
 }

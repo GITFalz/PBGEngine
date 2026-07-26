@@ -219,7 +219,7 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
         descriptor.Uniform(VoxelRenderer.WorldDoRealtimeShadowsLocation, 0);
         descriptor.Uniform(VoxelRenderer.WorldDoAmbientOcclusionLocation, voxelRenderer.AmbientOcclusion ? 1 : 0);
         descriptor.Uniform(VoxelRenderer.WorldPlayerPositionLocation, Camera.Position);
-        descriptor.Uniform(VoxelRenderer.WorldTimeLocation, voxelRenderer.Time);
+        descriptor.Uniform(VoxelRenderer.WorldTimeLocation, WorldSettings.Time);
     }
 
     public Camera GetCamera() => Camera;

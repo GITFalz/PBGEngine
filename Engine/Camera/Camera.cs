@@ -74,6 +74,8 @@ namespace PBG.Rendering
 
         public SSBO<GpuPlane> FrustumSSBO;
 
+        private bool _freeze = false;
+
         public Camera() : this(new()) {}
         public Camera(int width, int height, Vector3 position)
         {
@@ -117,6 +119,9 @@ namespace PBG.Rendering
 
             FrustumSSBO = new(6);
         }   
+
+        public void Freeze() => _freeze = true;
+        public void Unfreeze() => _freeze = false;
 
         public void Viewport((int left, int right, int bottom, int top) data) => Viewport(data.left, data.right, data.bottom, data.top);
         public void Viewport(int left, int right, int bottom, int top)
@@ -325,7 +330,8 @@ namespace PBG.Rendering
 
         public void Update()
         {
-            _updateAction.Invoke();
+            if (!_freeze)
+                _updateAction.Invoke();
             GetViewMatrix();
             CalculateFrustumPlanes();
         }

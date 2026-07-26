@@ -9,8 +9,8 @@ namespace PBG.Graphics;
 
 public struct ShaderInfo 
 {
-    public string VertexShaderPath = "";
-    public string? FragmentShaderPath = null;
+    public PString VertexShaderPath = "";
+    public PString? FragmentShaderPath = null;
     public RenderPass RenderPass = VulkanInstance.Instance.ClearRenderPass.RenderPass;
 
     public PipelineRasterizationStateCreateInfo Rasterizer = new()
@@ -84,12 +84,12 @@ public unsafe class Shader : BufferBase, IShader
     public Pipeline GraphicsPipeline;
 
     private ShaderInfo _shaderInfo;
-    private string _name = "";
+    public string Name = "";
 
     public Shader(ShaderInfo info)
     {
         _shaderInfo = info;
-        _name = Path.GetRelativePath(Game.ShaderPath, info.VertexShaderPath + "-" + info.FragmentShaderPath);
+        Name = Path.GetRelativePath(Game.ShaderPath, info.VertexShaderPath + "-" + info.FragmentShaderPath);
     }
 
     public string GetPath() => _shaderInfo.VertexShaderPath;

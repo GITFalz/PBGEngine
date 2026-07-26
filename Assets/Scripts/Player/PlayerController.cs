@@ -3,6 +3,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.PBGConsole;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
@@ -131,6 +132,12 @@ public class PlayerController : ScriptingNode
 
     void Update()
     {
+        if (PBGConsole.Focused)
+        {
+            return;
+        }
+            
+
         IsMining = false;
 
         SelectedRegion = -1;

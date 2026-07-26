@@ -59,9 +59,6 @@ namespace PBG.Voxel
         public static int WorldPlayerPositionLocation = -1;
         public static int WorldTimeLocation = -1;
 
-        float dayLengthSeconds = 60f; // 10 minutes per full day
-
-
         public static Shader BlankWorldShader = null!;
 
         public static int BlankWorldViewLocation = -1;
@@ -160,12 +157,11 @@ namespace PBG.Voxel
         public bool GenerateChunks = true;
 
         public bool AmbientOcclusion = true;
-        public bool RealtimeShadows = false;
+        public bool RealtimeShadows = true;
         public bool NeedsNeighborsToRender = true;
 
         private Vector3 _lightUp;
         public Vector3 LightDirection;
-        public float Time = 0;
         public Matrix4 ProjectionMatrix;
 
         public static FBO CloseFBO;
@@ -193,6 +189,9 @@ namespace PBG.Voxel
 
 
         public static Dictionary<Vector3i, uint[]> DebugAOMasks = [];
+
+
+        public static DebugModule debugModule;
 
 
 
@@ -298,6 +297,29 @@ namespace PBG.Voxel
 
                 _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
                 _uiPlaneDescriptor.BindFramebufferColor(MiddleFBO, 0);
+
+
+                debugModule = new();
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
+                debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
+                debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
+                debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+                debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+                debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+
+                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+                debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+                
+                debugModule.Generate();
 
                 _started = true;
             }
@@ -667,8 +689,9 @@ namespace PBG.Voxel
                 }
             }
 
-            Time = Mathf.Fraction(GameTime.TotalTime / dayLengthSeconds);
-            float angle = Time * 360f;
+            WorldSettings.Tick(GameTime.DeltaTime);
+
+            float angle = WorldSettings.Time * 360f;
             LightDirection = Mathf.RotatePoint((0, 1, 0), (0, 0, 0), (0, 0, 1), angle);
             var right = Vector3.Normalize(Vector3.Cross(LightDirection, Vector3.UnitY));
             _lightUp = Vector3.Normalize(Vector3.Cross(right, LightDirection));
@@ -676,7 +699,7 @@ namespace PBG.Voxel
             if (skybox != null)
             {
                 skybox.LightDirection = LightDirection;
-                skybox.Time = Time;
+                skybox.Time = WorldSettings.Time;
             }
         }
 
@@ -742,7 +765,14 @@ namespace PBG.Voxel
             GFX.Draw(3, 1, 0, 0);
             */
 
-            ChunkDebugger.Render(Camera);
+            //ChunkDebugger.Render(Camera);
+            if (WorldSettings.ShowChunkDebug)
+                debugModule.Render(Camera, VoxelData.BlockToChunk(Camera.Position.Rti()));
+
+            if (GameTime.FpsUpdated)
+            {
+                Console.WriteLine("Chunk count: " + VisibleChunks.Count);
+            }
             
             if (DataPool.Updated || Input.MouseMoved || _oldCameraPosition != Camera.Position || VisibleChunks.Count != _oldVisibleChunkCount)
             {
@@ -792,7 +822,7 @@ namespace PBG.Voxel
             descriptor.Uniform(WorldDoRealtimeShadowsLocation, RealtimeShadows ? 1 : 0);
             descriptor.Uniform(WorldDoAmbientOcclusionLocation, AmbientOcclusion ? 1 : 0);
             descriptor.Uniform(WorldPlayerPositionLocation, Camera.Position);
-            descriptor.Uniform(WorldTimeLocation, Time);
+            descriptor.Uniform(WorldTimeLocation, WorldSettings.Time);
         }
 
         public void RenderShadowMap(FBO fbo, float halfSize, float depth, float distance, int passIndex, out Matrix4 matrix)

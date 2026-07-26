@@ -210,12 +210,12 @@ public class GPUChunkDataPool : IDisposable
         return false;
     }
 
-    public void Update(VoxelChunk chunk, Vector4i[] data)
+    public void Update(VoxelChunk chunk, Vector4i[] data, int vertexCount)
     {
         _chunkDataPool.Updated = true;
         
         nint stride = Marshal.SizeOf<Vector4i>();
-        MeshSSBO.Update(data, (ulong)(chunk.Allocation.Offset * _chunkSize * stride), 0);
+        MeshSSBO.Update(data, (ulong)(chunk.Allocation.Offset * _chunkSize * stride), (ulong)(vertexCount * stride));
         for (int i = 0; i < chunk.Allocation.Size; i++)
         {
             long index = chunk.Allocation.Offset + i;

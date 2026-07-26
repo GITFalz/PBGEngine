@@ -31,8 +31,16 @@ namespace PBG.Voxel
 
         public static int GetAO(uint sideBlockMask, int a1, int b1, int c1)
         {
-            return AO_LUT[((sideBlockMask >> a1) & 1) | (((sideBlockMask >> b1) & 1) << 1) | (((sideBlockMask >> c1) & 1) << 2)];
+            return GetAOValue(((sideBlockMask >> a1) & 1) | (((sideBlockMask >> b1) & 1) << 1) | (((sideBlockMask >> c1) & 1) << 2));
+            //return AO_LUT[((sideBlockMask >> a1) & 1) | (((sideBlockMask >> b1) & 1) << 1) | (((sideBlockMask >> c1) & 1) << 2)];
         }
+
+        private static int GetAOValue(uint mask) => mask switch
+        {
+            0 => 0, 1 => 1, 2 => 1, 3 => 2,
+            4 => 1, 5 => 2, 6 => 3, 7 => 3,
+            _ => 0
+        };
 
         private static int[] aoCorners =
         [
@@ -69,18 +77,18 @@ namespace PBG.Voxel
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int ChunkDir(int v) => v < 0 ? -1 : v >= 32 ? 1 : 0;
 
-        public static bool GenerateIndirectMesh(DefaultChunkRenderingProcess process, Vector3i worldPosition, ChunkBlocks blocks)
+        public static bool GenerateIndirectMesh(DefaultChunkRenderingProcess process, List<Vector4i> vertexData, Vector3i worldPosition, ChunkBlocks blocks, out int vertexCount)
         {
+            int vertCount = 0;
             //uint[] bitMap = new uint[32*32*32];
 
             //Stopwatch sw = Stopwatch.StartNew();
 
             var renderer = process.Chunk.Renderer;
 
-            VoxelChunk emptyChunk = new VoxelChunk(renderer, (0, 0, 0));
             VoxelChunk[] sideChunks = new VoxelChunk[27];
             for (int i = 0; i < 27; i++)
-                sideChunks[i] = renderer.GetChunk(process.Chunk.RelativePosition + _neighbourOffsets[i]) ?? emptyChunk;
+                sideChunks[i] = renderer.GetChunk(process.Chunk.RelativePosition + _neighbourOffsets[i]) ?? VoxelChunk.Empty;
 
             int count = 0;
 
@@ -125,17 +133,17 @@ namespace PBG.Voxel
 
                     uint xside = 0;
 
-                    xside |= (sideChunks[cx]?.Get(tx, 31, 31) ?? Block.Air).IsAir() ? 0 : 0b100u;
-                    xside |= (sideChunks[cx+3]?.Get(tx, 31, 0) ?? Block.Air).IsAir() ? 0 : 0b100000u;
-                    xside |= (sideChunks[cx+3]?.Get(tx, 31, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+                    xside |= sideChunks[cx].Get(tx, 31, 31).IsAir() ? 0 : 0b100u;
+                    xside |= sideChunks[cx+3].Get(tx, 31, 0).IsAir() ? 0 : 0b100000u;
+                    xside |= sideChunks[cx+3].Get(tx, 31, 1).IsAir() ? 0 : 0b100000000u;
 
-                    xside |= (sideChunks[cx+9]?.Get(tx, 0, 31) ?? Block.Air).IsAir() ? 0 : 0b100000000000u;
-                    xside |= (sideChunks[cx+12]?.Get(tx, 0, 0) ?? Block.Air).IsAir() ? 0 : 0b100000000000000u;
-                    xside |= (sideChunks[cx+12]?.Get(tx, 0, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000u;
+                    xside |= sideChunks[cx+9].Get(tx, 0, 31).IsAir() ? 0 : 0b100000000000u;
+                    xside |= sideChunks[cx+12].Get(tx, 0, 0).IsAir() ? 0 : 0b100000000000000u;
+                    xside |= sideChunks[cx+12].Get(tx, 0, 1).IsAir() ? 0 : 0b100000000000000000u;
 
-                    xside |= (sideChunks[cx+9]?.Get(tx, 1, 31) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000u;
-                    xside |= (sideChunks[cx+12]?.Get(tx, 1, 0) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000u;
-                    xside |= (sideChunks[cx+12]?.Get(tx, 1, 1) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000000u;
+                    xside |= sideChunks[cx+9].Get(tx, 1, 31).IsAir() ? 0 : 0b100000000000000000000u;
+                    xside |= sideChunks[cx+12].Get(tx, 1, 0).IsAir() ? 0 : 0b100000000000000000000000u;
+                    xside |= sideChunks[cx+12].Get(tx, 1, 1).IsAir() ? 0 : 0b100000000000000000000000000u;
 
                     sideBlockXMask |= xside;
                 }
@@ -159,17 +167,17 @@ namespace PBG.Voxel
 
                         uint yside = 0;
 
-                        yside |= (sideChunks[cxa + cy + 0]?.Get((x-1) & 31, ty, 31) ?? Block.Air).IsAir() ? 0 : 0b1u;
-                        yside |= (sideChunks[cxb + cy + 0]?.Get( x,         ty, 31) ?? Block.Air).IsAir() ? 0 : 0b10u;
-                        yside |= (sideChunks[cxc + cy + 0]?.Get((x+1) & 31, ty, 31) ?? Block.Air).IsAir() ? 0 : 0b100u;
+                        yside |= sideChunks[cxa + cy + 0].Get((x-1) & 31, ty, 31).IsAir() ? 0 : 0b1u;
+                        yside |= sideChunks[cxb + cy + 0].Get( x,         ty, 31).IsAir() ? 0 : 0b10u;
+                        yside |= sideChunks[cxc + cy + 0].Get((x+1) & 31, ty, 31).IsAir() ? 0 : 0b100u;
 
-                        yside |= (sideChunks[cxa + cy + 3]?.Get((x-1) & 31, ty,  0) ?? Block.Air).IsAir() ? 0 : 0b1000u;
-                        yside |= (sideChunks[cxb + cy + 3]?.Get( x,         ty,  0) ?? Block.Air).IsAir() ? 0 : 0b10000u;
-                        yside |= (sideChunks[cxc + cy + 3]?.Get((x+1) & 31, ty,  0) ?? Block.Air).IsAir() ? 0 : 0b100000u;
+                        yside |= sideChunks[cxa + cy + 3].Get((x-1) & 31, ty,  0).IsAir() ? 0 : 0b1000u;
+                        yside |= sideChunks[cxb + cy + 3].Get( x,         ty,  0).IsAir() ? 0 : 0b10000u;
+                        yside |= sideChunks[cxc + cy + 3].Get((x+1) & 31, ty,  0).IsAir() ? 0 : 0b100000u;
 
-                        yside |= (sideChunks[cxa + cy + 3]?.Get((x-1) & 31, ty,  1) ?? Block.Air).IsAir() ? 0 : 0b1000000u;
-                        yside |= (sideChunks[cxb + cy + 3]?.Get( x,         ty,  1) ?? Block.Air).IsAir() ? 0 : 0b10000000u;
-                        yside |= (sideChunks[cxc + cy + 3]?.Get((x+1) & 31, ty,  1) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+                        yside |= sideChunks[cxa + cy + 3].Get((x-1) & 31, ty,  1).IsAir() ? 0 : 0b1000000u;
+                        yside |= sideChunks[cxb + cy + 3].Get( x,         ty,  1).IsAir() ? 0 : 0b10000000u;
+                        yside |= sideChunks[cxc + cy + 3].Get((x+1) & 31, ty,  1).IsAir() ? 0 : 0b100000000u;
 
                         sideBlockYMask |= yside << 18;
                     }
@@ -189,17 +197,17 @@ namespace PBG.Voxel
 
                             if (interior)
                             {
-                                sideBlockMaskMem |= (blocks.Get(x - 1, y - 1, z + 1).IsAir() ? 0u : 0b1000000u);
-                                sideBlockMaskMem |= (blocks.Get(x,     y - 1, z + 1).IsAir() ? 0u : 0b10000000u);
-                                sideBlockMaskMem |= (blocks.Get(x + 1, y - 1, z + 1).IsAir() ? 0u : 0b100000000u);
+                                sideBlockMaskMem |= blocks.Get(x - 1, y - 1, z + 1).IsAir() ? 0u : 0b1000000u;
+                                sideBlockMaskMem |= blocks.Get(x,     y - 1, z + 1).IsAir() ? 0u : 0b10000000u;
+                                sideBlockMaskMem |= blocks.Get(x + 1, y - 1, z + 1).IsAir() ? 0u : 0b100000000u;
                                 
-                                sideBlockMaskMem |= (blocks.Get(x - 1, y    , z + 1).IsAir() ? 0u : 0b1000000000000000u);
-                                sideBlockMaskMem |= (blocks.Get(x,     y    , z + 1).IsAir() ? 0u : 0b10000000000000000u);
-                                sideBlockMaskMem |= (blocks.Get(x + 1, y    , z + 1).IsAir() ? 0u : 0b100000000000000000u);
+                                sideBlockMaskMem |= blocks.Get(x - 1, y    , z + 1).IsAir() ? 0u : 0b1000000000000000u;
+                                sideBlockMaskMem |= blocks.Get(x,     y    , z + 1).IsAir() ? 0u : 0b10000000000000000u;
+                                sideBlockMaskMem |= blocks.Get(x + 1, y    , z + 1).IsAir() ? 0u : 0b100000000000000000u;
 
-                                sideBlockMaskMem |= (blocks.Get(x - 1, y + 1, z + 1).IsAir() ? 0u : 0b1000000000000000000000000u);
-                                sideBlockMaskMem |= (blocks.Get(x,     y + 1, z + 1).IsAir() ? 0u : 0b10000000000000000000000000u);
-                                sideBlockMaskMem |= (blocks.Get(x + 1, y + 1, z + 1).IsAir() ? 0u : 0b100000000000000000000000000u);
+                                sideBlockMaskMem |= blocks.Get(x - 1, y + 1, z + 1).IsAir() ? 0u : 0b1000000000000000000000000u;
+                                sideBlockMaskMem |= blocks.Get(x,     y + 1, z + 1).IsAir() ? 0u : 0b10000000000000000000000000u;
+                                sideBlockMaskMem |= blocks.Get(x + 1, y + 1, z + 1).IsAir() ? 0u : 0b100000000000000000000000000u;
                             }
                             else
                             {
@@ -226,17 +234,17 @@ namespace PBG.Voxel
 
                                 
 
-                                sideBlockMaskMem |= (sideChunks[tx1 + ty1 + tz]?.Get(nx1, ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b1000000u;
-                                sideBlockMaskMem |= (sideChunks[  1 + ty1 + tz]?.Get( x , ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b10000000u;
-                                sideBlockMaskMem |= (sideChunks[tx2 + ty1 + tz]?.Get(nx2, ny1, nz) ?? Block.Air).IsAir() ? 0 : 0b100000000u;
+                                sideBlockMaskMem |= sideChunks[tx1 + ty1 + tz].Get(nx1, ny1, nz).IsAir() ? 0 : 0b1000000u;
+                                sideBlockMaskMem |= sideChunks[  1 + ty1 + tz].Get( x , ny1, nz).IsAir() ? 0 : 0b10000000u;
+                                sideBlockMaskMem |= sideChunks[tx2 + ty1 + tz].Get(nx2, ny1, nz).IsAir() ? 0 : 0b100000000u;
 
-                                sideBlockMaskMem |= (sideChunks[tx1 +   9 + tz]?.Get(nx1,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b1000000000000000u;
-                                sideBlockMaskMem |= (sideChunks[  1 +   9 + tz]?.Get( x ,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b10000000000000000u;
-                                sideBlockMaskMem |= (sideChunks[tx2 +   9 + tz]?.Get(nx2,  y , nz) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000u;
+                                sideBlockMaskMem |= sideChunks[tx1 +   9 + tz].Get(nx1,  y , nz).IsAir() ? 0 : 0b1000000000000000u;
+                                sideBlockMaskMem |= sideChunks[  1 +   9 + tz].Get( x ,  y , nz).IsAir() ? 0 : 0b10000000000000000u;
+                                sideBlockMaskMem |= sideChunks[tx2 +   9 + tz].Get(nx2,  y , nz).IsAir() ? 0 : 0b100000000000000000u;
 
-                                sideBlockMaskMem |= (sideChunks[tx1 + ty2 + tz]?.Get(nx1, ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b1000000000000000000000000u;
-                                sideBlockMaskMem |= (sideChunks[  1 + ty2 + tz]?.Get( x , ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b10000000000000000000000000u;
-                                sideBlockMaskMem |= (sideChunks[tx2 + ty2 + tz]?.Get(nx2, ny2, nz) ?? Block.Air).IsAir() ? 0 : 0b100000000000000000000000000u;
+                                sideBlockMaskMem |= sideChunks[tx1 + ty2 + tz].Get(nx1, ny2, nz).IsAir() ? 0 : 0b1000000000000000000000000u;
+                                sideBlockMaskMem |= sideChunks[  1 + ty2 + tz].Get( x , ny2, nz).IsAir() ? 0 : 0b10000000000000000000000000u;
+                                sideBlockMaskMem |= sideChunks[tx2 + ty2 + tz].Get(nx2, ny2, nz).IsAir() ? 0 : 0b100000000000000000000000000u;
                             }  
                         }
 
@@ -248,22 +256,27 @@ namespace PBG.Voxel
                         var definition = block.Definition();
                         int pos = x | (y << 5) | (z << 10);
 
-                        HandleFrontFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
-                        HandleRightFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
-                        HandleTopFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
-                        HandleLeftFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
-                        HandleBottomFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
-                        HandleBackFaceAO(process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z);
+                        var newBlockFaces = definition.NewBlockFaces[0];
+
+                        HandleFrontFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleRightFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleTopFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleLeftFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleBottomFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleBackFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
 
                         var iFaces = definition.NewBlockFaces[0].InternalFaces;
                         for (int i = 0; i < iFaces.Length; i++)
                         {
                             var face = iFaces[i];
-                            process.VertexData.Add(new(face.GeometryIndex, pos, 0, 0));
+                            vertexData.Add(new(face.GeometryIndex, pos, 0, 0));
+                            vertCount++;
                         }
                     }
                 }
             }
+
+            vertexCount = vertCount;
 
 
             //Console.WriteLine($"Setup:          {setupTime / (double)Stopwatch.Frequency:F6}s");
@@ -291,15 +304,18 @@ namespace PBG.Voxel
             return s;
         }
 
-        private static void HandleFrontFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleFrontFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = lz == 0 ? sideChunks[10].Get(lx, ly, 31) : process.Chunk.Get(lx, ly, lz - 1);
-            var sDef = sideBlock.Definition();
 
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 0, 5))
-                return;
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 0, 5))
+                    return;
+            }
             
-            var faces = definition.NewBlockFaces[0].GetFaces(0);
+            var faces = newBlockFaces.GetFaces(0);
             
             int a = GetAO(sideBlockMask, 0, 1, 9);
             int b = GetAO(sideBlockMask, 18, 9, 19);
@@ -311,19 +327,23 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 
-        private static void HandleRightFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleRightFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = lx == 31 ? sideChunks[14].Get(0, ly, lz) : process.Chunk.Get(lx + 1, ly, lz);
-            var sDef = sideBlock.Definition();
-
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 1, 3))
-                return;
             
-            var faces = definition.NewBlockFaces[0].GetFaces(1);
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 1, 3))
+                    return;
+            }
+            
+            var faces = newBlockFaces.GetFaces(1);
             
             int a = GetAO(sideBlockMask, 2, 5, 11);
             int b = GetAO(sideBlockMask, 20, 11, 23);
@@ -335,19 +355,23 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 
-        private static void HandleTopFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleTopFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = ly == 31 ? sideChunks[22].Get(lx, 0, lz) : process.Chunk.Get(lx, ly + 1, lz);
             
-            var sDef = sideBlock.Definition();
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 2, 4))
-                return;
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 2, 4))
+                    return;
+            }
             
-            var faces = definition.NewBlockFaces[0].GetFaces(2);
+            var faces = newBlockFaces.GetFaces(2);
             
             int a = GetAO(sideBlockMask, 18, 19, 21);
             int b = GetAO(sideBlockMask, 24, 21, 25);
@@ -359,19 +383,23 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 
-        private static void HandleLeftFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleLeftFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = lx == 0 ? sideChunks[12].Get(31, ly, lz) : process.Chunk.Get(lx - 1, ly, lz);
             
-            var sDef = sideBlock.Definition();
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 3, 1))
-                return;
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 3, 1))
+                    return;
+            }
             
-            var faces = definition.NewBlockFaces[0].GetFaces(3);
+            var faces = newBlockFaces.GetFaces(3);
             
             int a = GetAO(sideBlockMask, 6, 3, 15);
             int b = GetAO(sideBlockMask, 24, 15, 21);
@@ -383,19 +411,23 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 
-        private static void HandleBottomFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleBottomFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = ly == 0 ? sideChunks[4].Get(lx, 31, lz) : process.Chunk.Get(lx, ly - 1, lz);
             
-            var sDef = sideBlock.Definition();
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 4, 2))
-                return;
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 4, 2))
+                    return;
+            }
             
-            var faces = definition.NewBlockFaces[0].GetFaces(4);
+            var faces = newBlockFaces.GetFaces(4);
             
             int a = GetAO(sideBlockMask, 2, 1, 5);
             int b = GetAO(sideBlockMask, 8, 5, 7);
@@ -407,19 +439,23 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 
-        private static void HandleBackFaceAO(DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz)
+        private static void HandleBackFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
             Block sideBlock = lz == 31 ? sideChunks[16].Get(lx, ly, 0) : process.Chunk.Get(lx, ly, lz + 1);
             
-            var sDef = sideBlock.Definition();
-            if (!sideBlock.IsAir() && definition.NewBlockFaces[0].IsOccluded(sDef.NewBlockFaces[0], 5, 0))
-                return;
+            if (!sideBlock.IsAir())
+            {
+                var sDef = sideBlock.Definition();
+                if (newBlockFaces.IsOccluded(sDef.NewBlockFaces[0], 5, 0))
+                    return;
+            }
             
-            var faces = definition.NewBlockFaces[0].GetFaces(5);
+            var faces = newBlockFaces.GetFaces(5);
 
             int a = GetAO(sideBlockMask, 8, 7, 17);
             int b = GetAO(sideBlockMask, 26, 17, 25);
@@ -431,7 +467,8 @@ namespace PBG.Voxel
             for (int i = 0; i < faces.Length; i++)
             {
                 var face = faces[i];
-                process.VertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexData.Add(new(face.GeometryIndex, pos, r, 0));
+                vertexCount++;
             }
         }
 

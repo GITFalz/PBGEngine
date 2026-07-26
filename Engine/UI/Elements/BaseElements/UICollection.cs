@@ -128,6 +128,11 @@ namespace PBG.UI
             float maxWidth = 0;
             float maxHeight = 0;
 
+            Console.WriteLine("Grow");
+
+            Vector2 min = (float.MaxValue, float.MaxValue);
+            Vector2 max = (float.MinValue, float.MinValue);
+
             for (int i = 0; i < ChildElements.Count; i++)
             {
                 var child = ChildElements[i];
@@ -144,12 +149,16 @@ namespace PBG.UI
                 if (child.Width.IsPercent())
                     child.PercentAlignement |= PercentAlignementType.Horizontal;
                 else
+                {
                     maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
+                }
 
                 if (child.Height.IsPercent())
                     child.PercentAlignement |= PercentAlignementType.Vertical;
                 else
-                    maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
+                {
+                    maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W); 
+                }
             }
             
             if (!Width.IsPercent())

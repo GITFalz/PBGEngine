@@ -3,6 +3,7 @@ using PBG.Data;
 using PBG.MathLibrary;
 using TextCopy;
 using PBG.Core;
+using Silk.NET.Vulkan;
 
 
 namespace PBG.UI
@@ -79,11 +80,23 @@ namespace PBG.UI
             {
                 _fbo = new(() => (uint)Game.Width, () => (uint)Game.Height);
 
-                _uiPlaneShader = new(new()
+                ShaderInfo planeShaderInfo = new()
                 {
                     VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
                     FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
-                });
+                };
+
+                planeShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;
+                planeShaderInfo.ColorBlendAttachment.BlendEnable = true;
+                planeShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.One;
+                planeShaderInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+                planeShaderInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+                planeShaderInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+                planeShaderInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+                planeShaderInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+                _uiPlaneShader = new(planeShaderInfo);
+
                 _uiPlaneShader.Compile();
                 
                 _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();

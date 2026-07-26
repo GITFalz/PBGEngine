@@ -1,5 +1,6 @@
 using PBG.Core;
 using PBG.Graphics;
+using PBG.PBGConsole;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.Voxel;
@@ -94,6 +95,14 @@ public class StructureEditorScene : Scene
         };
 
         editorNode.AddComponent(voxelRenderer, structureEngineManager, structureNodeManager, bitMaskDebugger, bitMaskController);
+
+        // Console
+        var console = new PBGConsole();
+        var consoleUI = new UIController();
+
+        var consoleNode = editorNode.AddChild("Console");
+
+        consoleNode.AddComponent(console, consoleUI);
 
         // Build bounding box
         var buildNode = structureNode.AddChild("Build Bounding Box");

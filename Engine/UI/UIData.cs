@@ -35,7 +35,22 @@ namespace PBG.UI
         
         public UIData(TextureType textureType)
         {   
-            UiShader = new Shader(new() { VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag") });
+            ShaderInfo uiShaderInfo = new()
+            {
+                VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), 
+                FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag")
+            };
+
+            uiShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;
+            uiShaderInfo.ColorBlendAttachment.BlendEnable = true;
+            uiShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.One;
+            uiShaderInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            uiShaderInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+            uiShaderInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+            uiShaderInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+            uiShaderInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+            UiShader = new Shader(uiShaderInfo);
             UiShader.Compile();
 
             UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest});

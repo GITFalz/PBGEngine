@@ -10,6 +10,7 @@ namespace PBG.Voxel
 {
     public class VoxelChunk
     {
+        public static readonly VoxelChunk Empty = new();
         private static int _idCounter = 0;
 
         public int ID;
@@ -30,7 +31,6 @@ namespace PBG.Voxel
 
         public Texture? AmbientOcclusionTexture = null;
 
-        public IndirectVoxelMesh ChunkMesh; //new(VertexDataType.Position | VertexDataType.Normal | VertexDataType.Uv | VertexDataType.TextureIndex);
         public Allocation Allocation;
         public int[] ChunkInfoSlot;
 
@@ -38,7 +38,9 @@ namespace PBG.Voxel
         public bool ForceDisabled = false;
         public bool Visible = false;
 
-        public ChunkBlocks? Blocks;
+        public ChunkBlocks? Blocks = null;
+
+        private VoxelChunk() {}
 
         public VoxelChunk(VoxelRenderer renderer, Vector3i position)
         {
@@ -57,8 +59,6 @@ namespace PBG.Voxel
             {
                 Chunk = this
             };
-
-            ChunkMesh = new(this);
         }
 
         public Block Get(Vector3i position) => Blocks?.Get(position) ?? Block.Air;
@@ -81,75 +81,7 @@ namespace PBG.Voxel
 
             return (uint)lx < 32u && (uint)ly < 32u && (uint)lz < 32u;
         }
-
-        /*
-        public void GenerateChunkMesh(DefaultVoxelChunkHandlerNew handler)
-        {
-            if (_isDisposed || (Process != null && Process.Failed))
-                return;
-
-            ChunkMesh.Vertices = handler.Vertices;
-            ChunkMesh.Normals = handler.Normals;
-            ChunkMesh.Uvs = handler.Uvs;
-            ChunkMesh.TextureIndices = handler.TextureIndices;
-
-            var vertexCount = (handler.Vertices.Count >> 2) * 6;
-
-            uint index = 0;
-
-            for (int i = 0; i < vertexCount; i+=6)
-            {
-                ChunkMesh.Indices.Add(index);
-                ChunkMesh.Indices.Add(index+1);
-                ChunkMesh.Indices.Add(index+2);
-                ChunkMesh.Indices.Add(index+2);
-                ChunkMesh.Indices.Add(index+3);
-                ChunkMesh.Indices.Add(index);
-                index += 4;
-            }
-
-            ChunkMesh.GenerateMesh();
-            HasBlocks = ChunkMesh.HasVertices();
-        }
-        */
-
-        public void GenerateChunkMesh(List<Vector4i> vertexData)
-        {
-            if (_isDisposed || (Process != null && Process.Failed))
-                return;
-
-            ChunkMesh.VertexData = [..vertexData];
-
-            ChunkMesh.GenerateMesh();
-            /*
-            if (_isDisposed || (Process != null && Process.Failed))
-                return;
-
-            ChunkMesh.Vertices = handler.Vertices;
-            ChunkMesh.Normals = handler.Normals;
-            ChunkMesh.Uvs = handler.Uvs;
-            ChunkMesh.TextureIndices = handler.TextureIndices;
-
-            var vertexCount = (handler.Vertices.Count >> 2) * 6;
-
-            uint index = 0;
-
-            for (int i = 0; i < vertexCount; i+=6)
-            {
-                ChunkMesh.Indices.Add(index);
-                ChunkMesh.Indices.Add(index+1);
-                ChunkMesh.Indices.Add(index+2);
-                ChunkMesh.Indices.Add(index+2);
-                ChunkMesh.Indices.Add(index+3);
-                ChunkMesh.Indices.Add(index);
-                index += 4;
-            }
-
-            ChunkMesh.GenerateMesh();
-            HasBlocks = ChunkMesh.HasVertices();
-            */
-        }
-
+    
         public bool IsAir(Vector3i blockPos) => Blocks?.Get(blockPos).IsAir() ?? true;
         public bool IsSolid(Vector3i blockPos) => Blocks?.Get(blockPos).IsSolid() ?? false;
 
@@ -158,18 +90,12 @@ namespace PBG.Voxel
             Process?.Break();
         } 
 
-        public void Render()
-        {
-            ChunkMesh.Render();
-        }
-
         private bool _isDisposed = false;
 
         public void Dispose()
         {
             Process?.Break();
             AmbientOcclusionTexture?.Dispose();
-            ChunkMesh?.Dispose();
 
             if (_isDisposed)
             {

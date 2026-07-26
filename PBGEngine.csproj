@@ -8,7 +8,10 @@
     <Nullable>enable</Nullable>
     <OutputPath>bin/Debug</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DefineConstants>DEBUG;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

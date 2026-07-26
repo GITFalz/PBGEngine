@@ -23,7 +23,7 @@ public unsafe class VBOBase : BufferBase
     {
         fixed (ulong* pOffset = offsets)
         fixed (Buffer* pBuffers = buffers)
-        GFX.Vk.CmdBindVertexBuffers(GFX.CommandBuffer, 0, 1, pBuffers, pOffset);
+        GFX.Vk.CmdBindVertexBuffers(GFX.CommandBuffer, 0, (uint)buffers.Length, pBuffers, pOffset);
     }
 
     public void Bind() => Bind(GFX.CommandBuffer);

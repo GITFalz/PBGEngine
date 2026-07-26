@@ -74,17 +74,36 @@ public unsafe class ShaderCompiler
         // === Vertex buffer ===
         VertexInputAttributeDescription[] attributeDescriptions = new VertexInputAttributeDescription[vertexData.VertexAttributes.Length];
         VertexInputBindingDescription[] vertexBindings = [..shader.VertexBindings];
-        for (int i = 0; i < vertexData.VertexAttributes.Length; i++)
-        {
-            var attribute = vertexData.VertexAttributes[i];
-            //if (!_attributes.TryGetValue(attribute.Name, out var att))
-                //throw new KeyNotFoundException($"[Error] : was not able to find attribute {attribute.Name} while creating the shader");
 
-            attributeDescriptions[i].Location = (uint)attribute.Location;
-            attributeDescriptions[i].Binding = 0;
-            attributeDescriptions[i].Format = attribute.Format;
-            attributeDescriptions[i].Offset = attribute.Offset;
-        }
+        vertexBindings = [.. vertexBindings.OrderBy(x => x.Binding)];
+
+        if (vertexBindings.Length > 0)
+        {
+            uint currentBinding = 0;
+            var currentVertexBinding = vertexBindings[0];
+            uint currentStride = currentVertexBinding.Stride; 
+
+            for (int i = 0; i < vertexData.VertexAttributes.Length; i++)
+            {
+                var attribute = vertexData.VertexAttributes[i];
+                //if (!_attributes.TryGetValue(attribute.Name, out var att))
+                    //throw new KeyNotFoundException($"[Error] : was not able to find attribute {attribute.Name} while creating the shader");
+
+                if (attribute.Offset >= currentStride && currentBinding + 1 < vertexBindings.Length)
+                {
+                    currentBinding++;
+                    currentVertexBinding = vertexBindings[currentBinding];
+                    currentStride += currentVertexBinding.Stride;  
+                }
+
+                attributeDescriptions[i].Location = (uint)attribute.Location;
+                attributeDescriptions[i].Binding = currentBinding;
+                attributeDescriptions[i].Format = attribute.Format;
+                attributeDescriptions[i].Offset = 0; //attribute.Offset;
+
+                Console.WriteLine(attribute);
+            }
+        }  
         // === End ===
 
         // === Unfiorm Mapping ===

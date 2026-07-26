@@ -19,6 +19,7 @@ namespace PBG.Voxel
         private DefaultVoxelChunkHandlerNew _handler;
 
         public List<Vector4i> VertexData = [];
+        public int VertexCount = 0;
 
         public static RollingAverageTimer Timer = new();
         public Stopwatch timer;
@@ -39,11 +40,13 @@ namespace PBG.Voxel
                 return true;
             }
 
+            VertexData = new List<Vector4i>((int)ChunkDataPool.SLOT_SIZE);
+
             timer = Stopwatch.StartNew();
-            var result = VoxelChunkGenerator.GenerateIndirectMesh(this, Chunk.WorldPosition, Chunk.Blocks);
+            var result = VoxelChunkGenerator.GenerateIndirectMesh(this, VertexData, Chunk.WorldPosition, Chunk.Blocks, out VertexCount);
             timer.Stop();
-            Timer.AddSample(timer.Elapsed.Milliseconds);
-            Info.AverageRenderingSpeed = Timer.GetAverageMs();
+            if (VertexCount > 0)
+                Timer.AddSample(timer.Elapsed.Milliseconds);
             return result;
         }
 
@@ -51,6 +54,11 @@ namespace PBG.Voxel
 
         public override void OnCompleteBase()
         {
+            if (GameTime.FpsUpdated)
+            {
+                Info.AverageRenderingSpeed = Timer.GetAverageMs();
+            }
+
             Chunk.Renderer.RerenderMap.Remove(Chunk);
             if (Chunk.Restart)
             {
@@ -67,21 +75,21 @@ namespace PBG.Voxel
 
             try
             {   
-                if (VertexData.Count == 0)
+                if (VertexCount == 0)
                 {
                     Chunk.Allocation.Size = 0;
                     Chunk.HasBlocks = false;
                     Chunk.Renderer.VisibleChunks.Remove(Chunk);
                 }
-                else if (Chunk.Renderer.DataPool.TryAllocate((uint)VertexData.Count, out var alloc))
+                else if (Chunk.Renderer.DataPool.TryAllocate((uint)VertexCount, out var alloc))
                 {
                     Chunk.Allocation.Set(alloc);
-                    alloc.DataPool.Update(Chunk, [..VertexData]);
+                    alloc.DataPool.Update(Chunk, [..VertexData], VertexCount);
                     
                     if (!Chunk.HasBlocks)
                         Chunk.Renderer.VisibleChunks.Add(Chunk);
 
-                    Chunk.HasBlocks = VertexData.Count > 0; 
+                    Chunk.HasBlocks = VertexCount > 0; 
                 }
                 else
                 {
