@@ -354,10 +354,17 @@ public unsafe sealed partial class VulkanDevice
             ShaderDrawParameters = true
         };
 
+        var vulkan12Features = new PhysicalDeviceVulkan12Features
+        {
+            SType             = StructureType.PhysicalDeviceVulkan12Features,
+            DrawIndirectCount = true,
+            PNext             = &vulkan11Features   // chain 1.1 features after 1.2 features
+        };
+
         var deviceFeatures2 = new PhysicalDeviceFeatures2
         {
             SType = StructureType.PhysicalDeviceFeatures2,
-            PNext = &vulkan11Features
+            PNext = &vulkan12Features
         };
 
         PhysicalDeviceFeatures deviceFeatures = new()

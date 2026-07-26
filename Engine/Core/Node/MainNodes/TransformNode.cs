@@ -72,6 +72,7 @@ namespace PBG.Core
                 if (component.GetMethod("FixedUpdate", out mi)) info.OnFixedUpdate.Add(new(component, mi));
                 if (component.GetMethod("Update", out mi))      info.OnUpdate.Add(new(component, mi));
                 if (component.GetMethod("LateUpdate", out mi))  info.OnLateUpdate.Add(new(component, mi));
+                if (component.GetMethod("Compute", out mi))     info.OnCompute.Add(new(component, mi));
                 if (component.GetMethod("Render", out mi))      info.OnRender.Add(new(component, mi));
                 if (component.GetMethod("Exit", out mi))        info.OnExit.Add(new(component, mi));
                 if (component.GetMethod("Dispose", out mi))     info.OnDispose.Add(new(component, mi));

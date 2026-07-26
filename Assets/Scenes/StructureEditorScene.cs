@@ -1,6 +1,6 @@
+using PBG;
 using PBG.Core;
 using PBG.Graphics;
-using PBG.PBGConsole;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.Voxel;

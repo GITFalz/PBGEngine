@@ -35,6 +35,7 @@ namespace PBG.Core
         private ScriptCall[] OnFixedUpdate = [];
         private ScriptCall[] OnUpdate = [];
         private ScriptCall[] OnLateUpdate = [];
+        private ScriptCall[] OnCompute = [];
         private ScriptCall[] OnRender = [];
         private ScriptCall[] OnExit = [];
         private ScriptCall[] OnDispose = [];
@@ -115,7 +116,7 @@ namespace PBG.Core
             UIController.InitControllers(this);
         }
 
-        public void Calls(ScriptCall[] calls)
+        public static void Calls(ScriptCall[] calls)
         {
             for (int i = 0; i < calls.Length; i++)
                 calls[i].Invoke();
@@ -153,13 +154,19 @@ namespace PBG.Core
             }
 
             UIController.HandleInputs(this);
-            
+
             Calls(OnUpdate);
         }
         public void LateUpdate()
         {
             Calls(OnLateUpdate);
         }
+
+        public void Compute()
+        {
+            Calls(OnCompute);
+        }
+
         public void Render()
         {
             Calls(OnRender);
@@ -180,6 +187,7 @@ namespace PBG.Core
             OnFixedUpdate = [..info.OnFixedUpdate];
             OnUpdate      = [..info.OnUpdate];
             OnLateUpdate  = [..info.OnLateUpdate];
+            OnCompute     = [..info.OnCompute];
             OnRender      = [..info.OnRender];
             OnExit        = [..info.OnExit];
             OnDispose     = [..info.OnDispose];

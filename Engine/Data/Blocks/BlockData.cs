@@ -361,8 +361,10 @@ namespace PBG.Voxel
 
 public unsafe struct FaceGeometry
 {
-    public fixed float Vertices[4 * 4];
-    public fixed float Uvs[4 * 2];
+    public Vector3 Vertices;
+    private float _p1;
+    public Vector2 Uvs;
+    private float _p2, p3;
     public Vector3 Normal;
     public int TextureIndex;
 }

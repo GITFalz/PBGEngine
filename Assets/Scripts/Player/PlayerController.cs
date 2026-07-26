@@ -3,12 +3,12 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.PBGConsole;
+using PBG.Parse;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.Voxel;
-
+using Silk.NET.SPIRV.Cross;
 using static PBG.UI.Styles;
 
 
@@ -114,6 +114,22 @@ public class PlayerController : ScriptingNode
         WeaponData.TryGet("sword", out WeaponModel);
 
         WorldManager.SpawnEntity((10, 20, 10));
+
+        PBGConsole.AddCommand(new("tp", [
+            new("!self", null, c => {
+                if (!c.HasTokens(2))
+                    return new(false, "Expected 3 numbers after !self");
+
+                float x = Float.Parse(c.Next());
+                float y = Float.Parse(c.Next());
+                float z = Float.Parse(c.Next());
+
+                Transform.Position = (x, y, z);
+                Camera.Position = (x, y, z);
+
+                return new(true, $"Teleported player to ({x}, {y}, {z})");
+            })
+        ]));
     }
 
     void Awake()
@@ -220,8 +236,8 @@ public class PlayerController : ScriptingNode
         if (Input.IsKeyPressed(Key.Escape))
         {
             _oldCameraMode = Scene.DefaultCamera.GetCameraMode();
-            Scene.DefaultCamera.SetCameraMode(CameraMode.Fixed);
-            Game.SetCursorState(CursorMode.Normal);
+            Scene.DefaultCamera.SetCameraMode(_oldCameraMode == CameraMode.Fixed ? CameraMode.Free : CameraMode.Fixed);
+            Game.SetCursorState(_oldCameraMode == CameraMode.Fixed ? CursorMode.Hidden : CursorMode.Normal);
             _showSettings = true;
         }
 

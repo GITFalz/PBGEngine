@@ -8,6 +8,7 @@ public class PlayerAdminState : PlayerBaseState
 
     public override void Start()
     {
+        Camera.SetCameraSpeed(300f);
         Console.WriteLine("Enter Player Admin State");
     }
 
@@ -18,6 +19,8 @@ public class PlayerAdminState : PlayerBaseState
             Camera.SetCameraMode(PBG.Rendering.CameraMode.Follow);
             Player.SwitchState(Player.GameState);
         }
+
+        Player.Transform.Position = Camera.Position;
     }
 
     public override void FixedUpdate()
@@ -27,6 +30,6 @@ public class PlayerAdminState : PlayerBaseState
 
     public override void Exit()
     {
-        
+        Camera.SetCameraSpeed(75f);
     }   
 }

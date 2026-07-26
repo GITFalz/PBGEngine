@@ -351,26 +351,29 @@ public class VariantJSON
             Side = side
         };
 
-        FaceGeometry face = new()
-        {
-            Normal = normal,
+        FaceGeometry faceA = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
+        FaceGeometry faceB = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
+        FaceGeometry faceC = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
+        FaceGeometry faceD = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
 
-            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
-        };
-        
+        faceA.Vertices = A;
+        faceA.Uvs = uvA;
 
-        for (int j = 0; j < 3; j++) face.Vertices[    j] = A[j];
-        for (int j = 0; j < 3; j++) face.Vertices[4 + j] = B[j];
-        for (int j = 0; j < 3; j++) face.Vertices[8 + j] = C[j];
-        for (int j = 0; j < 3; j++) face.Vertices[12+ j] = D[j];
+        faceB.Vertices = B;
+        faceB.Uvs = uvB;
 
-        for (int j = 0; j < 2; j++) face.Uvs[    j] = uvA[j];
-        for (int j = 0; j < 2; j++) face.Uvs[2 + j] = uvB[j];
-        for (int j = 0; j < 2; j++) face.Uvs[4 + j] = uvC[j];
-        for (int j = 0; j < 2; j++) face.Uvs[6 + j] = uvD[j];
+        faceC.Vertices = C;
+        faceC.Uvs = uvC;
 
-        BlockData.FaceGeometries.Add(face);
-        BlockJSON.GeometryIndex++;
+        faceD.Vertices = D;
+        faceD.Uvs = uvD;
+
+        BlockData.FaceGeometries.Add(faceA);
+        BlockData.FaceGeometries.Add(faceB);
+        BlockData.FaceGeometries.Add(faceC);
+        BlockData.FaceGeometries.Add(faceD);
+
+        BlockJSON.GeometryIndex+=4;
 
         GetBitMask(ref voxelFace);
 

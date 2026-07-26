@@ -253,6 +253,8 @@ public unsafe class VulkanInstance
 
         CurrentFramebuffer = _vulkanFramebuffer.SwapChainFramebuffers[imageIndex];
 
+        gameWindow.OnCompute();
+
         RenderPassBeginInfo renderPassInfo = new()
         {
             SType = StructureType.RenderPassBeginInfo,

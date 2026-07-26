@@ -24,6 +24,7 @@ public class Info : ScriptingNode
     public static UIText TotalChunks = null!;
     public static UIText GenerationQueueText = null!;
     public static UIText RenderingQueueText = null!;
+    public static UIText ThreadPoolQueueText = null!;
     public static UIText GlobalChunkVertexCount = null!;
     public static UIText AverageChunkRenderingText = null!;
     public static UIText AverageChunkGenerationText = null!;
@@ -51,6 +52,9 @@ public class Info : ScriptingNode
 
     public static int _oldRenderingQueueCount = 0;
     public static int RenderingQueueCount = 0;
+
+    public static int _oldThreadPoolQueueCount = 0;
+    public static int ThreadPoolQueueCount = 0;
 
     public static float _oldAverageRenderingSpeed = 0;
     public static float AverageRenderingSpeed = 0;
@@ -108,6 +112,7 @@ public class Info : ScriptingNode
                 new UIText("0", mc_[50], fs_[1]).Ref(ref TotalChunks),
                 new UIText("0", mc_[50], fs_[1]).Ref(ref GenerationQueueText),
                 new UIText("0", mc_[50], fs_[1]).Ref(ref RenderingQueueText),
+                new UIText("0", mc_[50], fs_[1]).Ref(ref ThreadPoolQueueText),
                 new UIText("0", mc_[50], fs_[1]).Ref(ref GlobalChunkVertexCount),
                 new UIText("0", mc_[50], fs_[1]).Ref(ref AverageChunkRenderingText),
                 new UIText("0", mc_[50], fs_[1]).Ref(ref AverageChunkGenerationText),
@@ -122,10 +127,20 @@ public class Info : ScriptingNode
         ];
     }
 
+    Stopwatch stopwatch = Stopwatch.StartNew();
+
     void Update()
     {
         if (!RenderInfo)
             return;
+
+        if (stopwatch.Elapsed.TotalSeconds > 0.1f)
+        {
+            GenerationQueueText?.UpdateText("Generation Queue: " + GenerationQueueCount);
+            RenderingQueueText?.UpdateText("Rendering Queue: " + RenderingQueueCount);
+            ThreadPoolQueueText?.UpdateText("Thread pool Queue: " + ThreadPoolQueueCount);
+            stopwatch.Restart();
+        }
 
         if (GameTime.FpsUpdated)
         {
@@ -135,8 +150,6 @@ public class Info : ScriptingNode
             GlobalChunkVertexCount?.UpdateText($"Vertices: {VertexCount}");
             RenderedChunks?.UpdateText("Visible Chunks: " + ChunkCount);
             TotalChunks?.UpdateText("Total Chunks: " + TotalChunkCount);
-            GenerationQueueText?.UpdateText("Generation Queue: " + GenerationQueueCount);
-            RenderingQueueText?.UpdateText("Rendering Queue: " + RenderingQueueCount);
             AverageChunkRenderingText?.UpdateText($"Average rendering speed {AverageRenderingSpeed:F3} ms");
             AverageChunkGenerationText?.UpdateText($"Average generation speed {AverageGenerationSpeed:F3} ms");
 

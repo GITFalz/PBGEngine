@@ -181,6 +181,19 @@ public unsafe class GPUBuffer<T> : GPUBufferBase where T : unmanaged
             GFX.CreateBuffer(SizeInBytes, BufferUsageFlags.TransferDstBit | _settings.UsageFlags, MemoryPropertyFlags.DeviceLocalBit, out Buffer, out BufferMemory);
         }
     }
+
+    public T[] ReadBack(int count)
+    {
+        if (!_settings.HostVisible)
+            throw new InvalidOperationException("ReadBack (mapped) called on a non-host-visible buffer — use ReadBackStaging instead.");
+
+        T[] result = new T[count];
+        fixed (T* pResult = result)
+        {
+            HelperFunctions.MemCpyTo<T>((byte*)_mapped, (byte*)pResult, (ulong)(count * Marshal.SizeOf<T>()), (ulong)(count * Marshal.SizeOf<T>()));
+        }
+        return result;
+    }
 }
 
 public struct GPUBufferSettings

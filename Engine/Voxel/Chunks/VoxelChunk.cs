@@ -29,8 +29,6 @@ namespace PBG.Voxel
 
         public ChunkStatus Status = ChunkStatus.Empty;
 
-        public Texture? AmbientOcclusionTexture = null;
-
         public Allocation Allocation;
         public int[] ChunkInfoSlot;
 
@@ -87,7 +85,11 @@ namespace PBG.Voxel
 
         public void BreakProcess() 
         {
-            Process?.Break();
+            if (Status != ChunkStatus.Deleted)
+            {
+                Process?.Break();
+                Process?.TryRemoveProcess();
+            }
         } 
 
         private bool _isDisposed = false;
@@ -95,15 +97,15 @@ namespace PBG.Voxel
         public void Dispose()
         {
             Process?.Break();
-            AmbientOcclusionTexture?.Dispose();
+            Process?.TryRemoveProcess();
+
+            Status = ChunkStatus.Deleted;
 
             if (_isDisposed)
             {
                 Console.WriteLine($"[WARNING] Double dispose attempted on chunk at {RelativePosition}");
                 return;
             }
-
-            //Allocation.DataPool?.Free(this);
             
             _isDisposed = true;
 
@@ -145,6 +147,7 @@ namespace PBG.Voxel
 
 public enum ChunkStatus
 {
+    Deleted = -1,
     Empty = 0,
     Generated = 1,
     Rendered = 2,

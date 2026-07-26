@@ -34,6 +34,7 @@ namespace PBG.Voxel
 
         public override bool Function()
         {
+            Console.WriteLine("meshing: " + Chunk.WorldPosition);
             if (Chunk.Blocks == null)
             {
                 Console.WriteLine("no blocks");
@@ -73,6 +74,8 @@ namespace PBG.Voxel
                 return;
             } 
 
+            Chunk.Process = null;
+
             try
             {   
                 if (VertexCount == 0)
@@ -103,7 +106,6 @@ namespace PBG.Voxel
             }
 
             Chunk.Status = ChunkStatus.Rendered;
-            Chunk.Process = null;
 
             VertexData = [];
         }

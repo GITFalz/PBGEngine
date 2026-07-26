@@ -6,7 +6,7 @@ using PBG.UI;
 using PBG.Voxel;
 using static PBG.UI.Styles;
 
-namespace PBG.PBGConsole;
+namespace PBG;
 
 [InternalSystemInit(InitPriority.Data)]
 public class PBGConsole : ScriptingNode
@@ -26,7 +26,7 @@ public class PBGConsole : ScriptingNode
 
     private static bool _started = false;
 
-    private Dictionary<string, CommandModule> Commands = new()
+    private static Dictionary<string, CommandModule> Commands = new()
     {
         {
             "time", 
@@ -113,6 +113,13 @@ public class PBGConsole : ScriptingNode
     {
         Scene.CurrentScene.DefaultCamera.Unfreeze();
         Focused = false;
+    }
+
+
+    public static void AddCommand(CommandModule command)
+    {
+        if (!Commands.TryAdd(command.Name, command))
+            Console.WriteLine("[Warning] : Command '" + command.Name + "' already exists");
     }
 
     void Start()
@@ -263,8 +270,11 @@ public struct CommandContext
     public int TokenIndex;
     
     public bool HasToken() => TokenIndex < Tokens.Length;
+    public bool HasTokens(int count) => TokenIndex + count < Tokens.Length;
     public string CurrentToken() => Tokens[TokenIndex];
     public string LastToken() => Tokens[TokenIndex-1];
+    public int Increment() => TokenIndex++;
+    public string Next() => Tokens[TokenIndex++];
 }
 
 public class CommandModule
@@ -309,5 +319,5 @@ public struct CommandResult
 {
     public bool Result = false;
     public string Reason = "";
-    public CommandResult(bool result, string reason) { Result = result; Reason = reason; }
+    public CommandResult(bool result, string reason = "") { Result = result; Reason = reason; }
 }

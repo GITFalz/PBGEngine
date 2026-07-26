@@ -7,7 +7,7 @@ namespace PBG.Graphics;
 
 public unsafe class GFX
 {
-    public const int MAX_FRAMES_IN_FLIGHT = 2;
+    public const int MAX_FRAMES_IN_FLIGHT = 4;
     internal static int RenderCallCount = 0;
     public static uint CurrentFrame => _renderer.CurrentFrame;
     

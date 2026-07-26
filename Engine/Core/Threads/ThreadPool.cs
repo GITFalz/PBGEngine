@@ -142,91 +142,100 @@ namespace PBG.Threads
             public List<ThreadProcess> _lowPriorityActions = [];
             public List<ThreadProcess> _backgroundPriorityActions = [];
 
+            private readonly object _lock = new();
+
             public void Enqueue(ThreadProcess process)
             {
-                switch (process.Priority)
+                lock (_lock)
                 {
-                    case TaskPriority.Background:
-                        _backgroundPriorityActions.Add(process);
-                        break;
-                    case TaskPriority.Low:
-                        _lowPriorityActions.Add(process);
-                        break;
-                    case TaskPriority.Normal:
-                        _normalPriorityActions.Add(process);
-                        break;
-                    case TaskPriority.High:
-                        _highPriorityActions.Add(process);
-                        break;
-                    case TaskPriority.Urgent:
-                        _urgentPriorityActions.Add(process);
-                        break;
+                    switch (process.Priority)
+                    {
+                        case TaskPriority.Background:
+                            _backgroundPriorityActions.Add(process);
+                            break;
+                        case TaskPriority.Low:
+                            _lowPriorityActions.Add(process);
+                            break;
+                        case TaskPriority.Normal:
+                            _normalPriorityActions.Add(process);
+                            break;
+                        case TaskPriority.High:
+                            _highPriorityActions.Add(process);
+                            break;
+                        case TaskPriority.Urgent:
+                            _urgentPriorityActions.Add(process);
+                            break;
+                    }
                 }
             }
 
             public bool TryDequeue([NotNullWhen(true)] out ThreadProcess? process)
             {
-                process = null;
-                if (_urgentPriorityActions.Count > 0)
+                lock (_lock)
                 {
-                    process = _urgentPriorityActions[0];
-                    _urgentPriorityActions.RemoveAt(0);
-                    return true;
-                }
-                else if (_highPriorityActions.Count > 0)
-                {
-                    process = _highPriorityActions[0];
-                    _highPriorityActions.RemoveAt(0);
-                    return true;
-                }
-                else if (_normalPriorityActions.Count > 0)
-                {
-                    process = _normalPriorityActions[0];
-                    _normalPriorityActions.RemoveAt(0);
-                    return true;
-                }
-                else if (_lowPriorityActions.Count > 0)
-                {
-                    process = _lowPriorityActions[0];
-                    _lowPriorityActions.RemoveAt(0);
-                    return true;
-                }
-                else if (_backgroundPriorityActions.Count > 0)
-                {
-                    process = _backgroundPriorityActions[0];
-                    _backgroundPriorityActions.RemoveAt(0);
-                    return true;
-                }
+                    process = null;
+                    if (_urgentPriorityActions.Count > 0)
+                    {
+                        process = _urgentPriorityActions[0];
+                        _urgentPriorityActions.RemoveAt(0);
+                        return true;
+                    }
+                    else if (_highPriorityActions.Count > 0)
+                    {
+                        process = _highPriorityActions[0];
+                        _highPriorityActions.RemoveAt(0);
+                        return true;
+                    }
+                    else if (_normalPriorityActions.Count > 0)
+                    {
+                        process = _normalPriorityActions[0];
+                        _normalPriorityActions.RemoveAt(0);
+                        return true;
+                    }
+                    else if (_lowPriorityActions.Count > 0)
+                    {
+                        process = _lowPriorityActions[0];
+                        _lowPriorityActions.RemoveAt(0);
+                        return true;
+                    }
+                    else if (_backgroundPriorityActions.Count > 0)
+                    {
+                        process = _backgroundPriorityActions[0];
+                        _backgroundPriorityActions.RemoveAt(0);
+                        return true;
+                    }
 
-                return false;
+                    return false;
+                }
             }
 
             public bool TryRemoveProcess(ThreadProcess process)
             {
-                switch (process.Priority)
+                lock (_lock)
                 {
-                    case TaskPriority.Background:
-                        return _backgroundPriorityActions.Remove(process);
-                    case TaskPriority.Low:
-                        return _lowPriorityActions.Remove(process);
-                    case TaskPriority.Normal:
-                        return _normalPriorityActions.Remove(process);
-                    case TaskPriority.High:
-                        return _highPriorityActions.Remove(process);
-                    case TaskPriority.Urgent:
-                        return _urgentPriorityActions.Remove(process);
+                    return process.Priority switch
+                    {
+                        TaskPriority.Background => _backgroundPriorityActions.Remove(process),
+                        TaskPriority.Low => _lowPriorityActions.Remove(process),
+                        TaskPriority.Normal => _normalPriorityActions.Remove(process),
+                        TaskPriority.High => _highPriorityActions.Remove(process),
+                        TaskPriority.Urgent => _urgentPriorityActions.Remove(process),
+                        _ => false,
+                    };
                 }
-                return false;
             }
 
             public void Clear()
             {
-                Console.WriteLine("Clearing PriorityQueue with " + Count + " queued actions.");
-                _urgentPriorityActions = [];
-                _highPriorityActions = [];
-                _normalPriorityActions = [];
-                _lowPriorityActions = [];
-                _backgroundPriorityActions = [];
+                lock (_lock)
+                {
+                    Console.WriteLine("Clearing PriorityQueue with " + Count + " queued actions.");
+                    _urgentPriorityActions = [];
+                    _highPriorityActions = [];
+                    _normalPriorityActions = [];
+                    _lowPriorityActions = [];
+                    _backgroundPriorityActions = [];
+                }
             }
         }
 

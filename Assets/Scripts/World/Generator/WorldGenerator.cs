@@ -75,7 +75,8 @@ public class WorldGenerator : VoxelRendererGenerator
             {
                 if (renderer.GenerationQueue.Count > 0)
                 {
-                    var chunk = renderer.GenerationQueue.Dequeue();
+                    var chunk = renderer.GenerationQueue.First();
+                    renderer.GenerationQueue.RemoveFirst();
 
                     timer.Start();
                     
@@ -86,7 +87,8 @@ public class WorldGenerator : VoxelRendererGenerator
                     chunk.Status = ChunkStatus.Generated;
                     if (chunk.Blocks != null && chunk.Blocks.HasBlocks)
                     {
-                        renderer.RenderingQueue.AddLast(chunk);
+                        //Console.WriteLine("test 2: " + chunk.WorldPosition);
+                        //renderer.RenderingQueue.AddLast(chunk);
                     }
 
                     chunk.Renderer.Counter++;
@@ -168,6 +170,7 @@ public class WorldGenerationProcess : ThreadProcess
     {
         _renderer = renderer;
         _chunk = chunk;
+        _chunk.Process = this;
     }
 
     private const int SampleCount = 100;
@@ -223,6 +226,8 @@ public class WorldGenerationProcess : ThreadProcess
         Info.AverageChunkGenerationSpeed(avg);
 
         //Console.WriteLine(Succeded);
+
+        _chunk.Process = null;
 
         if (Succeded && _chunk.Blocks != null)
         {

@@ -39,6 +39,7 @@ public abstract class GameWindow
     public virtual void OnRenderLoad() {}
     public abstract void OnResize(int width, int height);
     public abstract void OnUpdate(double delta);
+    public abstract void OnCompute();
     public abstract void OnRender();
     public abstract void OnUnload();
     public void Run()

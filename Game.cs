@@ -166,6 +166,9 @@ public class Game : GameWindow
         Scene.CurrentScene?.Resize();
     }
 
+    private static readonly System.Diagnostics.Stopwatch debugTimer = new();
+    private static long frameStartTicks; // marks the beginning of OnUpdate for this frame
+
     public override void OnUpdate(double delta)
     {
         Scene.LoadSceneFinal();
@@ -216,6 +219,11 @@ public class Game : GameWindow
             Console.WriteLine(GameTime.Fps);
     }
 
+    public override void OnCompute()
+    {
+        Scene.CurrentScene?.Compute();
+    }
+
     public override void OnRender()
     {
         GameTime.Render((float)_renderingDeltaTime);
@@ -231,7 +239,7 @@ public class Game : GameWindow
 
     public override void OnUnload()
     {
-        PBGConsole.PBGConsole.Save();
+        PBGConsole.Save();
     }
 
     public static void SetCursorState(PBG.Data.CursorMode cursorMode)
