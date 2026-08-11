@@ -37,18 +37,20 @@ namespace PBG.UI
         {   
             ShaderInfo uiShaderInfo = new()
             {
-                VertexShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.vert"), 
-                FragmentShaderPath = Path.Combine(Game.ShaderPath, "ui_vulkan/ui.frag")
+                VertexShaderFile = "ui_vulkan/ui.vert", 
+                FragmentShaderFile = "ui_vulkan/ui.frag"
             };
 
             uiShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;
             uiShaderInfo.ColorBlendAttachment.BlendEnable = true;
-            uiShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.One;
+            uiShaderInfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
             uiShaderInfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
             uiShaderInfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
             uiShaderInfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
             uiShaderInfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
             uiShaderInfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+            uiShaderInfo.DepthStencil.DepthTestEnable = true;
 
             UiShader = new Shader(uiShaderInfo);
             UiShader.Compile();
@@ -59,8 +61,8 @@ namespace PBG.UI
 
             ShaderInfo textShaderInfo = new() 
             { 
-                VertexShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.vert"), 
-                FragmentShaderPath = Path.Combine(Game.ShaderPath, "text_vulkan/text.frag") 
+                VertexShaderFile = "text_vulkan/text.vert", 
+                FragmentShaderFile = "text_vulkan/text.frag" 
             };
 
             textShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;

@@ -144,8 +144,12 @@ namespace PBG.UI
 
         private void HandleGrowFromChildren()
         {
+            HasGrowthDependentChildren = false;
+
             float totalWidth = TotalWidth;
             float maxHeight = 0;
+
+            bool hasPercentHeight = Height.IsPercent() || MinHeight.IsPercent() || MaxHeight.IsPercent();
 
             for (int i = 0; i < ChildElements.Count; i++)
             {
@@ -158,13 +162,21 @@ namespace PBG.UI
                 float yOffset = OffsetY(child);
                 child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
 
-                if (Height.IsNone())
+                if (child.MinHeight.IsPercent() || child.MaxHeight.IsPercent())
                 {
-                    if (child.Height.IsPercent())
-                        child.PercentAlignement = PercentAlignementType.Vertical;
-                    else
-                        maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);
-                }    
+                    child.PercentAlignement = PercentAlignementType.Vertical;
+                    HasGrowthDependentChildren |= hasPercentHeight;
+                }
+
+                if (child.Height.IsPercent())
+                {
+                    child.PercentAlignement = PercentAlignementType.Vertical;
+                    HasGrowthDependentChildren |= hasPercentHeight;
+                }
+                else
+                {
+                    maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W);  
+                }
                 
                 totalWidth += child.BaseOffset.X + child.Size.X + child.Padding.X + child.Padding.Z + Spacing;
             };
@@ -184,6 +196,9 @@ namespace PBG.UI
                     child.Height.AddedOffset = -(Border.Y + Border.W);
                     child.CalculateHeight();
                 }
+
+                if (child is UICol c && c.HasGrowthDependentChildren)
+                    child.FirstPass();
             }
         }
 

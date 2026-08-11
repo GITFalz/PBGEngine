@@ -124,42 +124,42 @@ namespace PBG.UI
         // COLOR CLASSES
         // =============================================================================
         // Gray
-        public readonly static BinaryType<float, int> gray_ = new((v, e) => e.Color = new(new(v), 1f), (v, e) => e.Color = new(new(((float)v) / 100f), 1f));
-        public readonly static TrinaryStyle<float, float, float> rgb_ = new((r, g, b, e) => e.Color = new(r, g, b, 1f));
-        public readonly static UnaryType<Vector3> rgb_v3_ = new((color, e) => e.Color = new(color.X, color.Y, color.Z, 1f));
-        public readonly static QuaternaryStyle<float, float, float, float> rgba_ = new((r, g, b, a, e) => e.Color = new(r, g, b, a));
-        public readonly static UnaryType<Vector4> rgba_v4_ = new((color, e) => e.Color = color);
-        public readonly static ValueStyle transparent = new(e => e.Color = TRANSPARENT);
+        public readonly static BinaryType<float, int> gray_ = new((v, e) => e.SetColor(new(new(v), 1f)), (v, e) => e.SetColor(new(new(((float)v) / 100f), 1f)));
+        public readonly static TrinaryStyle<float, float, float> rgb_ = new((r, g, b, e) => e.SetColor(new(r, g, b, 1f)));
+        public readonly static UnaryType<Vector3> rgb_v3_ = new((color, e) => e.SetColor(new(color.X, color.Y, color.Z, 1f)));
+        public readonly static QuaternaryStyle<float, float, float, float> rgba_ = new((r, g, b, a, e) => e.SetColor(new(r, g, b, a)));
+        public readonly static UnaryType<Vector4> rgba_v4_ = new((color, e) => e.SetColor(color));
+        public readonly static ValueStyle transparent = new(e => e.SetColor(TRANSPARENT));
         
-        public readonly static UnaryType<Vector3> color3_ = new((color, e) => e.Color = new(color.X, color.Y, color.Z, 1f));
-        public readonly static UnaryType<Vector4> color4_ = new((color, e) => e.Color = color);
+        public readonly static UnaryType<Vector3> color3_ = new((color, e) => e.SetColor(new(color.X, color.Y, color.Z, 1f)));
+        public readonly static UnaryType<Vector4> color4_ = new((color, e) => e.SetColor(color));
 
 
         
 
         // Accent colors
-        public readonly static ValueStyle bg_blue = new(e => e.Color = ACCENT_BLUE);
-        public readonly static ValueStyle bg_blue_hover = new(e => e.Color = ACCENT_BLUE_HOVER);
-        public readonly static ValueStyle bg_red = new(e => e.Color = ACCENT_RED);
-        public readonly static ValueStyle bg_green = new(e => e.Color = ACCENT_GREEN);
-        public readonly static ValueStyle bg_orange = new(e => e.Color = ACCENT_ORANGE);
-        public readonly static ValueStyle bg_purple = new(e => e.Color = ACCENT_PURPLE);
-        public readonly static ValueStyle bg_yellow = new(e => e.Color = ACCENT_YELLOW);
+        public readonly static ValueStyle bg_blue = new(e => e.SetColor(ACCENT_BLUE));
+        public readonly static ValueStyle bg_blue_hover = new(e => e.SetColor(ACCENT_BLUE_HOVER));
+        public readonly static ValueStyle bg_red = new(e => e.SetColor(ACCENT_RED));
+        public readonly static ValueStyle bg_green = new(e => e.SetColor(ACCENT_GREEN));
+        public readonly static ValueStyle bg_orange = new(e => e.SetColor(ACCENT_ORANGE));
+        public readonly static ValueStyle bg_purple = new(e => e.SetColor(ACCENT_PURPLE));
+        public readonly static ValueStyle bg_yellow = new(e => e.SetColor(ACCENT_YELLOW));
 
         // Special colors
-        public readonly static ValueStyle bg_transparent = new(e => e.Color = TRANSPARENT);
-        public readonly static ValueStyle bg_black = new(e => e.Color = BLACK);
-        public readonly static ValueStyle bg_white = new(e => e.Color = WHITE);
+        public readonly static ValueStyle bg_transparent = new(e => e.SetColor(TRANSPARENT));
+        public readonly static ValueStyle bg_black = new(e => e.SetColor(BLACK));
+        public readonly static ValueStyle bg_white = new(e => e.SetColor(WHITE));
 
         // Text colors (same naming convention)
-        public readonly static ValueStyle text_gray_000 = new(e => e.Color = GRAY_000);
-        public readonly static ValueStyle text_gray_050 = new(e => e.Color = GRAY_050);
-        public readonly static ValueStyle text_gray_100 = new(e => e.Color = GRAY_100);
-        public readonly static ValueStyle text_blue = new(e => e.Color = ACCENT_BLUE);
-        public readonly static ValueStyle text_red = new(e => e.Color = ACCENT_RED);
-        public readonly static ValueStyle text_green = new(e => e.Color = ACCENT_GREEN);
-        public readonly static ValueStyle text_white = new(e => e.Color = WHITE);
-        public readonly static ValueStyle text_black = new(e => e.Color = BLACK);
+        public readonly static ValueStyle text_gray_000 = new(e => e.SetColor(GRAY_000));
+        public readonly static ValueStyle text_gray_050 = new(e => e.SetColor(GRAY_050));
+        public readonly static ValueStyle text_gray_100 = new(e => e.SetColor(GRAY_100));
+        public readonly static ValueStyle text_blue = new(e => e.SetColor(ACCENT_BLUE));
+        public readonly static ValueStyle text_red = new(e => e.SetColor(ACCENT_RED));
+        public readonly static ValueStyle text_green = new(e => e.SetColor(ACCENT_GREEN));
+        public readonly static ValueStyle text_white = new(e => e.SetColor(WHITE));
+        public readonly static ValueStyle text_black = new(e => e.SetColor(BLACK));
 
         // SPACING CLASSES
         // =============================================================================
@@ -194,6 +194,14 @@ namespace PBG.UI
         public readonly static ValueStyle text_align_left = new(e => { if (e is UIText t) t.TextAlign = TextAlign.Left; });
         public readonly static ValueStyle text_align_center = new(e => { if (e is UIText t) t.TextAlign = TextAlign.Center; });
         public readonly static ValueStyle text_align_right = new(e => { if (e is UIText t) t.TextAlign = TextAlign.Right; });
+        public readonly static UnaryType<TextInputType> text_type_ = new((v, e) => { if (e is UIField t) t.SetTextType(v); });
+        public readonly static ValueStyle text_type_any = new(e => { if (e is UIField t) t.SetTextType(TextInputType.Any); });
+        public readonly static ValueStyle text_type_alphabetic_decimal = new(e => { if (e is UIField t) t.SetTextType(TextInputType.AlphabeticDecimal); });
+        public readonly static ValueStyle text_type_alphanumeric = new(e => { if (e is UIField t) t.SetTextType(TextInputType.Alphanumeric); });
+        public readonly static ValueStyle text_type_alphabetic = new(e => { if (e is UIField t) t.SetTextType(TextInputType.Alphabetic); });
+        public readonly static ValueStyle text_type_decimal = new(e => { if (e is UIField t) t.SetTextType(TextInputType.Decimal); });
+        public readonly static ValueStyle text_type_numeric = new(e => { if (e is UIField t) t.SetTextType(TextInputType.Numeric); });
+        public readonly static ValueStyle text_type_special_characters = new(e => { if (e is UIField t) t.SetTextType(TextInputType.SpecialCharacters); });
 
         // LAYOUT BEHAVIOR CLASSES
         // =============================================================================
@@ -220,59 +228,74 @@ namespace PBG.UI
                 panel.TextureID = item.Index | 0x40000000;  
         });
 
-        public readonly static ValueStyle light_round = new(e => { if (e is UIPanel p) { p.TextureID = 0; p.Slice = SLICE_100; }});
-        public readonly static ValueStyle dark_round = new(e => { if (e is UIPanel p) { p.TextureID = 1; p.Slice = SLICE_100; }});
+
+        public readonly static ValueStyle blank_full = new(e => { if (e is UIPanel p) { p.TextureID = 0; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle blank_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 1; p.Slice = SLICE_100; }});
         public readonly static ValueStyle blank_round = new(e => { if (e is UIPanel p) { p.TextureID = 2; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle blank_round_3 = new(e => { if (e is UIPanel p) { p.TextureID = 3; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle blank_round_2 = new(e => { if (e is UIPanel p) { p.TextureID = 4; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle blank_round_2_diagonal = new(e => { if (e is UIPanel p) { p.TextureID = 5; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle blank_round_1 = new(e => { if (e is UIPanel p) { p.TextureID = 6; p.Slice = SLICE_100; }});
 
-        public readonly static ValueStyle light_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 10; p.Slice = SLICE_100; }});
-        public readonly static ValueStyle dark_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 11; p.Slice = SLICE_100; }});
-        public readonly static ValueStyle blank_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 12; p.Slice = SLICE_100; }});
+        
+        public readonly static ValueStyle light_full = new(e => { if (e is UIPanel p) { p.TextureID = 10; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle light_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 11; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle light_round = new(e => { if (e is UIPanel p) { p.TextureID = 12; p.Slice = SLICE_100; }});
+        
 
-        public readonly static ValueStyle light_full = new(e => { if (e is UIPanel p) { p.TextureID = 20; p.Slice = SLICE_100; }});
-        public readonly static ValueStyle dark_full = new(e => { if (e is UIPanel p) { p.TextureID = 21; p.Slice = SLICE_100; }});
-        public readonly static ValueStyle blank_full = new(e => { if (e is UIPanel p) { p.TextureID = 22; p.Slice = SLICE_100; }});
+
+        public readonly static ValueStyle dark_full = new(e => { if (e is UIPanel p) { p.TextureID = 20; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle dark_sharp = new(e => { if (e is UIPanel p) { p.TextureID = 21; p.Slice = SLICE_100; }});
+        public readonly static ValueStyle dark_round = new(e => { if (e is UIPanel p) { p.TextureID = 22; p.Slice = SLICE_100; }});
+
+
+        public readonly static ValueStyle rot_0 = new(e => { if (e is UIPanel p) { p.panelRotation = PanelRotation.R0; }});
+        public readonly static ValueStyle rot_90 = new(e => { if (e is UIPanel p) { p.panelRotation = PanelRotation.R90; }});
+        public readonly static ValueStyle rot_180 = new(e => { if (e is UIPanel p) { p.panelRotation = PanelRotation.R180; }});
+        public readonly static ValueStyle rot_270 = new(e => { if (e is UIPanel p) { p.panelRotation = PanelRotation.R270; }});
+        
 
         /// <summary>
         /// (left, top, right, bottom)
         /// </summary>
         public readonly static QuaternaryStyle<float, float, float, float> border_ui_ = new((x, y, z, w, e) => { if (e is UIPanel p) { p.BorderUI = (x, y, z, w);} });
-        public readonly static QuaternaryStyle<float, float, float, float> border_rgba_ = new((r, g, b, a, e) => { if (e is UIPanel p) { p.BorderColor = (r, g, b, a);} });
-        public readonly static UnaryType<Vector4> border_color_ = new((color, e) => { if (e is UIPanel p) { p.BorderColor = color; } });
+        public readonly static QuaternaryStyle<float, float, float, float> border_rgba_ = new((r, g, b, a, e) => { if (e is UIPanel p) { p.SetBorderColor((r, g, b, a));} });
+        public readonly static UnaryType<Vector4> border_color_ = new((color, e) => { if (e is UIPanel p) { p.SetBorderColor(color); } });
         public readonly static BinaryType<float, int> border_color_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.BorderColor = new(new(value), 1f); } },
-            (value, e) => { if (e is UIPanel p) { p.BorderColor = new(new(((float)value) / 100f), 1f); } });
+            (value, e) => { if (e is UIPanel p) { p.SetBorderColor(new(new(value), 1f)); } },
+            (value, e) => { if (e is UIPanel p) { p.SetBorderColor(new(new(((float)value) / 100f), 1f)); } });
 
         
         public readonly static BinaryType<float, int> light_round_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 0; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 0; p.Slice = SLICE_100;} });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 0; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 0; p.Slice = SLICE_100;} });
         public readonly static BinaryType<float, int> dark_round_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 1; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 1; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 1; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 1; p.Slice = SLICE_100; } });
         public readonly static BinaryType<float, int> blank_round_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 2; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 2; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 2; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 2; p.Slice = SLICE_100; } });
 
 
         public readonly static BinaryType<float, int> light_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 10; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 10; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } });
         public readonly static BinaryType<float, int> dark_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 11; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 11; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } });
         public readonly static BinaryType<float, int> blank_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 12; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 12; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 12; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 12; p.Slice = SLICE_100; } });
 
         public readonly static BinaryType<float, int> light_full_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 20; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 20; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 20; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 20; p.Slice = SLICE_100; } });
         public readonly static BinaryType<float, int> dark_full_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 21; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 21; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 21; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 21; p.Slice = SLICE_100; } });
         public readonly static BinaryType<float, int> blank_full_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(value), 1f); p.TextureID = 22; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.Color = new(new(((float)value) / 100f), 1f); p.TextureID = 22; p.Slice = SLICE_100; } });
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 22; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 22; p.Slice = SLICE_100; } });
 
         public readonly static ValueStyle slice_null = new(e => { if (e is UIPanel p) { p.Slice = (-1, -1); } });
         public readonly static ValueStyle slice_75 = new(e => { if (e is UIPanel p) { p.Slice = SLICE_75; } });

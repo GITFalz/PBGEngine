@@ -34,6 +34,7 @@ namespace PBG.UI
         // Events
         public HashSet<UIElementBase> InteractableElementsSet = [];
         public List<UI.UIElementBase> InteractableElements = [];
+        private bool _abortInteractions = false;
 
         public Rendering.Meshes.UIMesh UIMesh;
         public Rendering.Meshes.TextMesh TextMesh;
@@ -82,8 +83,8 @@ namespace PBG.UI
 
                 ShaderInfo planeShaderInfo = new()
                 {
-                    VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
-                    FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
+                    VertexShaderFile = "vulkan/fullScreen.vert",
+                    FragmentShaderFile = "vulkan/fullScreen.frag"
                 };
 
                 planeShaderInfo.ColorBlendAttachment.ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit | ColorComponentFlags.BBit | ColorComponentFlags.ABit;
@@ -374,6 +375,19 @@ namespace PBG.UI
             return Matrix4.CreateOrthographicOffCenter(0, width, 0, height, -2, 2);
         }
 
+        public void SetAsHighestPriority(UIElementBase element)
+        {
+            if (InteractableElementsSet.Contains(element) && InteractableElements.Remove(element))
+            {
+                InteractableElements.Insert(0, element);
+            }
+        }
+
+        public void AbortInteractions()
+        {
+            _abortInteractions = true;
+        }
+
         void Start()
         {
             UIData = _textureType == TextureType.Linear ? UIData.LinearUI : UIData.PixelPerfectUI;
@@ -412,6 +426,12 @@ namespace PBG.UI
                 if (element.Visible && element.Test() && !element.AllowPassingMouse)
                 {
                     over = true;
+                }
+
+                if (_abortInteractions)
+                {
+                    _abortInteractions = false;
+                    break;
                 }
             }
             return over;

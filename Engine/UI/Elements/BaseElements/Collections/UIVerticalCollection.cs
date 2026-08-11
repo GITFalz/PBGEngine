@@ -151,8 +151,12 @@ namespace PBG.UI
 
         private void HandleGrowFromChildren()
         {
+            HasGrowthDependentChildren = false;
+
             float totalHeight = TotalHeight;
             float maxWidth = 0;
+
+            bool hasPercentWidth = Width.IsPercent() || MinWidth.IsPercent() || MaxWidth.IsPercent();
 
             for (int i = 0; i < ChildElements.Count; i++)
             {
@@ -165,16 +169,21 @@ namespace PBG.UI
                 float xOffset = OffsetX(child);
                 child.CollectionOffset = (xOffset, totalHeight + child.Padding.Y);
 
-                if (Width.IsNone())
+                if (child.MinWidth.IsPercent() || child.MaxWidth.IsPercent())
                 {
-                    if (child.Width.IsPercent())
-                        child.PercentAlignement = PercentAlignementType.Horizontal;
-                    else
-                        maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
+                    child.PercentAlignement = PercentAlignementType.Horizontal;
+                    HasGrowthDependentChildren |= hasPercentWidth;
                 }
 
-                if (Name == "test")
-                Console.WriteLine("child: " + child.Name + " " + child.Size.X + " width: " + maxWidth);
+                if (child.Width.IsPercent())
+                {
+                    child.PercentAlignement = PercentAlignementType.Horizontal;
+                    HasGrowthDependentChildren |= hasPercentWidth;
+                }
+                else
+                {
+                    maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
+                }
 
                 totalHeight += child.BaseOffset.Y + child.Size.Y + child.Padding.Y + child.Padding.W + Spacing;
             };
@@ -193,6 +202,9 @@ namespace PBG.UI
                 {
                     child.CalculateWidth();
                 }
+
+                if (child is UICol c && c.HasGrowthDependentChildren)
+                    child.FirstPass();
             };
         }
         

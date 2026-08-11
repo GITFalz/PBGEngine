@@ -8,13 +8,20 @@ namespace PBG.UI
     {
         public int TextureID = -1;
         public Vector2 Slice = (-1, -1);
-        public Vector4 BorderColor = Vector4.Zero;
+        public Vector4 BorderColor { get; private set; } = Vector4.Zero;
         public Vector4 BorderUI = Vector4.Zero;
-        public bool IsValid => Visible && (Color.W + BorderColor.W != 0);
+        public PanelRotation panelRotation = PanelRotation.R0;
+        private bool _hasBorderTransparency = false;
+        public bool IsValid => Visible;
 
         public UIPanel() : base((0, 0, 0, 0)) { }
 
         public UIPanel Class(params IStyleData[] styles) => Style(this, styles);
+
+        public override bool HasTransparency()
+        {
+            return base.HasTransparency() || _hasBorderTransparency;
+        }
 
         public override void UpdateChildMaskIndex(int index) => UIController?.UIMesh.UpdateMaskIndex(this, index);
         public override void UpdateTextureIndex(int textureIndex)
@@ -56,8 +63,33 @@ namespace PBG.UI
         public override UIElementBase UpdateScale() { UIController?.UIMesh.UpdateScale(this); return this; }
         public override UIElementBase UpdateColor() { UIController?.UIMesh.UpdateColor(this); return this; }
         public override UIElementBase UpdateBorderUI() { UIController?.UIMesh.UpdateBorderUI(this); return this; }
-        public override UIElementBase UpdateBorderColor() { UIController?.UIMesh.UpdateBorderColor(this); return this; }
-        public override UIElementBase UpdateBorderColor(Vector4 color) { BorderColor = color; return UpdateBorderColor(); }
+
+        public UIElementBase SetBorderColor(Vector4 color)
+        {
+            BorderColor = color;
+
+            var oldTransparency = HasTransparency();
+
+            _hasBorderTransparency = color.W < 1.0f;
+
+            if (oldTransparency != HasTransparency())
+                UIController?.UIMesh.QueueUpdateDepth();
+
+            return this;
+        }
+
+        public override UIElementBase UpdateBorderColor() 
+        { 
+            UIController?.UIMesh.UpdateBorderColor(this); 
+            return this; 
+        }
+
+        public override UIElementBase UpdateBorderColor(Vector4 color) 
+        { 
+            SetBorderColor(color);
+            return UpdateBorderColor(); 
+        }
+        
         public override UIElementBase UpdateAnimationTranslation() { UIController?.UIMesh.UpdateAnimationTranslation(this); return this; }
         public override UIElementBase UpdateAnimationScale() { UIController?.UIMesh.UpdateAnimationScale(this); return this; }
         public override UIElementBase UpdateAnimationRotation() { UIController?.UIMesh.UpdateAnimationRotation(this); return this; }
@@ -65,11 +97,19 @@ namespace PBG.UI
         public override UIElementBase SetVisible(bool visible)
         {
             base.SetVisible(visible);
+            UIController?.UIMesh.UpdateVisible(this);
             UIController?.UIMesh.QueueUpdateVisibility();
             return this;
         }
         public override void Destroy() => ControllerCheck().UIMesh.RemoveElement(this);
 
         public UIElementTag GetTag() => Tag;
+    }
+    public enum PanelRotation
+    {
+        R0 = 0,
+        R90 = 1,
+        R180 = 2,
+        R270 = 3
     }
 }

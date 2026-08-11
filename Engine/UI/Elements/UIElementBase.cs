@@ -19,20 +19,22 @@ namespace PBG.UI
 
         public string Name = "UIElement";
 
-        public UISize? MinWidth = null;
-        public UISize Width = UISize.None(100);
-        public UISize? MaxWidth = null;
+        public UISize MinWidth = UISize.None(int.MinValue);
+        public UISize Width = UISize.None(1);
+        public UISize MaxWidth = UISize.None(int.MaxValue);
 
-        public UISize? MinHeight = null;
-        public UISize Height = UISize.None(100);
-        public UISize? MaxHeight = null;
+        public UISize MinHeight = UISize.None(int.MinValue);
+        public UISize Height = UISize.None(1);
+        public UISize MaxHeight = UISize.None(int.MaxValue);
 
         public Vector4 Padding = (0, 0, 0, 0);
         public Vector2 Size { get; set; } = (0, 0);
         public float SizeX { get => Size.X; set => Size = (value, Size.Y); }
         public float SizeY { get => Size.Y; set => Size = (Size.X, value); }
         public Vector2 BaseOffset = (0, 0);
-        public Vector4 Color { get; set; }
+        public Vector4 Color { get; private set; }
+        private bool _hasTransparency = false;
+
         public float Xoffset
         {
             get => BaseOffset.X;
@@ -67,7 +69,7 @@ namespace PBG.UI
 
         public UIAlign Alignement = UIAlign.TopLeft;
         public Dataset Dataset = [];
-        public bool Visible { get; set; } = true;
+        public bool Visible { get; set; } = false;
         public bool SetVisibleBefore = false;
 
         public Vector2 Origin
@@ -99,7 +101,7 @@ namespace PBG.UI
         public UIElementBase() { }
         public UIElementBase(Vector4 defaultColor)
         {
-            Color = defaultColor;
+            SetColor(defaultColor);
         }
         public UIElementBase(string name) { Name = name; }
         public UIElementBase(UIAlign alignement) { Alignement = alignement; }
@@ -118,6 +120,9 @@ namespace PBG.UI
         public virtual void OnHoldAction() => _onHold?.Invoke(this);
         public virtual void OnReleaseAction() => _onRelease?.Invoke(this);
         public virtual void OnHoverExitAction() => _onHoverExit?.Invoke(this);
+
+        public void SetAsHighestPriority() => UIController?.SetAsHighestPriority(this);
+        public void AbortInteractions() => UIController?.AbortInteractions();
 
         public virtual bool Test()
         {
@@ -145,7 +150,7 @@ namespace PBG.UI
 
                 OnHoverAction();
 
-                if (Input.IsMousePressed(MouseButton.Left) && !Clicked)
+                if (Input.IsMousePressed(MouseButton.Left))
                 {
                     if (UIController != null) AnimationClick?.Enter(UIController, this, ref DeleteClickAnimationAction);
                     OnClickAction();
@@ -289,12 +294,29 @@ namespace PBG.UI
             UIController?.RemoveElement(this);
         }
 
+        /// <summary>
+        /// Accounts for the border on the x axis when it is a collection
+        /// </summary>
+        /// <returns></returns>
+        public virtual float GetFixedWidth() => Size.X;
+
+        /// <summary>
+        /// Accounts for the border on the y axis when it is a collection
+        /// </summary>
+        /// <returns></returns>
+        public virtual float GetFixedHeight() => Size.Y;
+
         public void AddTo(UICol parent) => parent.AddElement(this);
 
         public void Created()
         {
             OnCreated?.Invoke();
             OnCreated = null;
+        }
+
+        public UIElementBase GetBaseParent()
+        {
+            return ParentElement == null ? this : ParentElement.GetBaseParent();
         }
 
         public bool IsParent(UIElementBase element)
@@ -324,13 +346,12 @@ namespace PBG.UI
         public void CalculateWidth()
         {
             float width = ParentElement?.Size.X ?? Game.Width;
+            float fixedWidth = ParentElement?.GetFixedWidth() ?? Game.Width;
+
             float sizeX = Width.Compute(width);
-
-            if (MinWidth != null)
-                sizeX = Mathf.Max(sizeX, MinWidth.Compute(width));
-
-            if (MaxWidth != null)
-                sizeX = Mathf.Min(sizeX, MaxWidth.Compute(width));
+            
+            sizeX = Mathf.Max(sizeX, MinWidth.Compute(fixedWidth));
+            sizeX = Mathf.Min(sizeX, MaxWidth.Compute(fixedWidth));
 
             SizeX = sizeX;
             UIController?.CalculateBoundaries();
@@ -339,13 +360,12 @@ namespace PBG.UI
         public void CalculateHeight()
         {
             float height = ParentElement?.Size.Y ?? Game.Height;
+            float fixedHeight = ParentElement?.GetFixedHeight() ?? Game.Height;
+
             float sizeY = Height.Compute(height);
 
-            if (MinHeight != null)
-                sizeY = Mathf.Max(sizeY, MinHeight.Compute(height));
-
-            if (MaxHeight != null)
-                sizeY = Mathf.Min(sizeY, MaxHeight.Compute(height));
+            sizeY = Mathf.Max(sizeY, MinHeight.Compute(fixedHeight));
+            sizeY = Mathf.Min(sizeY, MaxHeight.Compute(fixedHeight));
 
             SizeY = sizeY;
             UIController?.CalculateBoundaries();
@@ -353,10 +373,17 @@ namespace PBG.UI
 
         public virtual void SecondPass()
         {
+            float oldDepth = Transform.Z;
+
             float width = ParentElement?.Size.X ?? Game.Width;
             float height = ParentElement?.Size.Y ?? Game.Height;
             float depth = (ParentElement?.Transform.Z + 0.00001f ?? 0) + (Depth * 0.00001f);
             Transform = (Transform.X, Transform.Y, depth, Transform.W);
+
+            if (oldDepth != depth)
+            {
+                UIController?.UIMesh.QueueUpdateDepth();
+            }
     
             Vector2 offset = BaseOffset + CollectionOffset + AddedOffset + (ParentElement?.Origin ?? Vector2.Zero);
             Origin = _computeBaseOrigin[Alignement](width, height, Size.X, Size.Y) + offset;
@@ -367,6 +394,8 @@ namespace PBG.UI
                 UIController?.CalculateBoundaries();
             }
         }
+
+        public float GetTotalDepth() => (ParentElement?.Transform.Z + 0.00001f ?? 0) + (Depth * 0.00001f);
 
         public virtual void Generate() { }
         public abstract void UpdateChildMaskIndex(int index);
@@ -400,16 +429,36 @@ namespace PBG.UI
         public abstract UIElementBase UpdateBorderColor();
         public abstract UIElementBase UpdateBorderColor(Vector4 color);
 
-        public UIElementBase UpdateColor(Vector4 color)
+        public virtual bool HasTransparency()
+        {
+            return _hasTransparency;
+        }
+
+        public UIElementBase SetColor(Vector4 color)
         {
             Color = color;
+            Visible = true;
+
+            bool oldTransparency = HasTransparency();
+
+            _hasTransparency = color.W < 1.0f;
+
+            if (oldTransparency != HasTransparency())
+                UIController?.UIMesh.QueueUpdateDepth();
+
+            return this;
+        }
+
+        public UIElementBase UpdateColor(Vector4 color)
+        {
+            SetColor(color);
             UpdateColor();
             return this;
         }
 
         public UIElementBase UpdateColor(Vector3 color)
         {
-            Color = new Vector4(color, 1f);
+            SetColor(new Vector4(color, 1f));
             UpdateColor();
             return this;
         }

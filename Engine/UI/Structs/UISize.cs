@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace PBG.UI
 {
-    public class UISize
+    public struct UISize
     {
         private enum UISizeType
         {
@@ -15,7 +15,7 @@ namespace PBG.UI
             PercentCalc
         }
 
-        private UISizeType SizeType;
+        private UISizeType SizeType = UISizeType.None;
         public float Value;
         private float PixelOffset = 0;
         public float AddedOffset = 0;
@@ -34,7 +34,8 @@ namespace PBG.UI
                 UISizeType.Pixel => Value,
                 UISizeType.Percent => (Value * parentSize) + AddedOffset,
                 UISizeType.PercentCalc => (Value * parentSize) + (PixelOffset + AddedOffset),
-                _ => Value,
+                UISizeType.None => Value,
+                _ => Value
             };
         }
 

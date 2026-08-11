@@ -12,6 +12,12 @@ namespace PBG.UI
         public bool AllowScrollingToTop = false; // Used for scroll collections
         public float ScrollingSpeed = 5f;  // Used for scroll collections
         public bool GrowFromChildren { get; set; } = false;
+
+        // True when this collection has children that depend on its final size, while
+        // the collection's own size is not known until after its parent has been
+        // resolved. This requires an additional layout pass so percentage-based
+        // children can be resized using the collection's final dimensions.
+        public bool HasGrowthDependentChildren = false;
         public bool MaskChildren = false;
         public bool ForceToggleVisible = true;
         public bool WasVisible { get; set; } = true;
@@ -93,6 +99,7 @@ namespace PBG.UI
 
         public virtual void CollectionFirstPass()
         {
+            Size = (0, 0);
             bool notGrowOrFit = !GrowFromChildren || FitChildren;
             if (notGrowOrFit || !Width.IsNone())
                 CalculateWidth();
@@ -125,13 +132,13 @@ namespace PBG.UI
 
         private void HandleGrowFromChildren()
         {
+            HasGrowthDependentChildren = false;
+            
             float maxWidth = 0;
             float maxHeight = 0;
 
-            Console.WriteLine("Grow");
-
-            Vector2 min = (float.MaxValue, float.MaxValue);
-            Vector2 max = (float.MinValue, float.MinValue);
+            bool hasPercentWidth = Width.IsPercent() || MinWidth.IsPercent() || MaxWidth.IsPercent();
+            bool hasPercentHeight = Height.IsPercent() || MinHeight.IsPercent() || MaxHeight.IsPercent();
 
             for (int i = 0; i < ChildElements.Count; i++)
             {
@@ -146,25 +153,48 @@ namespace PBG.UI
 
                 child.CollectionOffset = (xOffset, yOffset);
 
-                if (child.Width.IsPercent())
+                if (child.MinWidth.IsPercent() || child.MaxWidth.IsPercent())
+                {
                     child.PercentAlignement |= PercentAlignementType.Horizontal;
+                    HasGrowthDependentChildren |= hasPercentWidth;
+                }
+
+                if (child.Width.IsPercent())
+                {
+                    child.PercentAlignement |= PercentAlignementType.Horizontal;
+                    HasGrowthDependentChildren |= hasPercentWidth;
+                }
                 else
                 {
-                    maxWidth = Mathf.Max(maxWidth, Border.X + child.BaseOffset.X + child.Size.X + Border.Z);
+                    var offset = child.IsRightAligned() ? -child.BaseOffset.X : child.BaseOffset.X;
+                    var padding = child.Padding.X + child.Padding.Z;
+                    maxWidth = Mathf.Max(maxWidth, Border.X + offset + child.Size.X + Border.Z + padding);
+                }
+
+                if (child.MinHeight.IsPercent() || child.MaxHeight.IsPercent())
+                {
+                    child.PercentAlignement |= PercentAlignementType.Vertical;
+                    HasGrowthDependentChildren |= hasPercentHeight;
                 }
 
                 if (child.Height.IsPercent())
+                {
                     child.PercentAlignement |= PercentAlignementType.Vertical;
+                    HasGrowthDependentChildren |= hasPercentHeight;
+                }
                 else
                 {
-                    maxHeight = Mathf.Max(maxHeight, Border.Y + child.BaseOffset.Y + child.Size.Y + Border.W); 
+                    var offset = child.IsBottomAligned() ? -child.BaseOffset.Y : child.BaseOffset.Y;
+                    var padding = child.Padding.Y + child.Padding.W;
+                    maxHeight = Mathf.Max(maxHeight, Border.Y + offset + child.Size.Y + Border.W + padding); 
                 }
             }
             
-            if (!Width.IsPercent())
-                Width = UISize.Pixels(maxWidth);
-            if (!Height.IsPercent())
-                Height = UISize.Pixels(maxHeight);
+            if (Width.IsNone()) Width = UISize.None(maxWidth);
+            if (Width.IsPixels()) Width = UISize.Pixels(maxWidth);
+            
+            if (Height.IsNone()) Height = UISize.None(maxHeight);
+            if (Height.IsPixels()) Height = UISize.Pixels(maxHeight);
 
             CalculateWidth();
             CalculateHeight();
@@ -172,8 +202,9 @@ namespace PBG.UI
             for (int i = 0; i < ChildElements.Count; i++)
             {
                 var child = ChildElements[i];
+
                 if (child.PercentAlignement.HasFlag(PercentAlignementType.Horizontal))
-                {
+                {    
                     child.Width.AddedOffset = -(Border.X + Border.Z);
                     child.CalculateWidth();
                 }
@@ -183,6 +214,9 @@ namespace PBG.UI
                     child.Height.AddedOffset = -(Border.Y + Border.W);
                     child.CalculateHeight();
                 }
+
+                if (child is UICol c && c.HasGrowthDependentChildren)
+                    child.FirstPass();
             }
         }
 
@@ -203,6 +237,9 @@ namespace PBG.UI
                 child.SecondPass();
             }
         }
+
+        public override float GetFixedWidth() => Size.X - Border.X - Border.Z;
+        public override float GetFixedHeight() => Size.Y - Border.Y - Border.W;
 
         public (Vector2 topLeft, Vector2 bottomRight) GetMaskCorners()
         {
@@ -550,6 +587,7 @@ namespace PBG.UI
             if (!ChildElements.Remove(element))
                 return false;
 
+            element.CollectionOffset = Vector2.Zero;
             element.ParentElement = null;
             return true;
             

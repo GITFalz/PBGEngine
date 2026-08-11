@@ -163,3 +163,30 @@ public class If : IUIChild
 
     public void AddTo(UICol parent) => _child?.AddTo(parent);
 }
+
+public class IfElse : IUIChild
+{
+    private IUIChild? _child = null;
+
+    public IfElse(bool condition, Func<IUIChild> ifAction, Func<IUIChild> elseAction)
+    {
+        _child = condition ? ifAction() : elseAction();
+    }
+
+    public IfElse(bool condition, Func<IUIChild[]> ifAction, Func<IUIChild> elseAction)
+    {
+        _child = condition ? new UIArray(ifAction()) : elseAction();
+    }
+
+    public IfElse(bool condition, Func<IUIChild> ifAction, Func<IUIChild[]> elseAction)
+    {
+        _child = condition ? ifAction() : new UIArray(elseAction());
+    }
+
+    public IfElse(bool condition, Func<IUIChild[]> ifAction, Func<IUIChild[]> elseAction)
+    {
+        _child = condition ? new UIArray(ifAction()) : new UIArray(elseAction());
+    }
+
+    public void AddTo(UICol parent) => _child?.AddTo(parent);
+}
