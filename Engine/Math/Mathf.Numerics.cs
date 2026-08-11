@@ -86,6 +86,16 @@ namespace PBG.MathLibrary
         public static Vector3 Min(this Vector3 a, params Vector3[] others) => others.Length == 0 ? a : Min(a, Min(others));
         public static Vector3i Min(this Vector3i a, params Vector3i[] others) => others.Length == 0 ? a : Min(a, Min(others));
 
+        
+        public static void MinSet(this ref float a, float other) => a = Min(a, other);
+        public static void MinSet(this ref double a, double other) => a = Min(a, other);
+        public static void MinSet(this ref int a, int other) => a = Min(a, other);
+        public static void MinSet(this ref uint a, uint other) => a = Min(a, other);
+        public static void MinSet(this ref Vector2 a, Vector2 other) => a = Min(a, other);
+        public static void MinSet(this ref Vector2i a, Vector2i other) => a = Min(a, other);
+        public static void MinSet(this ref Vector3 a, Vector3 other) => a = Min(a, other);
+        public static void MinSet(this ref Vector3i a, Vector3i other) => a = Min(a, other);
+
         public static void MinSet(this ref float a, params float[] others) => a = others.Length == 0 ? a : Min(a, Min(others));
         public static void MinSet(this ref double a, params double[] others) => a = others.Length == 0 ? a : Min(a, Min(others));
         public static void MinSet(this ref int a, params int[] others) => a = others.Length == 0 ? a : Min(a, Min(others));
@@ -179,6 +189,15 @@ namespace PBG.MathLibrary
         public static Vector2i Max(this Vector2i a, params Vector2i[] others) => others.Length == 0 ? a : Max(a, Max(others));
         public static Vector3 Max(this Vector3 a, params Vector3[] others) => others.Length == 0 ? a : Max(a, Max(others));
         public static Vector3i Max(this Vector3i a, params Vector3i[] others) => others.Length == 0 ? a : Max(a, Max(others));
+
+        public static void MaxSet(this ref float a, float other) => a = Max(a, other);
+        public static void MaxSet(this ref double a, double other) => a = Max(a, other);
+        public static void MaxSet(this ref int a, int other) => a = Max(a, other);
+        public static void MaxSet(this ref uint a, uint other) => a = Max(a, other);
+        public static void MaxSet(this ref Vector2 a, Vector2 other) => a = Max(a, other);
+        public static void MaxSet(this ref Vector2i a, Vector2i other) => a = Max(a, other);
+        public static void MaxSet(this ref Vector3 a, Vector3 other) => a = Max(a, other);
+        public static void MaxSet(this ref Vector3i a, Vector3i other) => a = Max(a, other);
 
         public static void MaxSet(this ref float a, params float[] others) => a = others.Length == 0 ? a : Max(a, Max(others));
         public static void MaxSet(this ref double a, params double[] others) => a = others.Length == 0 ? a : Max(a, Max(others));

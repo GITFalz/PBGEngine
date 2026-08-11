@@ -2,6 +2,8 @@ namespace PBG.MathLibrary
 {
     public struct Quaternion
     {
+        public static readonly uint ByteSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Quaternion>();
+
         public float X, Y, Z, W;
         public Vector3 Xyz => (X, Y, Z);
 

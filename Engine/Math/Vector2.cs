@@ -1,7 +1,11 @@
 namespace PBG.MathLibrary;
 
-public struct Vector2
+public struct Vector2 : IVector<float>
 {
+    public static readonly uint ByteSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Vector2>();
+
+    public readonly uint ElementCount => 2;
+
     public float X;
     public float Y;
 

@@ -1,9 +1,14 @@
+using System.Runtime.InteropServices;
 using PBG.Voxel;
 
 namespace PBG.MathLibrary;
 
-public struct Vector3i
+public struct Vector3i : IVector<int>
 {
+    public static readonly uint ByteSize = (uint)Marshal.SizeOf<Vector3i>();
+
+    public readonly uint ElementCount => 3;
+    
     public int X;
     public int Y;
     public int Z;

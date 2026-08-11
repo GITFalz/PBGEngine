@@ -1,7 +1,13 @@
+using System.Runtime.InteropServices;
+
 namespace PBG.MathLibrary;
 
-public struct Vector4i
+public struct Vector4i : IVector<int>
 {
+    public static readonly uint ByteSize = (uint)Marshal.SizeOf<Vector4i>();
+
+    public readonly uint ElementCount => 4;
+    
     public int X;
     public int Y;
     public int Z;
