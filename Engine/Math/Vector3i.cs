@@ -68,6 +68,7 @@ public struct Vector3i : IVector<int>
     public static Vector3i operator -(Vector3i v) => new(-v.X, -v.Y, -v.Z);
 
     public static Vector3i operator +(Vector3i a, Vector3i b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+    public static Vector3i operator +(Vector3i a, int b) => new(a.X + b, a.Y + b, a.Z + b);
 
     public static Vector3i operator *(Vector3i a, Vector3i b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
     public static Vector3i operator *(Vector3i a, int b) => new(a.X * b, a.Y * b, a.Z * b);

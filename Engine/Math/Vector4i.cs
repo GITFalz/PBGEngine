@@ -81,6 +81,7 @@ public struct Vector4i : IVector<int>
     public static Vector4i operator -(Vector4i v) => new(-v.X, -v.Y, -v.Z, -v.W);
 
     public static Vector4i operator +(Vector4i a, Vector4i b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z, a.W + b.W);
+    public static Vector4i operator +(Vector4i a, int b) => new(a.X + b, a.Y + b, a.Z + b, a.W + b);
 
     public static Vector4i operator *(Vector4i a, Vector4i b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z, a.W * b.W);
     public static Vector4i operator *(Vector4i a, int b) => new(a.X * b, a.Y * b, a.Z * b, a.W * b);
