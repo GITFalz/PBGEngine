@@ -32,12 +32,12 @@ namespace PBG.UI
             Tag = UIElementTag.UICollection;
         }
 
-        public UICol(params IStyleData[] styles) : this() 
+        public UICol(params IStyleData?[] styles) : this() 
         { 
             Class(styles);
         }
 
-        public UICol(string name, params IStyleData[] styles) : this(name) 
+        public UICol(string name, params IStyleData?[] styles) : this(name) 
         { 
             Class(styles);
         }
@@ -54,8 +54,6 @@ namespace PBG.UI
             return text;
         }
 
-        public UICol Class(params IStyleData[] styles) => Style(this, styles);
-
         public UICol OnHoverEnter(Action<UICol>? action)    { UIEventExtensions.OnHoverEnter(this, action); return this; }
         public UICol OnHover(Action<UICol>? action)         { UIEventExtensions.OnHover(this, action); return this; }
         public UICol OnClick(Action<UICol>? action)         { UIEventExtensions.OnClick(this, action); return this; }
@@ -63,12 +61,12 @@ namespace PBG.UI
         public UICol OnRelease(Action<UICol>? action)       { UIEventExtensions.OnRelease(this, action); return this; }
         public UICol OnHoverExit(Action<UICol>? action)     { UIEventExtensions.OnHoverExit(this, action); return this; }
 
-        public UICol this[params IUIChild[] subElements]
+        public UICol this[params IUIChild?[] subElements]
         {
             get { AddElements(subElements); return this; }
         }
 
-        public UICol this[IEnumerable<IUIChild> subElements]
+        public UICol this[IEnumerable<IUIChild?> subElements]
         {
             get { AddElements(subElements); return this; }
         }
@@ -538,8 +536,11 @@ namespace PBG.UI
             return element;
         }
 
-        public UIElementBase AddElement(UIElementBase element)
+        public UIElementBase AddElement(UIElementBase? element)
         {
+            if (element == null)
+                return this;
+
             if (IsParent(element))
                 throw new System.Exception("Cannot add parent as child element.");
 
@@ -564,16 +565,16 @@ namespace PBG.UI
             return this;
         }
 
-        public UIElementBase AddElements(IEnumerable<IUIChild> elements)
+        public UIElementBase AddElements(IEnumerable<IUIChild?> elements)
         {
             foreach (var element in elements)
             {
-                element.AddTo(this);
+                element?.AddTo(this);
             }
             return this;
         }
 
-        public UIElementBase AddElements(params UIElementBase[] elements)
+        public UIElementBase AddElements(params UIElementBase?[] elements)
         {
             foreach (var element in elements)
             {

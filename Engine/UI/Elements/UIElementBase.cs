@@ -11,7 +11,7 @@ namespace PBG.UI
 {
     public abstract partial class UIElementBase : IUIChild
     {
-        public UIController? UIController = null;
+        public UIController UIController = null!;
         public UIElementBase? ParentElement = null;
         public PercentAlignementType PercentAlignement = PercentAlignementType.None;
 
@@ -375,8 +375,8 @@ namespace PBG.UI
         {
             float oldDepth = Transform.Z;
 
-            float width = ParentElement?.Size.X ?? Game.Width;
-            float height = ParentElement?.Size.Y ?? Game.Height;
+            float width = ParentElement?.Size.X ?? UIController.Alignment.Width;
+            float height = ParentElement?.Size.Y ?? UIController.Alignment.Height;
             float depth = (ParentElement?.Transform.Z + 0.00001f ?? 0) + (Depth * 0.00001f);
             Transform = (Transform.X, Transform.Y, depth, Transform.W);
 
@@ -592,7 +592,7 @@ namespace PBG.UI
         public bool IsCenterAligned() => IsAlignedTo(UIAlignMasks.Center);
         public bool IsRightAligned() => IsAlignedTo(UIAlignMasks.Right);
         public bool IsTopAligned() => IsAlignedTo(UIAlignMasks.Top);
-        public bool IsLMiddleAligned() => IsAlignedTo(UIAlignMasks.Middle);
+        public bool IsMiddleAligned() => IsAlignedTo(UIAlignMasks.Middle);
         public bool IsBottomAligned() => IsAlignedTo(UIAlignMasks.Bottom);
         public bool IsAlignedTo(UIAlignMasks mask) => ((uint)Alignement & (uint)mask) != 0;
         protected UIController ControllerCheck()
@@ -618,17 +618,17 @@ namespace PBG.UI
             { UIAlign.BottomRight, (pWidth, pHeight, width, height) =>  (pWidth - width,     pHeight - height    ) },
         };
 
-        public UIElementBase Style(params IStyleData[] styles)
+        public UIElementBase Style(params IStyleData?[] styles)
         {
             for (int i = 0; i < styles.Length; i++)
-                styles[i].Set(this);
+                styles[i]?.Set(this);
             return this;
         }
 
-        public T Style<T>(T element, params IStyleData[] styles) where T : UIElementBase
+        public T Style<T>(T element, params IStyleData?[] styles) where T : UIElementBase
         {
             for (int i = 0; i < styles.Length; i++)
-                styles[i].Set(this);
+                styles[i]?.Set(this);
             return element;
         }
 

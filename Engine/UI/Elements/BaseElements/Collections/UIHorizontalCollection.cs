@@ -160,7 +160,18 @@ namespace PBG.UI
                     continue;
 
                 float yOffset = OffsetY(child);
-                child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
+                if (child.IsAlignedTo(UIAlignMasks.Right))
+                {
+                    child.CollectionOffset = (child.Padding.X, yOffset);
+                }
+                else if (child.IsAlignedTo(UIAlignMasks.Center))
+                {
+                    child.CollectionOffset = ((totalWidth * 0.5f) + child.Padding.X, yOffset);
+                }
+                else
+                {
+                    child.CollectionOffset = (totalWidth + child.Padding.X, yOffset);
+                }
 
                 if (child.MinHeight.IsPercent() || child.MaxHeight.IsPercent())
                 {

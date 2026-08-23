@@ -16,7 +16,7 @@ namespace PBG.UI
 
         public UIPanel() : base((0, 0, 0, 0)) { }
 
-        public UIPanel Class(params IStyleData[] styles) => Style(this, styles);
+        public UIPanel Class(params IStyleData?[] styles) => Style(this, styles);
 
         public override bool HasTransparency()
         {

@@ -7,24 +7,24 @@ namespace PBG.UI
 {
     public enum UIAlign
     {
-        TopLeft = 0x1,
-        TopCenter = 0x2,
-        TopRight = 0x4,
-        MiddleLeft = 0x8,
-        MiddleCenter = 0x10,
-        MiddleRight = 0x20,
-        BottomLeft = 0x40,
-        BottomCenter = 0x80,
-        BottomRight = 0x100
+        TopLeft = 1,
+        TopCenter = 2,
+        TopRight = 4,
+        MiddleLeft = 8,
+        MiddleCenter = 16,
+        MiddleRight = 32,
+        BottomLeft = 64,
+        BottomCenter = 128,
+        BottomRight = 256
     }
 
     public enum UIAlignMasks
     {
-        Left = 0x49,
-        Center = 0x92,
-        Right = 0x124,
-        Top = 0x7,
-        Middle = 0x39,
-        Bottom = 0x1c,
+        Left = 73,
+        Center = 146,
+        Right = 292,
+        Top = 7,
+        Middle = 112,
+        Bottom = 448,
     }
 }

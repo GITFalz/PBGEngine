@@ -108,7 +108,7 @@ namespace PBG.UI
                 Name = name;
 
             Controllers.Add(this);
-            Alignment = new(this);
+            Alignment = new();
         }
 
         public UIController(UIAlignment alignment, string? name = null, TextureType textureType = TextureType.Nearest) : this(name, textureType)
