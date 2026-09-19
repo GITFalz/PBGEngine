@@ -142,31 +142,91 @@ namespace PBG.MathLibrary
             return (float)(Math.Truncate(steps) * size);
         }
 
+        #region ABS
         public static float Abs(float value) => value < 0 ? -value : value;
         public static int Abs(int value) => value < 0 ? -value : value;
-        public static Vector3 Abs(Vector3 value) => new Vector3(Abs(value.X), Abs(value.Y), Abs(value.Z));
-        public static Vector2 Abs(Vector2 value) => new Vector2(Abs(value.X), Abs(value.Y));
 
+        public static Vector2 Abs(Vector2 value) => new Vector2(Abs(value.X), Abs(value.Y));
+        public static Vector2i Abs(Vector2i value) => new Vector2i(Abs(value.X), Abs(value.Y));
+
+        public static Vector3 Abs(Vector3 value) => new Vector3(Abs(value.X), Abs(value.Y), Abs(value.Z));
+        public static Vector3i Abs(Vector3i value) => new Vector3i(Abs(value.X), Abs(value.Y), Abs(value.Z));
+
+        public static Vector4 Abs(Vector4 value) => new Vector4(Abs(value.X), Abs(value.Y), Abs(value.Z), Abs(value.W));
+        public static Vector4i Abs(Vector4i value) => new Vector4i(Abs(value.X), Abs(value.Y), Abs(value.Z), Abs(value.W));
+        #endregion
+
+        #region FRACTION
         public static float Fraction(float value) => value - Floor(value);
         public static Vector2 Fraction(Vector2 value) => new Vector2(Fraction(value.X), Fraction(value.Y));
         public static Vector3 Fraction(Vector3 value) => new Vector3(Fraction(value.X), Fraction(value.Y), Fraction(value.Z));
+        public static Vector4 Fraction(Vector4 value) => new Vector4(Fraction(value.X), Fraction(value.Y), Fraction(value.Z), Fraction(value.W));
+        #endregion
 
+        #region SIN
         public static float Sin(float value) => (float)Math.Sin(value);
         public static Vector2 Sin(Vector2 value) => new Vector2(Sin(value.X), Sin(value.Y));
         public static Vector3 Sin(Vector3 value) => new Vector3(Sin(value.X), Sin(value.Y), Sin(value.Z));
+        public static Vector4 Sin(Vector4 value) => new Vector4(Sin(value.X), Sin(value.Y), Sin(value.Z), Sin(value.W));
+        #endregion
 
+        #region COS
         public static float Cos(float value) => (float)Math.Cos(value);
         public static Vector2 Cos(Vector2 value) => new Vector2(Cos(value.X), Cos(value.Y));
         public static Vector3 Cos(Vector3 value) => new Vector3(Cos(value.X), Cos(value.Y), Cos(value.Z));
+        public static Vector4 Cos(Vector4 value) => new Vector4(Cos(value.X), Cos(value.Y), Cos(value.Z), Cos(value.W));
+        #endregion
 
+        #region TAN
         public static float Tan(float value) => (float)Math.Tan(value); 
         public static Vector2 Tan(Vector2 value) => new Vector2(Tan(value.X), Tan(value.Y));
         public static Vector3 Tan(Vector3 value) => new Vector3(Tan(value.X), Tan(value.Y), Tan(value.Z));
+        public static Vector4 Tan(Vector4 value) => new Vector4(Tan(value.X), Tan(value.Y), Tan(value.Z), Tan(value.W));
+        #endregion
 
+        #region MOD
         public static float Mod(float value, float mod) => value - (mod * Floor(value / mod));
-        public static Vector2 Mod(Vector2 value, float mod) => new Vector2(Mod(value.X, mod), Mod(value.Y, mod));
-        public static Vector3 Mod(Vector3 value, float mod) => new Vector3(Mod(value.X, mod), Mod(value.Y, mod), Mod(value.Z, mod));
-        public static Vector3 Mod(Vector3 value, Vector3 mod) => new Vector3(Mod(value.X, mod.X), Mod(value.Y, mod.Y), Mod(value.Z, mod.Z));
+        public static int Mod(int value, int mod) => (int)(value - (mod * Floor(value / mod)));
+
+        public static Vector2 Mod(Vector2 value, Vector2 mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y));
+        public static Vector2i Mod(Vector2i value, Vector2i mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y));
+
+        public static Vector3 Mod(Vector3 value, Vector3 mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y), Mod(value.Z, mod.Z));
+        public static Vector3i Mod(Vector3i value, Vector3i mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y), Mod(value.Z, mod.Z));
+
+        public static Vector4 Mod(Vector4 value, Vector4 mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y), Mod(value.Z, mod.Z), Mod(value.W, mod.W));
+        public static Vector4i Mod(Vector4i value, Vector4i mod) => (Mod(value.X, mod.X), Mod(value.Y, mod.Y), Mod(value.Z, mod.Z), Mod(value.W, mod.W));
+        #endregion
+
+        #region POWER
+        public static float Power(float a, float b) => (float)Math.Pow(a, b);
+        public static int Power(int a, int b) => (int)Math.Pow(a, b);
+
+        public static Vector2 Power(Vector2 a, Vector2 b) => (Power(a.X, b.X), Power(a.Y, b.Y));
+        public static Vector2i Power(Vector2i a, Vector2i b) => (Power(a.X, b.X), Power(a.Y, b.Y));
+
+        public static Vector3 Power(Vector3 a, Vector3 b) => (Power(a.X, b.X), Power(a.Y, b.Y), Power(a.Z, b.Z));
+        public static Vector3i Power(Vector3i a, Vector3i b) => (Power(a.X, b.X), Power(a.Y, b.Y), Power(a.Z, b.Z));
+
+        public static Vector4 Power(Vector4 a, Vector4 b) => (Power(a.X, b.X), Power(a.Y, b.Y), Power(a.Z, b.Z), Power(a.W, b.W));
+        public static Vector4i Power(Vector4i a, Vector4i b) => (Power(a.X, b.X), Power(a.Y, b.Y), Power(a.Z, b.Z), Power(a.W, b.W));
+        #endregion
+
+        #region ATAN2
+        public static float Atan2(float a, float b) => (float)Math.Atan2(a, b);
+        public static int Atan2(int a, int b) => (int)Math.Atan2(a, b);
+
+        public static Vector2 Atan2(Vector2 a, Vector2 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y));
+        public static Vector2i Atan2(Vector2i a, Vector2i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y));
+
+        public static Vector3 Atan2(Vector3 a, Vector3 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z));
+        public static Vector3i Atan2(Vector3i a, Vector3i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z));
+
+        public static Vector4 Atan2(Vector4 a, Vector4 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z), Atan2(a.W, b.W));
+        public static Vector4i Atan2(Vector4i a, Vector4i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z), Atan2(a.W, b.W));
+        #endregion
+
+
 
         #region FLIP
         public static Vector2 Flip(this Vector2 v) => (v.Y, v.X);

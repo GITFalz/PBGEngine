@@ -33,7 +33,7 @@ public struct Vector4i : IVector<int>
 
     public Vector3i Xyz
     {
-        get => (X, Y, Z);
+        readonly get => (X, Y, Z);
         set { X = value.X; Y = value.Y; Z = value.Z; }
     }
 

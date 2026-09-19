@@ -313,6 +313,23 @@ namespace PBG.MathLibrary
                 v.X * m.M14 + v.Y * m.M24 + v.Z * m.M34 + v.W * m.M44
             );
 
+        public static bool operator ==(Matrix4 a, Matrix4 b)
+        {
+            return a.M11 == b.M11 && a.M21 == b.M21 &&
+                a.M31 == b.M31 && a.M41 == b.M41 &&
+                a.M12 == b.M12 && a.M22 == b.M22 &&
+                a.M32 == b.M32 && a.M42 == b.M42 &&
+                a.M13 == b.M13 && a.M23 == b.M23 &&
+                a.M33 == b.M33 && a.M43 == b.M43 &&
+                a.M14 == b.M14 && a.M24 == b.M24 &&
+                a.M34 == b.M34 && a.M44 == b.M44;
+        }
+
+        public static bool operator !=(Matrix4 a, Matrix4 b)
+        {
+            return !(a == b);
+        }
+
         public Vector3 TransformPoint(Vector3 v)
         {
             float x = M11*v.X + M12*v.Y + M13*v.Z + M14;

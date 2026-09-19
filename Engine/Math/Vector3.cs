@@ -156,7 +156,10 @@ public struct Vector3 : IVector<float>
 
     public static float DistanceSquared(Vector3 a, Vector3 b)
     {
-        return (b - a).LengthSquared;
+        float x = b.X - a.X;
+        float y = b.Y - a.Y;
+        float z = b.Z - a.Z;
+        return (x * x) + (y * y) + (z * z);
     }
 
     public static implicit operator Vector3((float x, float y, float z) data) => new(data.x, data.y, data.z);

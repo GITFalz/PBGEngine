@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
-using PBG.Voxel;
+using PBG.NewVoxel;
+
 
 namespace PBG.MathLibrary;
 
