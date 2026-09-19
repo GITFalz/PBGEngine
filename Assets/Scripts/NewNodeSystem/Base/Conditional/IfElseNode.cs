@@ -141,8 +141,7 @@ public class IfElseNode : NodeBase
         {
             var selection = _selection[i];
             if (selection == null) return;
-            selection.Color = SELECTION_COLOR;
-            selection.UpdateColor();
+            selection.UpdateColor(SELECTION_COLOR);
         }
     }
 
@@ -152,8 +151,7 @@ public class IfElseNode : NodeBase
         {
             var selection = _selection[i];
             if (selection == null) return;
-            selection.Color = Vector4.Zero;
-            selection.UpdateColor();
+            selection.UpdateColor(Vector4.Zero);
         }
     }
 
@@ -336,13 +334,11 @@ public class IfElseUI(
     {
         if (_type != null)
         {
-            _type.Color = (0.4f, 0.4f, 0.4f, 1f);
-            _type.UpdateColor();
+            _type.UpdateColor((0.4f, 0.4f, 0.4f, 1f));
         }
 
         node.Type = collection.Dataset.String("type");
-        collection.Color = (0.5f, 0.5f, 0.5f, 1f);
-        collection.UpdateColor();
+        collection.UpdateColor((0.5f, 0.5f, 0.5f, 1f));
         _type = collection;
     }
 

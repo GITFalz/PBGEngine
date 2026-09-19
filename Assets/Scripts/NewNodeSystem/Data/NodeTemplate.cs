@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-public class NodeTemplat
+public class NodeTemplateOld
 {
     public string NodeType = "";
     public string ClassName = "";
@@ -17,7 +17,7 @@ public class NodeTemplat
 
     public List<string> GLSLIncludes = [];
 
-    public NodeTemplat(string nodeType, string className)
+    public NodeTemplateOld(string nodeType, string className)
     {
         NodeType = nodeType;
         ClassName = className;

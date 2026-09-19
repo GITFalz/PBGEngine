@@ -129,6 +129,7 @@ namespace PBG.UI
         public readonly static UnaryType<Vector3> rgb_v3_ = new((color, e) => e.SetColor(new(color.X, color.Y, color.Z, 1f)));
         public readonly static QuaternaryStyle<float, float, float, float> rgba_ = new((r, g, b, a, e) => e.SetColor(new(r, g, b, a)));
         public readonly static UnaryType<Vector4> rgba_v4_ = new((color, e) => e.SetColor(color));
+        public readonly static BinaryType<float, int> alpha_ = new((v, e) => e.SetColor(new Vector4(e.Color.Xyz, v)), (v, e) => e.SetColor(new Vector4(e.Color.Xyz, ((float)v) / 100f)));
         public readonly static ValueStyle transparent = new(e => e.SetColor(TRANSPARENT));
         
         public readonly static UnaryType<Vector3> color3_ = new((color, e) => e.SetColor(new(color.X, color.Y, color.Z, 1f)));

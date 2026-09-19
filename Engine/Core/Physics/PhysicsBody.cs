@@ -2,8 +2,9 @@
 using PBG.MathLibrary;
 using PBG.Core;
 using PBG.Data;
-using PBG.Voxel;
+
 using System.Diagnostics;
+using PBG.NewVoxel;
 
 namespace PBG.Physics
 {
@@ -21,9 +22,6 @@ namespace PBG.Physics
 
         public Collider collider;
         public bool IsGrounded;
-
-        public Vector3 physicsPosition;
-        private Vector3 previousPosition;
 
         private Action GravityAction = () => { };
 
@@ -80,7 +78,7 @@ namespace PBG.Physics
                 previousPhysicsState = currentPhysicsState;
                 currentPhysicsState = new PhysicsData 
                 { 
-                    Position = physicsPosition, 
+                    Position = Transform.Position, 
                     Time = GameTime.FixedTotalTime 
                 };
             }
@@ -105,8 +103,6 @@ namespace PBG.Physics
 
         public void SetPosition(Vector3 position)
         {
-            physicsPosition = position;
-            previousPosition = position;
             Transform.Position = position;
         }
 
@@ -125,15 +121,10 @@ namespace PBG.Physics
             Acceleration.Y -= Gravity;
         }
 
-        public bool CollidesWidthBlockAt(Vector3i position, Block block)
-        {
-            Collider currentCollider = collider + physicsPosition;
-            return BlockCollision.CheckCollision(currentCollider, position, new Block(BlockState.Solid, 0));
-        }
-
-
         public void CollisionCheck()
         {
+            Vector3 physicsPosition = Transform.Position;
+
             Vector3 checkDistance = Velocity * (float)GameTime.FixedDeltaTime;
 
             Collider currentCollider = collider + physicsPosition;
@@ -150,7 +141,7 @@ namespace PBG.Physics
                 {
                     for (int z = min.Z; z <= max.Z; z++)
                     {
-                        if (!VoxelRenderer.IsAir_Fast((x, y, z)))
+                        if (!VoxelRenderer.IsAir((x, y, z)))
                             blockPositions.Add((x, y, z));
                     }
                 }
@@ -164,7 +155,7 @@ namespace PBG.Physics
 
             for (int i = 0; i < blockPositions.Count; i++)
             {
-                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 0), entryData);
+                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 1), entryData);
             }
 
             if (entryData.normal != null && entryData.normal.Value.Y != 0)
@@ -186,7 +177,7 @@ namespace PBG.Physics
 
             for (int i = 0; i < blockPositions.Count; i++)
             {
-                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 0), entryData);
+                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 1), entryData);
             }
 
             if (entryData.normal != null && entryData.normal.Value.X != 0)
@@ -207,7 +198,7 @@ namespace PBG.Physics
 
             for (int i = 0; i < blockPositions.Count; i++)
             {
-                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 0), entryData);
+                entryData = BlockCollision.GetEntry(currentCollider, testingDirection, blockPositions[i], new Block(BlockState.Solid, 1), entryData);
             }
 
             if (entryData.normal != null && entryData.normal.Value.Z != 0)
@@ -223,8 +214,7 @@ namespace PBG.Physics
             if (Velocity.Y != 0)
                 IsGrounded = false;
 
-            previousPosition = physicsPosition;
-            physicsPosition = newPhysicsPosition;
+            Transform.Position = newPhysicsPosition;
         }
     }
 }

@@ -1,9 +1,10 @@
 using PBG.Graphics.Vulkan;
 using Silk.NET.Vulkan;
+using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace PBG.Graphics;
 
-public unsafe class FBO : BufferBase, IResizeable
+public unsafe class FBO : GpuRessource, IResizeable
 {
     private static List<FBO> _fbos = [];
 
@@ -28,7 +29,7 @@ public unsafe class FBO : BufferBase, IResizeable
 
     public FBO(int width, int height) : this((uint)width, (uint)height) {}
     public FBO(uint width, uint height) : this(() => width, () => height) {}
-    public FBO(Func<uint> widthAction, Func<uint> heightAction)
+    public FBO(Func<uint> widthAction, Func<uint> heightAction) : base()
     {
         _widthAction = widthAction;
         _heightAction = heightAction;
@@ -36,10 +37,13 @@ public unsafe class FBO : BufferBase, IResizeable
         Width = _widthAction();
         Height = _heightAction();
 
+        _fbos.Add(this);
+    }
+
+    public override void Create()
+    {
         CreateFramebuffer();
         CreateSampler();
-
-        _fbos.Add(this);
     }
 
     public void Resize(uint width, uint height)
@@ -383,7 +387,7 @@ public unsafe class FBO : BufferBase, IResizeable
         };
         GFX.Vk.CmdPipelineBarrier(commandBuffer,
             PipelineStageFlags.LateFragmentTestsBit,
-            PipelineStageFlags.FragmentShaderBit,
+            PipelineStageFlags.FragmentShaderBit | PipelineStageFlags.VertexShaderBit,
             DependencyFlags.None,
             0, null, 0, null, 1, &depthBarrier);
         _currentLayout = ImageLayout.ShaderReadOnlyOptimal;
@@ -475,6 +479,61 @@ public unsafe class FBO : BufferBase, IResizeable
 
         return pixels;
     }
+
+
+    public void SaveToFile(string path)
+    {
+        byte[] pixels = GetPixels(); // RGBA8, tightly packed, row 0 = top row
+
+        int w = (int)Width;
+        int h = (int)Height;
+        int rowSize = w * 3;                       // BMP wants BGR, no alpha
+        int rowPadded = (rowSize + 3) & ~3;         // rows padded to 4-byte boundary
+        int pixelDataSize = rowPadded * h;
+        int fileSize = 14 + 40 + pixelDataSize;     // file header + info header + pixels
+
+        byte[] file = new byte[fileSize];
+        using (var ms = new MemoryStream(file))
+        using (var bw = new BinaryWriter(ms))
+        {
+            // BITMAPFILEHEADER
+            bw.Write((byte)'B'); bw.Write((byte)'M');
+            bw.Write(fileSize);
+            bw.Write(0);                 // reserved
+            bw.Write(14 + 40);           // pixel data offset
+
+            // BITMAPINFOHEADER
+            bw.Write(40);                // header size
+            bw.Write(w);
+            bw.Write(h);                 // positive height = bottom-up storage
+            bw.Write((short)1);          // planes
+            bw.Write((short)24);         // bpp
+            bw.Write(0);                 // no compression
+            bw.Write(pixelDataSize);
+            bw.Write(2835); bw.Write(2835); // ~72 DPI
+            bw.Write(0); bw.Write(0);    // palette colors
+
+            // pixel data, bottom row first, BGR order, row-padded
+            byte[] row = new byte[rowPadded];
+            for (int y = h - 1; y >= 0; y--)
+            {
+                int srcRow = y * w * 4;
+                for (int x = 0; x < w; x++)
+                {
+                    int s = srcRow + x * 4;
+                    int d = x * 3;
+                    row[d + 0] = pixels[s + 2]; // B
+                    row[d + 1] = pixels[s + 1]; // G
+                    row[d + 2] = pixels[s + 0]; // R
+                    // alpha (pixels[s+3]) dropped — BMP 24bpp has none
+                }
+                bw.Write(row);
+            }
+        }
+
+        File.WriteAllBytes(path, file);
+    }
+
 
     public void Reset()
     {

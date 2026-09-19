@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
@@ -53,7 +54,11 @@ public unsafe sealed class VulkanImage
         _vulkanDevice.Vk.BindImageMemory(_vulkanDevice.Device, image, imageMemory, 0);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CreateImageArray(uint width, uint height, uint layers, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, out Image image, out DeviceMemory imageMemory)
+    => CreateImageArray(width, height, layers, 1, format, tiling, usage, properties, out image, out imageMemory);
+    
+    public void CreateImageArray(uint width, uint height, uint layers, uint mipLevels, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, out Image image, out DeviceMemory imageMemory)
     {
         ImageCreateInfo imageInfo = new()
         {
@@ -63,7 +68,7 @@ public unsafe sealed class VulkanImage
         imageInfo.Extent.Width = width;
         imageInfo.Extent.Height = height;
         imageInfo.Extent.Depth = 1;
-        imageInfo.MipLevels = 1;
+        imageInfo.MipLevels = mipLevels;
         imageInfo.ArrayLayers = layers;
         imageInfo.Format = format;
         imageInfo.Tiling = tiling;
@@ -94,7 +99,11 @@ public unsafe sealed class VulkanImage
         _vulkanDevice.Vk.BindImageMemory(_vulkanDevice.Device, image, imageMemory, 0);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags, uint layers) 
+    => CreateImageView(image, format, aspectFlags, layers, 1);
+
+    public ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags, uint layers, uint mipLevels) 
     {
         ImageViewCreateInfo viewInfo = new()
         {
@@ -105,7 +114,7 @@ public unsafe sealed class VulkanImage
         };
         viewInfo.SubresourceRange.AspectMask = aspectFlags;
         viewInfo.SubresourceRange.BaseMipLevel = 0;
-        viewInfo.SubresourceRange.LevelCount = 1;
+        viewInfo.SubresourceRange.LevelCount = mipLevels;
         viewInfo.SubresourceRange.BaseArrayLayer = 0;
         viewInfo.SubresourceRange.LayerCount = layers;
 
@@ -115,6 +124,100 @@ public unsafe sealed class VulkanImage
         }
 
         return imageView;
+    }
+
+
+    public void GenerateMipmaps(Image image, Format format, int texWidth, int texHeight, uint layerCount, uint mipLevels)
+    {
+        var cmd = GFX.BeginSingleTimeCommands();
+
+        _vulkanDevice.Vk.GetPhysicalDeviceFormatProperties(_vulkanDevice.PhysicalDevice, format, out FormatProperties formatProperties);
+        if ((formatProperties.OptimalTilingFeatures & FormatFeatureFlags.SampledImageFilterLinearBit) == 0)
+        {
+            throw new InvalidOperationException("Texture image format does not support linear blitting!");
+        }
+
+        ImageMemoryBarrier barrier = new()
+        {
+            SType = StructureType.ImageMemoryBarrier,
+            Image = image,
+            SrcQueueFamilyIndex = Vk.QueueFamilyIgnored,
+            DstQueueFamilyIndex = Vk.QueueFamilyIgnored,
+            SubresourceRange = new ImageSubresourceRange
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                BaseArrayLayer = 0,
+                LayerCount = layerCount,
+                LevelCount = 1,
+            }
+        };
+
+        int mipWidth = texWidth;
+        int mipHeight = texHeight;
+
+        for (uint i = 1; i < mipLevels; i++)
+        {
+            barrier.SubresourceRange.BaseMipLevel = i - 1;
+            barrier.OldLayout = ImageLayout.TransferDstOptimal;
+            barrier.NewLayout = ImageLayout.TransferSrcOptimal;
+            barrier.SrcAccessMask = AccessFlags.TransferWriteBit;
+            barrier.DstAccessMask = AccessFlags.TransferReadBit;
+
+            _vulkanDevice.Vk.CmdPipelineBarrier(cmd, PipelineStageFlags.TransferBit, PipelineStageFlags.TransferBit, 0, 0, null, 0, null, 1, &barrier);
+
+            ImageBlit blit = new()
+            {
+                SrcOffsets = new ImageBlit.SrcOffsetsBuffer
+                {
+                    Element0 = new Offset3D(0, 0, 0),
+                    Element1 = new Offset3D(mipWidth, mipHeight, 1)
+                },
+                SrcSubresource = new ImageSubresourceLayers
+                {
+                    AspectMask = ImageAspectFlags.ColorBit,
+                    MipLevel = i - 1,
+                    BaseArrayLayer = 0,
+                    LayerCount = layerCount,
+                },
+                DstOffsets = new ImageBlit.DstOffsetsBuffer
+                {
+                    Element0 = new Offset3D(0, 0, 0),
+                    Element1 = new Offset3D(
+                        mipWidth > 1 ? mipWidth / 2 : 1,
+                        mipHeight > 1 ? mipHeight / 2 : 1,
+                        1)
+                },
+                DstSubresource = new ImageSubresourceLayers
+                {
+                    AspectMask = ImageAspectFlags.ColorBit,
+                    MipLevel = i,
+                    BaseArrayLayer = 0,
+                    LayerCount = layerCount,
+                }
+            };
+
+            _vulkanDevice.Vk.CmdBlitImage(cmd, image, ImageLayout.TransferSrcOptimal, image, ImageLayout.TransferDstOptimal, 1, &blit, Filter.Linear);
+
+            barrier.OldLayout = ImageLayout.TransferSrcOptimal;
+            barrier.NewLayout = ImageLayout.ShaderReadOnlyOptimal;
+            barrier.SrcAccessMask = AccessFlags.TransferReadBit;
+            barrier.DstAccessMask = AccessFlags.ShaderReadBit;
+
+            _vulkanDevice.Vk.CmdPipelineBarrier(cmd, PipelineStageFlags.TransferBit, PipelineStageFlags.FragmentShaderBit, 0, 0, null, 0, null, 1, &barrier);
+
+            if (mipWidth > 1) mipWidth /= 2;
+            if (mipHeight > 1) mipHeight /= 2;
+        }
+
+        barrier.SubresourceRange.BaseMipLevel = mipLevels - 1;
+        barrier.OldLayout = ImageLayout.TransferDstOptimal;
+        barrier.NewLayout = ImageLayout.ShaderReadOnlyOptimal;
+        barrier.SrcAccessMask = AccessFlags.TransferWriteBit;
+        barrier.DstAccessMask = AccessFlags.ShaderReadBit;
+
+        _vulkanDevice.Vk.CmdPipelineBarrier(cmd, PipelineStageFlags.TransferBit, PipelineStageFlags.FragmentShaderBit, 0, 0, null, 0, null, 1, &barrier);
+
+        GFX.EndSingleTimeCommands(cmd);
     }
 
     public void TransitionImageLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout) 
@@ -228,6 +331,8 @@ public unsafe sealed class VulkanImage
     }
 
     public void TransitionImageArrayLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout, uint layers) 
+    => TransitionImageArrayLayout(image, format, oldLayout, newLayout, layers, 1);
+    public void TransitionImageArrayLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout, uint layers, uint mipLevels) 
     {
         CommandBuffer commandBuffer = _vulkanDevice.BeginSingleTimeCommands();
 
@@ -241,7 +346,7 @@ public unsafe sealed class VulkanImage
             Image = image
         };
         barrier.SubresourceRange.BaseMipLevel = 0;
-        barrier.SubresourceRange.LevelCount = 1;
+        barrier.SubresourceRange.LevelCount = mipLevels;
         barrier.SubresourceRange.BaseArrayLayer = 0;
         barrier.SubresourceRange.LayerCount = layers;
 
@@ -304,6 +409,13 @@ public unsafe sealed class VulkanImage
             barrier.DstAccessMask = AccessFlags.ShaderReadBit | AccessFlags.ShaderWriteBit;
             sourceStage      = PipelineStageFlags.FragmentShaderBit;
             destinationStage = PipelineStageFlags.ComputeShaderBit;
+        }
+        else if (oldLayout == ImageLayout.General && newLayout == ImageLayout.TransferDstOptimal)
+        {
+            barrier.SrcAccessMask = AccessFlags.ShaderReadBit | AccessFlags.ShaderWriteBit;
+            barrier.DstAccessMask = AccessFlags.TransferWriteBit;
+            sourceStage      = PipelineStageFlags.ComputeShaderBit;
+            destinationStage = PipelineStageFlags.TransferBit;
         }
         else
         {

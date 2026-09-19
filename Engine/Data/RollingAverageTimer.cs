@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace PBG.Data;
 
-public class RollingAverageTimer
+public class RollingAverageLongTimer
 {
     private const int SampleCount = 100;
     private readonly long[] _samples = new long[SampleCount];

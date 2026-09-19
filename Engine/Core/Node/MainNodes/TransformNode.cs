@@ -68,21 +68,21 @@ namespace PBG.Core
             for (int i = 0; i < Components.Count; i++)
             {
                 var component = Components[i];
-                if (component.GetMethod("Resize", out var mi))  info.OnResize.Add(new(component, mi));
-                if (component.GetMethod("FixedUpdate", out mi)) info.OnFixedUpdate.Add(new(component, mi));
-                if (component.GetMethod("Update", out mi))      info.OnUpdate.Add(new(component, mi));
-                if (component.GetMethod("LateUpdate", out mi))  info.OnLateUpdate.Add(new(component, mi));
-                if (component.GetMethod("Compute", out mi))     info.OnCompute.Add(new(component, mi));
-                if (component.GetMethod("Render", out mi))      info.OnRender.Add(new(component, mi));
-                if (component.GetMethod("Exit", out mi))        info.OnExit.Add(new(component, mi));
-                if (component.GetMethod("Dispose", out mi))     info.OnDispose.Add(new(component, mi));
+                if (component.GetMethod("Resize", out var mi))   info.OnResize.Add(new(component, mi));
+                if (component.GetMethod("FixedUpdate", out mi))  info.OnFixedUpdate.Add(new(component, mi));
+                if (component.GetMethod("Update", out mi))       info.OnUpdate.Add(new(component, mi));
+                if (component.GetMethod("LateUpdate", out mi))   info.OnLateUpdate.Add(new(component, mi));
+                if (component.GetMethod("Compute", out mi))      info.OnCompute.Add(new(component, mi));
+                if (component.GetMethod("Render", out mi))       info.OnRender.Add(new(component, mi));
+                if (component.GetMethod("Exit", out mi))         info.OnExit.Add(new(component, mi));
+                if (component.GetMethod("Dispose", out mi))      info.OnDispose.Add(new(component, mi));
             }
 
             for (int i = 0; i < _addedNodes.Count; i++)
             {
                 var component = _addedNodes[i];
-                if (component.GetMethod("Start", out var mi))   info.OnStart.Add(new(component, mi));
-                if (component.GetMethod("Awake", out mi))       info.OnAwake.Add(new(component, mi));
+                if (component.GetMethod("Start", out var mi))    info.OnStart.Add(new(component, mi));
+                if (component.GetMethod("Awake", out mi))        info.OnAwake.Add(new(component, mi));
             }
 
             _addedNodes = [];

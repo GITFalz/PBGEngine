@@ -181,16 +181,16 @@ namespace PBG.Core
             ScriptInfo info = new();
             RootNode.InitPendingComponents(info);
 
-            OnStart       = [..info.OnStart];
-            OnAwake       = [..info.OnAwake];
-            OnResize      = [..info.OnResize];
-            OnFixedUpdate = [..info.OnFixedUpdate];
-            OnUpdate      = [..info.OnUpdate];
-            OnLateUpdate  = [..info.OnLateUpdate];
-            OnCompute     = [..info.OnCompute];
-            OnRender      = [..info.OnRender];
-            OnExit        = [..info.OnExit];
-            OnDispose     = [..info.OnDispose];
+            OnStart        = [..info.OnStart];
+            OnAwake        = [..info.OnAwake];
+            OnResize       = [..info.OnResize];
+            OnFixedUpdate  = [..info.OnFixedUpdate];
+            OnUpdate       = [..info.OnUpdate];
+            OnLateUpdate   = [..info.OnLateUpdate];
+            OnCompute      = [..info.OnCompute];
+            OnRender       = [..info.OnRender];
+            OnExit         = [..info.OnExit];
+            OnDispose      = [..info.OnDispose];
 
             info.Clear();
         }

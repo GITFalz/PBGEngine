@@ -274,15 +274,15 @@ public class TimelineUI(
 
     private void HoverEnter(UICol col)
     {
-        col.Color = GetColor(HOVER_BACKGROUND);
-        col.BorderColor = GetColor(HOVER_BORDER);
+        col.SetColor(GetColor(HOVER_BACKGROUND));
+        col.SetBorderColor(GetColor(HOVER_BORDER));
         col.ApplyChanges(UIChange.Color | UIChange.BorderColor);
     }
 
     private void HoverExit(UICol col)
     {
-        col.Color = GetColor(BASE_BACKGROUND);
-        col.BorderColor = GetColor(BASE_BORDER);
+        col.SetColor(GetColor(BASE_BACKGROUND));
+        col.SetBorderColor(GetColor(BASE_BORDER));
         col.ApplyChanges(UIChange.Color | UIChange.BorderColor);
     }
 

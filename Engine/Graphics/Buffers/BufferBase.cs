@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -10,14 +11,14 @@ public unsafe abstract class BufferBase : IDisposable
     protected static ShaderCompiler _shaderCompiler = null!;
     protected static ShaderBuffer _shaderBuffer = null!;
 
-    protected static readonly byte* _mainPtr = (byte*)"main".ToPtr();
-
     public static List<BufferBase> Buffers = [];
     public static bool BufferChanged { get; private set; } = false;
 
     private static bool _external = true;
     public static HashSet<BufferBase> ExternalBuffers = [];
     private static bool _externalBuffersChanged = false;
+
+    private static ConcurrentQueue<IResizeable> _resizeBufferQueue = [];
 
     private static HashSet<IResizeable> _highPriorityResizeList = [];
     private static HashSet<IResizeable> _lowPriorityResizeList = [];
@@ -49,12 +50,7 @@ public unsafe abstract class BufferBase : IDisposable
             _lowPriorityDisposeBuffer.Add(this);
 
         if (this is IResizeable resizeable)
-        {
-            if (this is Descriptor)
-                _lowPriorityResizeList.Add(resizeable);
-            else
-                _highPriorityResizeList.Add(resizeable);
-        }
+            _resizeBufferQueue.Enqueue(resizeable);
     }
 
     public static bool IfExternalBuffersChanged()
@@ -144,6 +140,8 @@ public unsafe abstract class BufferBase : IDisposable
     {
         if (RemoveFromList())
             _toBeDisposed.Add(this);
+
+        GC.SuppressFinalize(this);
     }
 
     public static void DisposeCached()
@@ -165,17 +163,6 @@ public unsafe abstract class BufferBase : IDisposable
         return RemoveDispose();
     }
 
-    protected void RemoveResize()
-    {
-        if (this is IResizeable resizeable)
-        {
-            if (this is Descriptor)
-                _lowPriorityResizeList.Remove(resizeable);
-            else
-                _highPriorityResizeList.Remove(resizeable);
-        }  
-    }
-
     protected void RemoveBuffer()
     {
         Buffers.Remove(this);
@@ -186,6 +173,17 @@ public unsafe abstract class BufferBase : IDisposable
     {
         if (ExternalBuffers.Remove(this))
             _externalBuffersChanged = true;
+    }
+
+    protected void RemoveResize()
+    {
+        if (this is IResizeable resizeable)
+        {
+            if (this is Descriptor)
+                _lowPriorityResizeList.Remove(resizeable);
+            else
+                _highPriorityResizeList.Remove(resizeable);
+        }  
     }
 
     protected bool RemoveDispose()
@@ -202,6 +200,14 @@ public unsafe abstract class BufferBase : IDisposable
 
     public static void ResizeAll(uint width, uint height)
     {
+        while (_resizeBufferQueue.TryDequeue(out var resizeable))
+        {
+            if (resizeable is Descriptor)
+                _lowPriorityResizeList.Add(resizeable);
+            else
+                _highPriorityResizeList.Add(resizeable);
+        }
+
         foreach (var buffer in _highPriorityResizeList)
             buffer.Resize(width, height);
 
@@ -225,8 +231,6 @@ public unsafe abstract class BufferBase : IDisposable
 
     public static void DisposeAll()
     {
-        ((nint)_mainPtr).Free();
-
         foreach (var buffer in _highPriorityDisposeBuffer)
         {
             buffer.OnDispose?.Invoke(buffer);

@@ -21,7 +21,7 @@ namespace PBG.Voxel
         public List<Vector4i> VertexData = [];
         public int VertexCount = 0;
 
-        public static RollingAverageTimer Timer = new();
+        public static RollingAverageLongTimer Timer = new();
         public Stopwatch timer;
 
         public DefaultChunkRenderingProcess(VoxelChunk chunk)
@@ -34,7 +34,6 @@ namespace PBG.Voxel
 
         public override bool Function()
         {
-            Console.WriteLine("meshing: " + Chunk.WorldPosition);
             if (Chunk.Blocks == null)
             {
                 Console.WriteLine("no blocks");
@@ -44,7 +43,7 @@ namespace PBG.Voxel
             VertexData = new List<Vector4i>((int)ChunkDataPool.SLOT_SIZE);
 
             timer = Stopwatch.StartNew();
-            var result = VoxelChunkGenerator.GenerateIndirectMesh(this, VertexData, Chunk.WorldPosition, Chunk.Blocks, out VertexCount);
+            var result = VoxelChunkGenerator.GenerateIndirectMesh(Chunk, VertexData, Chunk.WorldPosition, Chunk.Blocks, out VertexCount);
             timer.Stop();
             if (VertexCount > 0)
                 Timer.AddSample(timer.Elapsed.Milliseconds);
@@ -60,6 +59,7 @@ namespace PBG.Voxel
                 Info.AverageRenderingSpeed = Timer.GetAverageMs();
             }
 
+            /*
             Chunk.Renderer.RerenderMap.Remove(Chunk);
             if (Chunk.Restart)
             {
@@ -68,6 +68,7 @@ namespace PBG.Voxel
                 Chunk.Restart = false;
                 return;
             }
+            */
 
             if (Failed)
             {
@@ -105,7 +106,7 @@ namespace PBG.Voxel
                 throw;
             }
 
-            Chunk.Status = ChunkStatus.Rendered;
+            //Chunk._status = ChunkStatus.Rendered;
 
             VertexData = [];
         }

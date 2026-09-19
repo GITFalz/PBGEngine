@@ -8,7 +8,7 @@ using PBG.Rendering;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 [InternalSystemInit(InitPriority.Shader)]
-public class DebugModule
+public class DebugModule : IDisposable
 {
     public static Shader GridShader = null!;
     public static int GridModelLocation = -1;
@@ -38,8 +38,8 @@ public class DebugModule
     {
         ShaderInfo gridShaderInfo = new()
         {
-            VertexShaderPath = Game.ShaderPath / "debug" / "lines.vert",
-            FragmentShaderPath = Game.ShaderPath / "debug" / "lines.frag"
+            VertexShaderFile = "debug".P() / "lines.vert",
+            FragmentShaderFile = "debug".P() / "lines.frag"
         };
 
         gridShaderInfo.InputAssembly.Topology = Silk.NET.Vulkan.PrimitiveTopology.LineList;
@@ -68,83 +68,83 @@ public class DebugModule
     }
 
     public void AddGrid(Vector3 origin, Vector3 direction, Vector3 normal, Vector2 size, Vector2 gridCellSize, Vector2 offset, Vector3 color, IncludedBorder includedBorder = IncludedBorder.All)
-{
-    Vector3 n = Vector3.Normalize(normal);
-
-    Vector3 u = direction - n * Vector3.Dot(direction, n);
-    if (u.LengthSquared < 1e-8f)
     {
-        Vector3 fallback = MathF.Abs(Vector3.Dot(n, Vector3.UnitX)) < 0.99f ? Vector3.UnitX : Vector3.UnitY;
-        u = fallback - n * Vector3.Dot(fallback, n);
-    }
-    u = Vector3.Normalize(u);
-    Vector3 v = Vector3.Normalize(Vector3.Cross(n, u));
-    if (Vector3.Dot(v, Vector3.UnitY) < 0)
-        v.Y = -v.Y;
+        Vector3 n = Vector3.Normalize(normal);
 
-    if (Vector3.Dot(v, Vector3.UnitZ) < 0)
-        v.Z = -v.Z;
+        Vector3 u = direction - n * Vector3.Dot(direction, n);
+        if (u.LengthSquared < 1e-8f)
+        {
+            Vector3 fallback = MathF.Abs(Vector3.Dot(n, Vector3.UnitX)) < 0.99f ? Vector3.UnitX : Vector3.UnitY;
+            u = fallback - n * Vector3.Dot(fallback, n);
+        }
+        u = Vector3.Normalize(u);
+        Vector3 v = Vector3.Normalize(Vector3.Cross(n, u));
+        if (Vector3.Dot(v, Vector3.UnitY) < 0)
+            v.Y = -v.Y;
 
-    Vector3 To3D(Vector2 p) => origin + u * p.X + v * p.Y;
+        if (Vector3.Dot(v, Vector3.UnitZ) < 0)
+            v.Z = -v.Z;
 
-    Vector2 min = Vector2.Zero;
-    Vector2 max = size; // exact local rectangle, no projection distortion
+        Vector3 To3D(Vector2 p) => origin + u * p.X + v * p.Y;
 
-    Vector2 offsetA = (0, 0);
-    Vector2 offsetB = (0, 0);
+        Vector2 min = Vector2.Zero;
+        Vector2 max = size; // exact local rectangle, no projection distortion
 
-    if (includedBorder == IncludedBorder.None)
-    {
-        offsetA.X = gridCellSize.X;
-        offsetA.Y = gridCellSize.X;
-        offsetB.X = gridCellSize.Y;
-        offsetB.Y = gridCellSize.Y;
-    }
-    else
-    {
-        if (!includedBorder.HasFlag(IncludedBorder.Left))
+        Vector2 offsetA = (0, 0);
+        Vector2 offsetB = (0, 0);
+
+        if (includedBorder == IncludedBorder.None)
+        {
             offsetA.X = gridCellSize.X;
-
-        if (!includedBorder.HasFlag(IncludedBorder.Right))
             offsetA.Y = gridCellSize.X;
-
-        if (!includedBorder.HasFlag(IncludedBorder.Top))
             offsetB.X = gridCellSize.Y;
-
-        if (!includedBorder.HasFlag(IncludedBorder.Bottom))
             offsetB.Y = gridCellSize.Y;
+        }
+        else
+        {
+            if (!includedBorder.HasFlag(IncludedBorder.Left))
+                offsetA.X = gridCellSize.X;
+
+            if (!includedBorder.HasFlag(IncludedBorder.Right))
+                offsetA.Y = gridCellSize.X;
+
+            if (!includedBorder.HasFlag(IncludedBorder.Top))
+                offsetB.X = gridCellSize.Y;
+
+            if (!includedBorder.HasFlag(IncludedBorder.Bottom))
+                offsetB.Y = gridCellSize.Y;
+        }
+
+        Console.WriteLine(offsetA + " " + offsetB);
+
+        for (float x = min.X + offsetA.X + offset.X; x <= max.X - offsetA.Y; x += gridCellSize.X)
+        {
+            Vector3 p1 = To3D(new Vector2(x, min.Y));
+            Vector3 p2 = To3D(new Vector2(x, max.Y));
+
+            uint idx1 = (uint)GridVertices.Count;
+            GridVertices.Add(p1);
+            GridVertices.Add(p2);
+            GridColors.Add(color);
+            GridColors.Add(color);
+            GridIndices.Add(idx1);
+            GridIndices.Add(idx1 + 1);
+        }
+
+        for (float y = min.Y + offsetB.X + offset.Y; y <= max.Y - offsetB.Y; y += gridCellSize.Y)
+        {
+            Vector3 p1 = To3D(new Vector2(min.X, y));
+            Vector3 p2 = To3D(new Vector2(max.X, y));
+
+            uint idx1 = (uint)GridVertices.Count;
+            GridVertices.Add(p1);
+            GridVertices.Add(p2);
+            GridColors.Add(color);
+            GridColors.Add(color);
+            GridIndices.Add(idx1);
+            GridIndices.Add(idx1 + 1);
+        }
     }
-
-    Console.WriteLine(offsetA + " " + offsetB);
-
-    for (float x = min.X + offsetA.X + offset.X; x <= max.X - offsetA.Y; x += gridCellSize.X)
-    {
-        Vector3 p1 = To3D(new Vector2(x, min.Y));
-        Vector3 p2 = To3D(new Vector2(x, max.Y));
-
-        uint idx1 = (uint)GridVertices.Count;
-        GridVertices.Add(p1);
-        GridVertices.Add(p2);
-        GridColors.Add(color);
-        GridColors.Add(color);
-        GridIndices.Add(idx1);
-        GridIndices.Add(idx1 + 1);
-    }
-
-    for (float y = min.Y + offsetB.X + offset.Y; y <= max.Y - offsetB.Y; y += gridCellSize.Y)
-    {
-        Vector3 p1 = To3D(new Vector2(min.X, y));
-        Vector3 p2 = To3D(new Vector2(max.X, y));
-
-        uint idx1 = (uint)GridVertices.Count;
-        GridVertices.Add(p1);
-        GridVertices.Add(p2);
-        GridColors.Add(color);
-        GridColors.Add(color);
-        GridIndices.Add(idx1);
-        GridIndices.Add(idx1 + 1);
-    }
-}
 
     public void Generate()
     {
@@ -176,6 +176,23 @@ public class DebugModule
         VBOBase.Bind(GridBuffers, GridOffsets);
         GridIBO.Bind();
         GFX.DrawIndexed(GridIndexCount, 1, 0, 0, 0);
+    }
+
+    public void Dispose()
+    {
+        GridVertexVBO.Dispose();
+        GridColorVBO.Dispose();
+        GridIBO.Dispose();
+        
+        GridDescriptor.Dispose();
+
+        GridVertices = [];
+        GridColors = [];
+        GridIndices = [];
+
+        GridBuffers = [];
+        GridOffsets = [];
+        GridIndexCount = 0;
     }
 }
 

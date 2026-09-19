@@ -14,6 +14,11 @@ internal class InternalSystemInitAttribute : Attribute {
     }
 }
 
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+internal class InternalSystemCleanupAttribute : Attribute {
+    public InternalSystemCleanupAttribute() {}
+}
+
 public enum InitPriority
 {
     // Core engine systems - initialize first

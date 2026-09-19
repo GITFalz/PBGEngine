@@ -18,6 +18,7 @@ public unsafe sealed partial class VulkanDevice : IDisposable
     internal KhrSwapchain KhrSwapchain;
 
     public Queue GraphicsQueue;
+    public Queue ComputeQueue;
     public Queue PresentQueue;
 
     private ExtDebugUtils? _debugUtils = null;
@@ -25,10 +26,10 @@ public unsafe sealed partial class VulkanDevice : IDisposable
 
 
     private readonly string[] _validationLayers = ["VK_LAYER_KHRONOS_validation"];
-    private readonly string[] _deviceExtensions = [KhrSwapchain.ExtensionName, "VK_EXT_memory_budget"];
+    private readonly string[] _deviceExtensions = [KhrSwapchain.ExtensionName, KhrSynchronization2.ExtensionName, "VK_EXT_memory_budget"];
 
     public CommandPool CommandPool;
-
+    public CommandPool ComputeCommandPool;
 
     private IWindow _window;
     private bool _enableValidation;
@@ -51,6 +52,7 @@ public unsafe sealed partial class VulkanDevice : IDisposable
 
     public void Dispose()
     {
+        Vk.DestroyCommandPool(Device, ComputeCommandPool, null);
         Vk.DestroyCommandPool(Device, CommandPool, null);
 
         Vk.DestroyDevice(Device, null);

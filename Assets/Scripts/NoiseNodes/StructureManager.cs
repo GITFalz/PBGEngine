@@ -7,7 +7,7 @@ using PBG.Compiler;
 using PBG.Compiler.Lines;
 using PBG.MathLibrary;
 using PBG.Threads;
-using PBG.Voxel;
+using PBG.NewVoxel;
 
 public static class StructureManager
 {
@@ -177,7 +177,7 @@ public class TreeStructureData : AStructureData
             {
                 position -= chunk.WorldPosition;
                 position = (position.X >> chunk.Level, position.Y >> chunk.Level, position.Z >> chunk.Level);
-                int index = ChunkBlocks.GetIndex(position);
+                int index = VoxelChunk.GetIndex(position);
                 var currentBlock = chunk.Blocks[index];
                 if (forceSet || currentBlock.IsAir())
                 {
@@ -226,7 +226,7 @@ public class BuildingStructureData(string name, Vector3i a, Vector3i b) : AStruc
             {
                 position -= chunk.WorldPosition;
                 position = (position.X >> chunk.Level, position.Y >> chunk.Level, position.Z >> chunk.Level);
-                int index = ChunkBlocks.GetIndex(position);
+                int index = VoxelChunk.GetIndex(position);
                 var currentBlock = chunk.Blocks[index];
                 if (forceSet || currentBlock.IsAir())
                 {
@@ -275,7 +275,7 @@ public class BuildingStructureData(string name, Vector3i a, Vector3i b) : AStruc
                     var definition = BlockData.BlockDefinitions[block.ID];
                     if (definition.CanRotate)
                     {
-                        var rotation = block.Rotation();
+                        var rotation = Block.Rotation();
                         //var rotationId = definition.Placements?.RotatedKey((int)rotation, placement.Yrotation) ?? (int)rotation;
                         block.SetRotation(0);
                     }
@@ -294,7 +294,7 @@ public class BuildingStructureData(string name, Vector3i a, Vector3i b) : AStruc
                         {
                             Vector3i worldPos = (x + data.Position.X, y, z + data.Position.Z);
 
-                            setBlock(worldPos, new Block(BlockState.Solid, 3), true);
+                            setBlock(worldPos, new Block(BlockState.Solid, 4), true);
                         }
                     }  
                 }

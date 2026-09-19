@@ -128,14 +128,14 @@ namespace PBG.Rendering.Meshes
             }
 
             UpdatePanelData(0);
-            UpdatePanelData(PanelStructs.Length - 1);
+            UpdatePanelData(PanelStructs.Length);
 
             _updateVisibility = false;
         }
 
         public void UpdateDepth()
         {
-            List<UIPanel> sorted = Panels.Keys.ToList();
+            List<UIPanel> sorted = [.. Panels.Keys];
 
             sorted.Sort((a, b) =>
             {
@@ -166,7 +166,7 @@ namespace PBG.Rendering.Meshes
             PanelStructs = newPanels;
 
             UpdatePanelData(0);
-            UpdatePanelData(PanelStructs.Length - 1);
+            UpdatePanelData(PanelStructs.Length);
 
             _updateDepth = false;
             _updateVisibility = true;
@@ -522,6 +522,7 @@ namespace PBG.Rendering.Meshes
             _vao.Unbind();
             */
             GFX.Draw((uint)VisibleElementCount * 6, 1, 0, 0);
+            //Console.WriteLine(VisibleElementCount);
         }
 
         public void Delete()
@@ -597,6 +598,12 @@ namespace PBG.Rendering.Meshes
             transparency &= Color.W <= 0.0f;
 
             return transparency;
+        }
+
+
+        public override string ToString()
+        {
+            return $"Size: {Size} Slice: {Slice} Color: {Color} Transform: {Transform} Visible: {IsVisible()} ElementIndex: {GetElementIndex()} TextureIndex: {TextureIndex} MaskIndex: {MaskIndex} StyleIndex: {StyleIndex} StyleInfo {StyleInfo}";
         }
     }
 }

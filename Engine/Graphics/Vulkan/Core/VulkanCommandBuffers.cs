@@ -5,7 +5,8 @@ namespace PBG.Graphics.Vulkan;
 public unsafe sealed class VulkanCommandBuffers : IDisposable
 {
     private readonly VulkanDevice _vulkanDevice;
-    public CommandPool CommandPool { get; private set; }
+    public CommandPool CommandPool;
+
     public CommandBuffer[] CommandBuffers { get; private set; } = new CommandBuffer[GFX.MAX_FRAMES_IN_FLIGHT];
 
     public VulkanCommandBuffers(VulkanDevice vulkanDevice)
@@ -27,11 +28,9 @@ public unsafe sealed class VulkanCommandBuffers : IDisposable
             QueueFamilyIndex = queueFamilyIndices.GraphicsFamily!.Value
         };
 
-        if (_vulkanDevice.Vk.CreateCommandPool(_vulkanDevice.Device, &poolInfo, null, out var commandPool) != Result.Success) {
+        if (_vulkanDevice.Vk.CreateCommandPool(_vulkanDevice.Device, &poolInfo, null, out CommandPool) != Result.Success) {
             throw new InvalidOperationException("failed to create command pool!");
         }
-
-        CommandPool = commandPool;
     }
 
     private void CreateCommandBuffer() 
@@ -53,6 +52,7 @@ public unsafe sealed class VulkanCommandBuffers : IDisposable
     public void Dispose()
     {
         _vulkanDevice.Vk.FreeCommandBuffers(_vulkanDevice.Device, CommandPool, (uint)CommandBuffers.Length, CommandBuffers);
+
         _vulkanDevice.Vk.DestroyCommandPool(_vulkanDevice.Device, CommandPool, null);
     }
 }

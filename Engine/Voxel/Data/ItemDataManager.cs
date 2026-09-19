@@ -3,8 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 using PBG;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Rendering;
-using PBG.Voxel;
+
 using Silk.NET.Vulkan;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -79,7 +80,7 @@ public static class ItemDataManager
         }
         */
 
-        Image = new(imageCount, new() { Width = 128, Height = 128 });
+        Image = new(imageCount, new() { Width = 128, Height = 128, UseMipMaps = false });
 
         _textureArrayWrite ??= new ComputeShader(new() { ComputeShaderPath = Game.ShaderPath / "computeShaders/textureArrayWrite.comp"});
         _textureArrayWrite.Compile();
@@ -96,7 +97,7 @@ public static class ItemDataManager
         _textureWriteDescriptor.Uniform(_textureArrayOutlineRadiusLocation, 6);
         _textureWriteDescriptor.Uniform(_textureArrayOutlineColorLocation, new Vector4(0, 0, 0, 1));
 
-        BlocksShader = new Shader(new(Game.ShaderPath / "world_vulkan/world_base.vert", Game.ShaderPath / "world_vulkan/world_base.frag"));
+        BlocksShader = new Shader(new("world_vulkan/world_base.vert", "world_vulkan/world_base.frag"));
         BlocksShader.BindVertexBuffer<BlockVertexData>(0);
         BlocksShader.Compile();
         BlocksDescriptor = BlocksShader.GetDescriptorSet();
@@ -111,7 +112,7 @@ public static class ItemDataManager
 
         BlocksDescriptor.BindTextureArray(BlockData.BlockTextureArray, 2);
 
-        GFX.TransitionImageArrayLayout(Image.TextureImage, Format.R8G8B8A8Unorm, ImageLayout.Undefined, ImageLayout.General, Image.LayerCount);
+        Image.TransitionImageArrayLayout(ImageLayout.Undefined, ImageLayout.General);
 
         try
         {    
@@ -188,7 +189,8 @@ public static class ItemDataManager
             throw; // Re-throw to maintain original behavior
         }
 
-        GFX.TransitionImageArrayLayout(Image.TextureImage, GFX.SwapChainFormat, ImageLayout.General, ImageLayout.ShaderReadOnlyOptimal, Image.LayerCount);
+        Image.TransitionImageArrayLayout(ImageLayout.General, ImageLayout.TransferDstOptimal);
+        Image.GenerateMipmaps();
         
         GFX.Viewport(0, 0, Game.Width, Game.Height);
     }

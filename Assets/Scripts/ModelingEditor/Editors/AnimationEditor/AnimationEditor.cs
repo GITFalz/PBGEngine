@@ -1022,7 +1022,7 @@ public class AnimationEditor : BaseEditor
 
         foreach (var bone in SelectedBones)
         {
-            bone.Rotate(Camera.front, mouseDelta.X);
+            bone.Rotate(Camera.Front, mouseDelta.X);
         }
 
         Model.AnimationRig.RootBone.UpdateGlobalTransformation(); 

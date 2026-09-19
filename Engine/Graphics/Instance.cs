@@ -1,7 +1,9 @@
 using System.Reflection;
+using System.Runtime.Intrinsics.X86;
 using PBG.Core;
 using PBG.Data;
 using PBG.Graphics.Vulkan;
+using PBG.Threads;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -39,6 +41,9 @@ public unsafe class VulkanInstance
     private VulkanFramebuffer _vulkanFramebuffer;
     private VulkanSyncObject _vulkanSyncObject;
 
+
+    private VulkanQuery _vulkanQuery;
+
     public uint CurrentFrame = 0;
     public Framebuffer CurrentFramebuffer;
 
@@ -69,6 +74,8 @@ public unsafe class VulkanInstance
         _window.FramebufferResize += OnResize;
 
         _window.Run();
+
+        _window.Dispose();
     } 
 
     private void InitVulkan()
@@ -93,12 +100,51 @@ public unsafe class VulkanInstance
         _vulkanFramebuffer = new VulkanFramebuffer(VulkanDevice, VulkanSwapchain, _vulkanImageViews, VulkanDepthBuffer, LoadRenderPass);
         _vulkanSyncObject = new VulkanSyncObject(VulkanDevice, VulkanSwapchain);
 
-        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject);  
+        _vulkanQuery = new VulkanQuery(VulkanDevice);
+
+        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
     }
 
     private void OnLoad()
     {
         Console.WriteLine($"Window loaded - {Game.Width}x{Game.Height}");
+
+        // === SSE family ===
+        Console.WriteLine($"SSE      : {Sse.IsSupported}");
+        Console.WriteLine($"SSE2     : {Sse2.IsSupported}");
+        Console.WriteLine($"SSE3     : {Sse3.IsSupported}");
+        Console.WriteLine($"SSSE3    : {Ssse3.IsSupported}");
+        Console.WriteLine($"SSE4.1   : {Sse41.IsSupported}");
+        Console.WriteLine($"SSE4.2   : {Sse42.IsSupported}");
+
+        // === AVX family ===
+        Console.WriteLine($"AVX      : {Avx.IsSupported}");
+        Console.WriteLine($"AVX2     : {Avx2.IsSupported}");
+        Console.WriteLine($"FMA      : {Fma.IsSupported}");
+        Console.WriteLine($"AVXVNNI  : {AvxVnni.IsSupported}");
+
+        // === Bit manipulation ===
+        Console.WriteLine($"BMI1     : {Bmi1.IsSupported}");
+        Console.WriteLine($"BMI2     : {Bmi2.IsSupported}");
+        Console.WriteLine($"LZCNT    : {Lzcnt.IsSupported}");
+        Console.WriteLine($"POPCNT   : {Popcnt.IsSupported}");
+
+        // === Crypto / special ===
+        Console.WriteLine($"AES      : {Aes.IsSupported}");
+        Console.WriteLine($"PCLMULQDQ: {Pclmulqdq.IsSupported}");
+
+        // === AVX-512 ===
+        Console.WriteLine($"AVX-512F : {Avx512F.IsSupported}");
+        Console.WriteLine($"AVX-512BW: {Avx512BW.IsSupported}");
+        Console.WriteLine($"AVX-512CD: {Avx512CD.IsSupported}");
+        Console.WriteLine($"AVX-512DQ: {Avx512DQ.IsSupported}");
+        Console.WriteLine($"AVX-512VL: {Avx512F.VL.IsSupported}");   // note: VL lives under Avx512F
+        Console.WriteLine($"AVX-512VBMI : {Avx512Vbmi.IsSupported}");
+
+        // === Newer / less common ===
+        Console.WriteLine($"AVX10v1  : {Avx10v1.IsSupported}");
+        Console.WriteLine($"X86Base  : {X86Base.IsSupported}");
+        Console.WriteLine($"SERIALIZE: {X86Serialize.IsSupported}");
 
         var input = _window.CreateInput();
 
@@ -139,7 +185,7 @@ public unsafe class VulkanInstance
 
         if (Game.Width == 0 || Game.Height == 0) 
             return;
-
+            
         RecreateSwapChain();
         
         gameWindow.OnResize(Game.Width, Game.Height);
@@ -150,6 +196,8 @@ public unsafe class VulkanInstance
     {
         if (_isLoading)
             return;
+
+        MainThreadDispatcher.ProcessQueue();
             
         BufferBase.DisposeCached();
         gameWindow.OnUpdate(deltaSeconds);
@@ -162,6 +210,7 @@ public unsafe class VulkanInstance
             _window.DoEvents();
         }
 
+        Console.WriteLine("Allocated: " + _vulkanSyncObject.AllocatedValue + " - Completed: " + _vulkanSyncObject.CompletedValue);
         VulkanDevice.Vk.DeviceWaitIdle(VulkanDevice.Device);
 
         VulkanDepthBuffer.Dispose();
@@ -174,7 +223,7 @@ public unsafe class VulkanInstance
         _vulkanImageViews = new VulkanImageViews(VulkanDevice, VulkanImage, VulkanSwapchain);
         _vulkanFramebuffer = new VulkanFramebuffer(VulkanDevice, VulkanSwapchain, _vulkanImageViews, VulkanDepthBuffer, LoadRenderPass);
 
-        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject);  
+        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
     }
 
     private void OnRender(double deltaSeconds)
@@ -194,11 +243,62 @@ public unsafe class VulkanInstance
         VulkanDevice.Vk.ResetFences(VulkanDevice.Device, 1, ref _vulkanSyncObject.InFlightFences[CurrentFrame]);
 
         VulkanDevice.Vk.ResetCommandBuffer(_vulkanCommandBuffers.CommandBuffers[CurrentFrame], 0);
+
         RecordCommandBuffer(_vulkanCommandBuffers.CommandBuffers[CurrentFrame], imageIndex);
 
+        ulong computeSignalValue = _vulkanSyncObject.AllocateTimelineValue();
+
+        SemaphoreSubmitInfo[] graphicsWaits =
+        [
+            new()
+            {
+                SType = StructureType.SemaphoreSubmitInfo,
+                Semaphore = _vulkanSyncObject.ImageAvailableSemaphores[CurrentFrame],
+                StageMask = PipelineStageFlags2.ColorAttachmentOutputBit
+            },/*
+            new()
+            {
+                SType = StructureType.SemaphoreSubmitInfo,
+                Semaphore = _vulkanSyncObject.TimelineSemaphore,
+                Value = computeSignalValue,
+                StageMask = PipelineStageFlags2.VertexShaderBit
+            },*/
+        ];
+        SemaphoreSubmitInfo graphicsSignal = new()
+        {
+            SType = StructureType.SemaphoreSubmitInfo,
+            Semaphore = _vulkanSyncObject.RenderFinishedSemaphores[CurrentFrame],
+            StageMask = PipelineStageFlags2.AllCommandsBit
+        };
+
+        CommandBufferSubmitInfo graphicsCmdInfo = new()
+        {
+            SType = StructureType.CommandBufferSubmitInfo,
+            CommandBuffer = _vulkanCommandBuffers.CommandBuffers[CurrentFrame]
+        };
+
+        fixed (SemaphoreSubmitInfo* pWaits = graphicsWaits)
+        {
+            SubmitInfo2 graphicsSubmit = new()
+            {
+                SType = StructureType.SubmitInfo2,
+                WaitSemaphoreInfoCount = (uint)graphicsWaits.Length,
+                PWaitSemaphoreInfos = pWaits,
+                CommandBufferInfoCount = 1,
+                PCommandBufferInfos = &graphicsCmdInfo,
+                SignalSemaphoreInfoCount = 1,
+                PSignalSemaphoreInfos = &graphicsSignal
+            };
+
+            if (VulkanDevice.Vk.QueueSubmit2(VulkanDevice.GraphicsQueue, 1, &graphicsSubmit, _vulkanSyncObject.InFlightFences[CurrentFrame]) != Result.Success)
+                throw new InvalidOperationException("failed to submit draw command buffer!");
+        }
+
+        /*
         var waitStages = stackalloc PipelineStageFlags[] { PipelineStageFlags.ColorAttachmentOutputBit };
 
         var waitSemaphore = _vulkanSyncObject.ImageAvailableSemaphores[CurrentFrame];
+        var computeCommandBuffer = _vulkanCommandBuffers.ComputeCommandBuffers[CurrentFrame];
         var commandBuffer = _vulkanCommandBuffers.CommandBuffers[CurrentFrame];
         var signalSemaphore = _vulkanSyncObject.RenderFinishedSemaphores[CurrentFrame];
 
@@ -216,8 +316,11 @@ public unsafe class VulkanInstance
 
         if (VulkanDevice.Vk.QueueSubmit(VulkanDevice.GraphicsQueue, 1, &submitInfo, _vulkanSyncObject.InFlightFences[CurrentFrame]) != Result.Success)
             throw new InvalidOperationException("failed to submit draw command buffer!");
+            */
 
+        var signalSemaphore = _vulkanSyncObject.RenderFinishedSemaphores[CurrentFrame];
         var swapChains = stackalloc SwapchainKHR[] { VulkanSwapchain.SwapChain };
+
         PresentInfoKHR presentInfo = new()
         {
             SType = StructureType.PresentInfoKhr,
@@ -228,16 +331,17 @@ public unsafe class VulkanInstance
             PImageIndices = &imageIndex,
             PResults = null
         };
+        
 
         result = VulkanDevice.KhrSwapchain.QueuePresent(VulkanDevice.PresentQueue, &presentInfo);
         if (result == Result.ErrorOutOfDateKhr)
             RecreateSwapChain();
         else if (result != Result.Success && result != Result.SuboptimalKhr)
             throw new InvalidOperationException("failed to present swap chain image!");
+            
 
         CurrentFrame = (CurrentFrame + 1) % GFX.MAX_FRAMES_IN_FLIGHT;
     }
-
 
     private void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex) 
     {
@@ -306,6 +410,9 @@ public unsafe class VulkanInstance
 
     public void OnClosing()
     {
+        var cleanupAttributes = AttributeManager.GetAttribute<InternalSystemCleanupAttribute>();
+        AttributeManager.InvokeAttributeMethod(cleanupAttributes, "Cleanup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
         VulkanDevice.Vk.DeviceWaitIdle(VulkanDevice.Device);
 
         BufferBase.DisposeAll();
@@ -323,11 +430,11 @@ public unsafe class VulkanInstance
         _vulkanSyncObject.Dispose();
         _vulkanCommandBuffers.Dispose();
 
+        _vulkanQuery.Dispose();
+
         VulkanDevice.Dispose();
 
         gameWindow.OnUnload();
-
-        _window.Dispose();
     }
 
     public void Dispose()

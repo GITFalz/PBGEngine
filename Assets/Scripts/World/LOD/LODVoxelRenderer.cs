@@ -4,10 +4,11 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Rendering;
 using PBG.Threads;
-using PBG.Voxel;
-using PBG.Graphics;
 
-public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
+using PBG.Graphics;
+using PBG.NewVoxel;
+
+public class LODVoxelRenderer : ScriptingNode
 {
     public Dictionary<Vector3i, LODBaseChunk> LODChunks = [];
 
@@ -33,8 +34,6 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
     private int _width;
     private int _height;
 
-    public ChunkDataPool DataPool;
-
     public LODVoxelRenderer()
     {
         _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
@@ -42,7 +41,7 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
         _width = Game.Width;
         _height = Game.Height;
 
-        DataPool = new(this);
+        //DataPool = new(this);
     }
 
     void Start()
@@ -61,7 +60,7 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
         _width = Game.Width - (_viewport.left + _viewport.right);
         _height = Game.Height - (_viewport.bottom + _viewport.top);
         _camera = new Camera(_width, _height, (0, 0, 0));
-        _camera.GetProjectionMatrix();
+        _camera.UpdateProjectionMatrix();
     }
 
     public void Init(int level)
@@ -138,8 +137,10 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
         }
     }
 
+    /*
     public void Update()
     {
+        
         if (GenerationQueue.Count > 0)
         {
             Generator.Generate(this);
@@ -221,6 +222,8 @@ public class LODVoxelRenderer : ScriptingNode, IVoxelRenderer
         descriptor.Uniform(VoxelRenderer.WorldPlayerPositionLocation, Camera.Position);
         descriptor.Uniform(VoxelRenderer.WorldTimeLocation, WorldSettings.Time);
     }
+    */
 
     public Camera GetCamera() => Camera;
+    
 }

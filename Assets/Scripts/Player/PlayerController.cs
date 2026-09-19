@@ -7,7 +7,7 @@ using PBG.Parse;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
-using PBG.Voxel;
+using PBG.NewVoxel;
 using Silk.NET.SPIRV.Cross;
 using static PBG.UI.Styles;
 
@@ -73,7 +73,7 @@ public class PlayerController : ScriptingNode
         AdminState = new PlayerAdminState(this);
         GameState = new PlayerGameState(this);
 
-        CurrentState = GameState;
+        CurrentState = AdminState;
     }
 
     public void SwitchState(PlayerBaseState state)
@@ -83,8 +83,21 @@ public class PlayerController : ScriptingNode
         CurrentState.Start();
     }  
 
+    public string SelectedBlock = "grass_block";
+    private UIElementBase _blockList;
+
     void Start()
     {
+        _blockList = new UIVScroll(top_right, grow_children, h_full)[
+            new Foreach<string, uint>(BlockData.BlockNames, (name, id) =>
+            {
+                string blockName = name;
+                return new UICol(grow_children).OnClick(_ => SelectedBlock = blockName)[
+                    new UIImg(bg_white, w_[50], h_[50], item_[blockName])
+                ];
+            })
+        ];
+
         PhysicsBody = Transform.GetComponent<PhysicsBody>();
         var worldNode = Scene.GetNode("Root/World");
         World = worldNode.GetComponent<VoxelRenderer>();
@@ -99,6 +112,8 @@ public class PlayerController : ScriptingNode
                 new UIImg(middle_center, w_[2], h_[20], blank_full, bg_white)
             ]
         ]);
+
+        _playerUI.AddElement(_blockList);
 
         Info.SetPlayerPosition(Scene.DefaultCamera.Position);
         _oldPlayerPosition = Transform.Position;
@@ -152,20 +167,20 @@ public class PlayerController : ScriptingNode
         {
             return;
         }
-            
 
         IsMining = false;
 
         SelectedRegion = -1;
         RenderPlacementHelper = false;
         RenderEmptyBlock = false;
+
         if (_oldState != CursorMode.Normal && Game.IsCursorState(CursorMode.Disabled))
         {
-            bool raycast = VoxelData.Raycast(World, Camera.Position, Camera.front, 100, out Hit hit);
+            bool raycast = VoxelData.Raycast(World, Camera.Position, Camera.Front, 100, out Hit hit);
             if (raycast)
             {
                 Vector3i position = hit.BlockPosition + hit.Normal;
-                if (Input.IsMousePressed(MouseButton.Right) && BlockData.GetBlock("grass_block", out Block block))
+                if (Input.IsMousePressed(MouseButton.Right) && BlockData.GetBlockFull(SelectedBlock, out Block block))
                 {
                     int rotationIndex = 0;
                     
@@ -173,10 +188,35 @@ public class PlayerController : ScriptingNode
                     World.SetBlock(position, block);
                     IsMining = true;
                 }
+
                 BlockPlacementPosition = hit.BlockPosition;
                 SelectedRegion = hit.Region;
                 RenderPlacementHelper = true;
                 SelectedSide = hit.Side;
+
+                // test code to check if variants work
+                var definition = hit.Block.Definition();
+                if (Input.IsKeyPressed(Key.Up))
+                {
+                    var variant = hit.Block.GetVariant();
+                    variant = Math.Min(variant + 1, definition.VariantCount - 1);
+                    hit.Block.SetVariant(variant);
+
+                    World.SetBlock(hit.BlockPosition, hit.Block);
+
+                    Console.WriteLine($"Increased variant of block '{definition.Name}' to {variant}");
+                }
+
+                if (Input.IsKeyPressed(Key.Down))
+                {
+                    var variant = hit.Block.GetVariant();
+                    variant = Math.Max(variant - 1, 0);
+                    hit.Block.SetVariant(variant);
+
+                    World.SetBlock(hit.BlockPosition, hit.Block);
+
+                    Console.WriteLine($"Decreased variant of block '{definition.Name}' to {variant}");
+                }
             }
 
             if (Input.IsMousePressed(MouseButton.Left))
@@ -191,7 +231,7 @@ public class PlayerController : ScriptingNode
 
             if (Input.IsKeyPressed(Key.I))
             {
-                var rotation = hit.Block.Rotation();
+                var rotation = Block.Rotation();
                 var definition = BlockData.BlockDefinitions[hit.Block.ID];
                 //BlockPlacement.Key((int)rotation, out var side, out var region, out var facing);
                 //Console.WriteLine($"[Info] : Looking at block '{definition.Name}' that is placed on side {side}, region {region} and facing {(BlockFacing)facing}");
@@ -202,7 +242,7 @@ public class PlayerController : ScriptingNode
         WeaponModel?.Update();
         CurrentState.Update();
 
-        World.Transform.Position.Xz = Transform.Position.Xz;
+        //World.Transform.Position.Xz = Transform.Position.Xz;
 
         if (Input.IsKeyAndControlPressed(Key.P))
         {
@@ -226,6 +266,7 @@ public class PlayerController : ScriptingNode
 
     void LateUpdate()
     {
+        /*
         if (Input.IsMousePressed(MouseButton.Left) && Game.IsCursorState(CursorMode.Normal))
         {
             Scene.DefaultCamera.SetCameraMode(_oldCameraMode);
@@ -240,6 +281,7 @@ public class PlayerController : ScriptingNode
             Game.SetCursorState(_oldCameraMode == CameraMode.Fixed ? CursorMode.Hidden : CursorMode.Normal);
             _showSettings = true;
         }
+        */
 
         if (_oldPlayerPosition != Transform.Position)
         {

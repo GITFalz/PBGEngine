@@ -200,13 +200,13 @@ public abstract class NodeBase
     public virtual void Select()
     {
         _position = Collection.Origin;
-        Collection.Color = SELECTION_COLOR;
+        Collection.SetColor(SELECTION_COLOR);
         Collection.ApplyChanges(UIChange.Color);
     }
 
     public virtual void Deselect()
     {
-        Collection.Color = Vector4.Zero;
+        Collection.SetColor(Vector4.Zero);
         Collection.ApplyChanges(UIChange.Color);
     }
 

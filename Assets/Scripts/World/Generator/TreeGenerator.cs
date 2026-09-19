@@ -1,7 +1,7 @@
 using PBG.MathLibrary;
 using PBG.Hash;
 using PBG.Rendering;
-using PBG.Voxel;
+using PBG.NewVoxel;
 
 public static class TreeGenerator
 {
@@ -19,7 +19,7 @@ public static class TreeGenerator
     public static bool Trunk(TreeGenerationInfo info, Vector3i start, int currentTrunk, uint index, Action<Vector3i, Block, bool> setBlock)
     {
         uint seed = info.Seed + index;
-        if (!BlockData.GetBlock("log_block", out uint logId))
+        if (!BlockData.GetBlockFull("log_block", out Block logBlock))
             throw new InvalidOperationException("log_block not found");
 
         float xt = Hash.HashFloat(start.X + 31.415f, seed);
@@ -60,8 +60,6 @@ public static class TreeGenerator
                     float distance = DistanceToSegment(pos, start, end, out float t, out Vector3 tp);
                     if (distance <= Mathf.Lerp(thicknessStart, thicknessEnd, t))
                     {
-                        var logBlock = new Block(BlockState.Solid, logId);
-                        logBlock.SetRotation(0xFF);
                         setBlock(pos, logBlock, false);
                     }
                 }
@@ -136,8 +134,6 @@ public static class TreeGenerator
                             float distance = DistanceToSegment(pos, branchStart, branchEnd, out float bt, out Vector3 btp);
                             if (distance <= branchThickness)
                             {
-                                var logBlock = new Block(BlockState.Solid, logId);
-                                logBlock.SetRotation(0xFF);
                                 setBlock(pos, logBlock, true);
                             }
                         }
@@ -179,7 +175,7 @@ public static class TreeGenerator
 
     public static bool SphereLeafCluster(TreeGenerationInfo info, Vector3 direction, Vector3i position, Action<Vector3i, Block, bool> setBlock)
     {
-        if (!BlockData.GetBlock("leaf_block", out uint leafId))
+        if (!BlockData.GetBlockID("leaf_block", out uint leafId))
             throw new InvalidOperationException("leaf_block not found");
     
         // Random radius
@@ -231,7 +227,7 @@ public static class TreeGenerator
 
     public static bool CubeLeafCluster(TreeGenerationInfo info, Vector3 direction, Vector3i position, Action<Vector3i, Block, bool> setBlock)
     {
-        if (!BlockData.GetBlock("leaf_block", out uint leafId))
+        if (!BlockData.GetBlockID("leaf_block", out uint leafId))
             throw new InvalidOperationException("leaf_block not found");
         // Not implemented yet, just use SphereLeafCluster for now
         return true;
@@ -239,7 +235,7 @@ public static class TreeGenerator
 
     public static bool ConeLeafCluster(TreeGenerationInfo info, Vector3 direction, Vector3i position, Action<Vector3i, Block, bool> setBlock)
     {
-        if (!BlockData.GetBlock("leaf_block", out uint leafId))
+        if (!BlockData.GetBlockID("leaf_block", out uint leafId))
             throw new InvalidOperationException("leaf_block not found");
 
         // ----- Base radius -----
@@ -343,7 +339,7 @@ public static class TreeGenerator
 
     public static bool CylinderLeafCluster(TreeGenerationInfo info, Vector3 direction, Vector3i position, Action<Vector3i, Block, bool> setBlock)
     {
-        if (!BlockData.GetBlock("leaf_block", out uint leafId))
+        if (!BlockData.GetBlockID("leaf_block", out uint leafId))
             throw new InvalidOperationException("leaf_block not found");
         // Not implemented yet, just use SphereLeafCluster for now
         return true;

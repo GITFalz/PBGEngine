@@ -3,7 +3,7 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.UI;
-using PBG.Voxel;
+
 using static PBG.UI.Styles;
 
 namespace PBG;
@@ -204,6 +204,8 @@ public class PBGConsole : ScriptingNode
             _baseUI.ApplyChanges(UIChange.Scale);
 
             _commandField.UpdateText("");
+
+            Unfocus();
         }
 
         if (Focused)

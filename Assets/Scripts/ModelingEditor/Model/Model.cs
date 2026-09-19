@@ -643,9 +643,9 @@ public class Model
             Vector3 end = (new Vector4(bone.End.Get, 1f) * ModelMatrix).Xyz;
 
             Vector2? screenPos1 = Mathf.WorldToScreen(pivot, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
-            Vector2? screenPos1Side = Mathf.WorldToScreen(pivot + Editor.Scene.DefaultCamera.right.Normalized() * 0.3f * 0.1f, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
+            Vector2? screenPos1Side = Mathf.WorldToScreen(pivot + Editor.Scene.DefaultCamera.Right.Normalized() * 0.3f * 0.1f, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
             Vector2? screenPos2 = Mathf.WorldToScreen(end, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
-            Vector2? screenPos2Side = Mathf.WorldToScreen(end + Editor.Scene.DefaultCamera.right.Normalized() * 0.2f * 0.1f, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
+            Vector2? screenPos2Side = Mathf.WorldToScreen(end + Editor.Scene.DefaultCamera.Right.Normalized() * 0.2f * 0.1f, Mathf.Num(projection), Mathf.Num(view), Game.Width - 400, Game.Height - 50);
 
             if (screenPos1 != null && screenPos1Side != null)
             {

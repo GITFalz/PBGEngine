@@ -176,4 +176,33 @@ public unsafe sealed class VulkanBuffer
 
         _vulkanDevice.Vk.FreeCommandBuffers(_vulkanDevice.Device, _vulkanDevice.CommandPool, 1, &commandBuffer);
     }
+
+
+    public void RecordUpload(CommandBuffer cmd, Buffer src, Buffer dst, ulong size, ulong srcOffset = 0, ulong dstOffset = 0)
+    {
+        BufferCopy copyRegion = new()
+        {
+            SrcOffset = srcOffset,
+            DstOffset = dstOffset,
+            Size      = size
+        };
+
+        _vulkanDevice.Vk.CmdCopyBuffer(cmd, src, dst, 1, &copyRegion);
+    }
+
+    public void RecordUpload(CommandBuffer cmd, Buffer src, Buffer dst, List<(ulong Offset, ulong Size)> ranges)
+    {
+        BufferCopy* copies = stackalloc BufferCopy[ranges.Count];
+        for (int i = 0; i < ranges.Count; i++)
+        {
+            copies[i] = new BufferCopy
+            {
+                SrcOffset = ranges[i].Offset,
+                DstOffset = ranges[i].Offset,
+                Size      = ranges[i].Size
+            };
+        }
+
+        _vulkanDevice.Vk.CmdCopyBuffer(cmd, src, dst, (uint)ranges.Count, copies);
+    }
 }

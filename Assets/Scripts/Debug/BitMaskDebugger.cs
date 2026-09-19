@@ -1,8 +1,8 @@
 using System.Numerics;
 using PBG.Core;
 using PBG.Data;
+using PBG.NewVoxel;
 using PBG.UI;
-using PBG.Voxel;
 using static PBG.UI.Styles;
 
 public class BitMaskDebugger : ScriptingNode
@@ -53,55 +53,6 @@ public class BitMaskDebugger : ScriptingNode
 
     void Update()
     {
-        bool raycast = VoxelData.Raycast(World, Camera.Position, Camera.front, 100, out Hit hit);
-        if (raycast)
-        {
-            if (Input.IsKeyPressed(Key.K))
-            {
-                Console.WriteLine(hit.Block.Definition().Name);
-                var chunkPos = hit.BlockPosition.ToChunkRelative();
-                var blockPos = hit.BlockPosition.ToRelative();
-
-                if (VoxelRenderer.DebugAOMasks.TryGetValue(chunkPos, out var array))
-                {
-                    var index = ChunkBlocks.GetIndex(blockPos);
-                    var mask = array[index];
-                    
-                    var nums = BitsToGrid(mask);
-
-                    _bitMaskA.UpdateText(nums[0]);
-                    _bitMaskB.UpdateText(nums[1]);
-                    _bitMaskC.UpdateText(nums[2]);
-
-                    _bitMaskD.UpdateText(nums[3]);
-                    _bitMaskE.UpdateText(nums[4]);
-                    _bitMaskF.UpdateText(nums[5]);
-
-                    _bitMaskG.UpdateText(nums[6]);
-                    _bitMaskH.UpdateText(nums[7]);
-                    _bitMaskI.UpdateText(nums[8]);
-
-                    if (_oldXBlock != blockPos.X)
-                    {
-                        _xTextBlock.UpdateText("Block X: " + blockPos.X);
-                        _oldXBlock =  blockPos.X;
-                    }
-
-                    if (_oldYBlock != blockPos.Y)
-                    {
-                        _yTextBlock.UpdateText("Block Y: " + blockPos.Y);
-                        _oldYBlock =  blockPos.Y;
-                    }
-
-                    if (_oldZBlock != blockPos.Z)
-                    {
-                        _zTextBlock.UpdateText("Block Z: " + blockPos.Z);
-                        _oldZBlock =  blockPos.Z;
-                    }
-                }
-            }
-        }
-
         if (Input.IsKeyPressed(Key.P))
         {
             _textWindow.SetVisible(!_textWindow.Visible);

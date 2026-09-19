@@ -9,6 +9,9 @@ using PBG.MathLibrary;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Silk.NET.Vulkan;
+using PBG.UI;
+using System.Collections.Concurrent;
+using Silk.NET.GLFW;
 
 namespace PBG.Voxel
 {
@@ -29,6 +32,8 @@ namespace PBG.Voxel
         public int SlotIndex;
     };
 
+
+    [InternalSystemInit(InitPriority.Shader)]
     public class VoxelRenderer : ScriptingNode, IVoxelRenderer
     {
         private static bool _started = false;
@@ -71,6 +76,10 @@ namespace PBG.Voxel
         private static Descriptor _uiPlaneDescriptor;
 
         public ChunkDataPool DataPool;
+
+
+
+        public static int GeneratedThisSecond;
         
 
         /*
@@ -120,26 +129,31 @@ namespace PBG.Voxel
 
         public HashSet<VoxelChunk> VoxelChunkInstances = [];
 
-        public Dictionary<Vector3i, VoxelChunk> ChunkDictionary = [];
+        public ConcurrentDictionary<Vector3i, VoxelChunk> ChunkDictionary = [];
         public HashSet<Vector3i> ChunkRelativePositions = [];
         public List<VoxelChunk> Chunks = [];
         public List<VoxelChunk> VisibleChunks = [];
         public List<RawChunkAllocationData> RawVisibleChunkData = [];
 
-        public HashSet<VoxelChunk> RerenderMap = [];
+        //public HashSet<VoxelChunk> RerenderMap = [];
         public HashSet<VoxelChunk> FreedMap = [];
 
         public LinkedList<VoxelChunk> GenerationQueue = [];
-        public LinkedList<VoxelChunk> RenderingQueue = [];
-        public LinkedList<VoxelChunk> RerenderingQueue = [];
+
+        public object _renderingLock = new();
+        public ConcurrentQueue<VoxelChunk> RenderingQueue = [];
+        public ConcurrentDictionary<VoxelChunk, int> RenderingMap = [];
+
+        public ConcurrentQueue<VoxelChunk> FailedRenderingQueue = [];
+        public ConcurrentQueue<VoxelChunkData> UploadQueue = [];
         public Queue<VoxelChunk> ToBeFreedQueue = [];
 
         private bool _enableTerrainGeneration = true;
 
-        public int RenderDistance = 17;
+        public int RenderDistance = 32;
         public int MaxVerticalChunks = 8;
 
-        public int MaxChunkGenerationPerFrame = 13;
+        public int MaxChunkGenerationPerFrame = 30;
         public int MaxChunkBuildingPerFrame = 10;
 
         public VoxelRendererGenerator ChunkGenerator = new BaseVoxelRendererGenerator();
@@ -196,20 +210,18 @@ namespace PBG.Voxel
 
         public VoxelRenderer()
         {
-            Init();
             _chunkOffsetAction = GenerateDistanceBasedChunkOffsets;
             _viewport = (0, 0, 0, 0);
             _width = Game.Width;
             _height = Game.Height;
             _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
-            ProjectionMatrix = _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.UpdateProjectionMatrix();
 
             DataPool = new(this);
         }
 
         public VoxelRenderer(VoxelRendererSettings settings)
         {
-            Init();
             _chunkOffsetAction = settings.GenerationType switch
             {
                 VoxelRendererGenerationType.Distance => GenerateDistanceBasedChunkOffsets,
@@ -227,117 +239,203 @@ namespace PBG.Voxel
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            ProjectionMatrix = _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.UpdateProjectionMatrix();
 
             DataPool = new(this);
         }
 
-        private void Init()
+        private static void Init()
         {
-            if (!_started)
+            TestPrePassShader = new(new()
             {
-                TestPrePassShader = new(new()
+                VertexShaderFile = "world_vulkan/indirect-world.vert"
+            });
+            TestPrePassShader.Compile();
+
+            PrePassView = TestPrePassShader.GetLocation("ubo.view");
+            PrePassProjection = TestPrePassShader.GetLocation("ubo.proj");
+
+            WorldShader = new(new()
+            {
+                VertexShaderFile = "world_vulkan/indirect-world.vert", 
+                FragmentShaderFile = "world_vulkan/indirect-world.frag",
+            });
+            WorldShader.Compile();
+
+            WorldViewLocation = WorldShader.GetLocation("ubo.view");
+            WorldProjectionLocation = WorldShader.GetLocation("ubo.proj");
+
+            WorldCloseLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uCloseLightSpaceMatrix");
+            WorldMiddleLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uMiddleLightSpaceMatrix");
+            WorldFarLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uFarLightSpaceMatrix");
+
+            WorldLightDirectionLocation = WorldShader.GetLocation("data.lightDirection");
+
+            WorldCloseLightDirectionLocation = WorldShader.GetLocation("data.closeLightDirection");
+            WorldMiddleLightDirectionLocation = WorldShader.GetLocation("data.middleLightDirection");
+            WorldFarLightDirectionLocation = WorldShader.GetLocation("data.farLightDirection");
+
+            WorldDoRealtimeShadowsLocation = WorldShader.GetLocation("data.uDoRealtimeShadows");
+            WorldDoAmbientOcclusionLocation = WorldShader.GetLocation("data.uDoAmbientOcclusion");
+            WorldPlayerPositionLocation = WorldShader.GetLocation("data.uPlayerPosition");
+            WorldTimeLocation = WorldShader.GetLocation("data.time");
+
+
+            ShaderInfo blankInfo = new()
+            {
+                VertexShaderFile = "world_vulkan/indirect-world-blank.vert", 
+                FragmentShaderFile = "world_vulkan/indirect-world-blank.frag",
+            };
+            blankInfo.Rasterizer.CullMode = CullModeFlags.FrontBit;
+            BlankWorldShader = new(blankInfo);
+            BlankWorldShader.Compile();
+
+            BlankWorldViewLocation = BlankWorldShader.GetLocation("ubo.view");
+            BlankWorldProjectionLocation = BlankWorldShader.GetLocation("ubo.proj");
+
+            CloseFBO = new FBO(4000, 4000);
+            MiddleFBO = new FBO(3000, 3000);
+            FarFBO = new FBO(2000, 2000);
+
+            _uiPlaneShader = new(new()
+            {
+                VertexShaderFile = "vulkan/fullScreen.vert",
+                FragmentShaderFile = "vulkan/fullScreen.frag"
+            });
+            _uiPlaneShader.Compile();
+
+            _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
+            _uiPlaneDescriptor.BindFramebufferColor(MiddleFBO, 0);
+
+
+            debugModule = new();
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
+            debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
+            debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
+            debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+            debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+            debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+
+            debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+            debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
+            
+            debugModule.Generate();
+            
+
+            /*
+            PBGConsole.AddCommand(new("info", [
+                new("datapool", [
+                    new("count", null, c => {
+                        var renderer = Scene.CurrentScene?.QueryComponent<VoxelRenderer>();
+                        if (renderer != null)
+                        {
+                            return new(true, "There are " + renderer.DataPool.DataPool.Count + " datapools");
+                        }
+                        else
+                        {
+                            return new(false, "There doesn't seem to be an active renderer");
+                        }
+                    })
+                ])
+            ]));
+
+            PBGConsole.AddCommand(new("settings", [
+                new("world", [
+                    new("render_distance", null, c => {
+                        var renderer = Scene.CurrentScene?.QueryComponent<VoxelRenderer>();
+                        if (renderer != null)
+                        {
+                            if (!c.HasToken())
+                                return new(false, "Expected code after \"" + c.LastToken() + "\"");
+
+                            var token = c.CurrentToken();
+                            int value = Parse.Int.Parse(token);
+
+                            renderer.RenderDistance = value;
+                            renderer.GenerateChunkMap();
+                            
+                            return new(true, $"Set render distance to {value}");
+                        }
+                        else
+                        {
+                            return new(false, "There doesn't seem to be an active renderer");
+                        }
+                    })
+                ]),
+                new("performance", [
+                    new("generation_count", null, c => {
+                        var renderer = Scene.CurrentScene?.QueryComponent<VoxelRenderer>();
+                        if (renderer != null)
+                        {
+                            if (!c.HasToken())
+                                return new(false, "Expected code after \"" + c.LastToken() + "\"");
+
+                            var token = c.CurrentToken();
+                            int value = Parse.Int.Parse(token);
+
+                            renderer.MaxChunkGenerationPerFrame = value;
+                            
+                            return new(true, $"Set max chunk generation count per frame to {value}");
+                        }
+                        else
+                        {
+                            return new(false, "There doesn't seem to be an active renderer");
+                        }
+                    }),
+                    new("meshing_count", null, c => {
+                        var renderer = Scene.CurrentScene?.QueryComponent<VoxelRenderer>();
+                        if (renderer != null)
+                        {
+                            if (!c.HasToken())
+                                return new(false, "Expected code after \"" + c.LastToken() + "\"");
+
+                            var token = c.CurrentToken();
+                            int value = Parse.Int.Parse(token);
+
+                            renderer.MaxChunkBuildingPerFrame = value;
+                            
+                            return new(true, $"Set max chunk meshing queue count per frame to {value}");
+                        }
+                        else
+                        {
+                            return new(false, "There doesn't seem to be an active renderer");
+                        }
+                    })
+                ])
+            ]));
+            */
+        }
+
+        public void EnqueueRendering(VoxelChunk chunk)
+        {
+            lock (_renderingLock)
+            {
+                if (RenderingMap.TryAdd(chunk, 0))
                 {
-                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert"
-                });
-                TestPrePassShader.Compile();
+                    RenderingQueue.Enqueue(chunk);
+                }
+            }
+        }
 
-                PrePassView = TestPrePassShader.GetLocation("ubo.view");
-                PrePassProjection = TestPrePassShader.GetLocation("ubo.proj");
+        public bool TryDequeueRendering([NotNullWhen(true)] out VoxelChunk? chunk)
+        {
+            lock (_renderingLock)
+            {
+                if (!RenderingQueue.TryDequeue(out chunk))
+                    return false;
 
-                WorldShader = new(new()
-                {
-                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.vert", 
-                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world.frag",
-                });
-                WorldShader.Compile();
+                RenderingMap.TryRemove(chunk, out _);
+                return true;
 
-                WorldViewLocation = WorldShader.GetLocation("ubo.view");
-                WorldProjectionLocation = WorldShader.GetLocation("ubo.proj");
-
-                WorldCloseLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uCloseLightSpaceMatrix");
-                WorldMiddleLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uMiddleLightSpaceMatrix");
-                WorldFarLightSpaceMatrixLocation = WorldShader.GetLocation("ubo.uFarLightSpaceMatrix");
-
-                WorldLightDirectionLocation = WorldShader.GetLocation("data.lightDirection");
-
-                WorldCloseLightDirectionLocation = WorldShader.GetLocation("data.closeLightDirection");
-                WorldMiddleLightDirectionLocation = WorldShader.GetLocation("data.middleLightDirection");
-                WorldFarLightDirectionLocation = WorldShader.GetLocation("data.farLightDirection");
-
-                WorldDoRealtimeShadowsLocation = WorldShader.GetLocation("data.uDoRealtimeShadows");
-                WorldDoAmbientOcclusionLocation = WorldShader.GetLocation("data.uDoAmbientOcclusion");
-                WorldPlayerPositionLocation = WorldShader.GetLocation("data.uPlayerPosition");
-                WorldTimeLocation = WorldShader.GetLocation("data.time");
-
-
-                ShaderInfo blankInfo = new()
-                {
-                    VertexShaderPath = Game.ShaderPath / "world_vulkan/indirect-world-blank.vert", 
-                    FragmentShaderPath = Game.ShaderPath / "world_vulkan/indirect-world-blank.frag",
-                };
-                blankInfo.Rasterizer.CullMode = CullModeFlags.FrontBit;
-                BlankWorldShader = new(blankInfo);
-                BlankWorldShader.Compile();
-
-                BlankWorldViewLocation = BlankWorldShader.GetLocation("ubo.view");
-                BlankWorldProjectionLocation = BlankWorldShader.GetLocation("ubo.proj");
-
-                CloseFBO = new FBO(4000, 4000);
-                MiddleFBO = new FBO(3000, 3000);
-                FarFBO = new FBO(2000, 2000);
-
-                _uiPlaneShader = new(new()
-                {
-                    VertexShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.vert"),
-                    FragmentShaderPath = Path.Combine(Game.ShaderPath, "vulkan/fullScreen.frag")
-                });
-                _uiPlaneShader.Compile();
-
-                _uiPlaneDescriptor = _uiPlaneShader.GetDescriptorSet();
-                _uiPlaneDescriptor.BindFramebufferColor(MiddleFBO, 0);
-
-
-                debugModule = new();
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
-                debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0));
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
-                debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.Left | IncludedBorder.Right);
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
-                debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (0, 0), new Vector3(1, 0, 0), IncludedBorder.None);
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-                debugModule.AddGrid(new Vector3(0, 32, 0), Vector3.UnitX, Vector3.UnitY, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-                debugModule.AddGrid(new Vector3(32, 0, 0), Vector3.UnitZ, Vector3.UnitX, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-
-                debugModule.AddGrid(new Vector3(0, 0, 0), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-                debugModule.AddGrid(new Vector3(0, 0, 32), Vector3.UnitX, Vector3.UnitZ, new Vector2(32, 32), new Vector2(4, 4), (2, 2), (0, 1, 0), IncludedBorder.All);
-                
-                debugModule.Generate();
-
-                _started = true;
-
-
-                PBGConsole.AddCommand(new("info", [
-                    new("datapool", [
-                        new("count", null, c => {
-                            var renderer = Scene.CurrentScene?.QueryComponent<VoxelRenderer>();
-                            if (renderer != null)
-                            {
-                                return new(true, "There are " + renderer.DataPool.DataPool.Count + " datapools");
-                            }
-                            else
-                            {
-                                return new(false, "There doesn't seem to be an active renderer");
-                            }
-                        })
-                    ])
-                ]));
             }
         }
 
@@ -481,9 +579,9 @@ namespace PBG.Voxel
                         chunk.Restart = true;
                         chunk.Process.Break();
                     }
-                    else if (RerenderMap.Add(chunk)) 
+                    else
                     {
-                        RerenderingQueue.AddLast(chunk);
+                        EnqueueRendering(chunk);
                     }
                 }
             }
@@ -506,18 +604,20 @@ namespace PBG.Voxel
             {
                 var chunk = Chunks[i];
                 if (ChunkRelativePositions.Contains(chunk.RelativePosition - playerChunkPosition))
+                {
                     continue;
-
+                }
+                
                 if (RemoveChunk(chunk.RelativePosition))
                     i--;
-
             }
             foreach (var c in ChunkRelativePositions)
             {
                 var position = c + playerChunkPosition;
                 if (ChunkDictionary.ContainsKey(position))
+                {
                     continue;
-
+                }
                 AddChunk(position);
             }
         }
@@ -541,15 +641,12 @@ namespace PBG.Voxel
                 return false;
 
             chunk.ToBeRemoved = true;
+            chunk.SetStatus(ChunkStatus.Canceled);
             chunk.BreakProcess();
-            ChunkDictionary.Remove(relativePosition);
+            ChunkDictionary.TryRemove(relativePosition, out var _);
             Chunks.Remove(chunk);
             VisibleChunks.Remove(chunk);
-
             GenerationQueue.Remove(chunk);
-            RenderingQueue.Remove(chunk);
-            RerenderingQueue.Remove(chunk);
-            RerenderMap.Remove(chunk);
 
             if (FreedMap.Add(chunk))
                 ToBeFreedQueue.Enqueue(chunk);
@@ -567,13 +664,14 @@ namespace PBG.Voxel
             Vector3i newPosition = VoxelData.BlockToChunkRelative(Mathf.FloorToInt(Transform.Position));
             _currentChunk.Xz = Mathf.FloorToInt(newPosition.Xz);
 
-            _chunkOffsetAction.Invoke();
-            ChunkCheck(_currentChunk);
+            GenerateChunkMap();
 
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            ProjectionMatrix = _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.UpdateProjectionMatrix();
+
+            StartWorkers(_workerCount);
         }
 
         public void Restart()
@@ -582,12 +680,19 @@ namespace PBG.Voxel
             Awake();
         }
 
+
+        private void GenerateChunkMap()
+        {
+            _chunkOffsetAction.Invoke();
+            ChunkCheck(_currentChunk);
+        }
+
         void Resize()
         {
             _width = Game.Width - (_viewport.left + _viewport.right);
             _height = Game.Height - (_viewport.bottom + _viewport.top);
             _camera = new Camera(_width, _height, (0, 0, 0));
-            ProjectionMatrix = _camera.GetProjectionMatrix();
+            ProjectionMatrix = _camera.UpdateProjectionMatrix();
         }
 
         private float _oldGameTime = 0f;
@@ -596,12 +701,12 @@ namespace PBG.Voxel
         {
             Info.GenerationQueueCount = GenerationQueue.Count;
             Info.RenderingQueueCount = RenderingQueue.Count;
-            Info.ThreadPoolQueueCount = TaskPool.QueueCount;
 
             if (Run)
             {   
                 //Info.SetGenerationQueueCount(GenerationQueue.Count);
 
+                /*
                 if (RenderingQueue.Count > 0)
                 {
                     for (int i = 0; i < MaxChunkBuildingPerFrame.Min(RenderingQueue.Count); i++)
@@ -617,7 +722,6 @@ namespace PBG.Voxel
 
                             if (!chunk.Value.ToBeRemoved && (!NeedsNeighborsToRender || chunk.Value.HasAllNeighbourChunks()))
                             {
-                                Console.WriteLine("putting up for mesh: " + chunk.Value.WorldPosition);
                                 //RenderingTimer.Start();
                                 DefaultChunkRenderingProcess renderingProcess = new DefaultChunkRenderingProcess(chunk.Value);
                                 //renderingProcess.Function();
@@ -639,7 +743,49 @@ namespace PBG.Voxel
                     //Info.SetRenderingQueueCount(RenderingQueue.Count);
                     //Info.AverageChunkRenderingSpeed(DefaultChunkRenderingProcess.Timer.GetAverageMs());
                 }
+                */
 
+                const int MaxPromotePerFrame = 200;   // tune this
+
+                int promoted = 0;
+                while (promoted < MaxPromotePerFrame && FailedRenderingQueue.TryDequeue(out var chunk))
+                {
+                    EnqueueRendering(chunk);
+                    promoted++;
+                }
+
+                if (RenderingQueue.Count > 0)
+                {
+                    Info.SetRenderingQueueCount(RenderingQueue.Count);
+                }   
+
+                /*
+                if (UploadQueue.TryDequeue(out var chunkData))
+                {
+                    ChunkMesher.UploadChunk(chunkData);
+                    Info.ThreadPoolQueueCount = UploadQueue.Count;
+                }
+                */
+
+                const int MaxUploadsPerFrame = 10;          // tune this
+                const double MaxUploadTimeMs = 3;        // optional time budget
+
+                int uploaded = 0;
+                var sw = Stopwatch.StartNew();
+
+                while (uploaded < MaxUploadsPerFrame && UploadQueue.TryDequeue(out var chunkData))
+                {
+                    ChunkMesher.UploadChunk(chunkData);
+                    
+                    uploaded++;
+
+                    if (sw.Elapsed.TotalMilliseconds > MaxUploadTimeMs)
+                        break;
+                }
+
+                Info.ThreadPoolQueueCount = uploaded;
+
+                /*
                 if (RerenderingQueue.Count > 0)
                 {
                     for (int i = 0; i < 2.Min(RerenderingQueue.Count); i++)
@@ -658,7 +804,6 @@ namespace PBG.Voxel
                                 /*
                                 DefaultChunkRenderingProcess renderingProcess = new DefaultChunkRenderingProcess(chunk.Value);
                                 TaskPool.QueueAction(renderingProcess, TaskPriority.Urgent);  
-                                */
 
                                 chunk.Value.Allocation.DataPool?.Free(chunk.Value);
                                 DefaultChunkRenderingProcess renderingProcess = new DefaultChunkRenderingProcess(chunk.Value);
@@ -678,6 +823,7 @@ namespace PBG.Voxel
                         }
                     }
                 }
+                */
 
                 if (_oldGameTime + 1f < GameTime.TotalTime)
                 {
@@ -686,14 +832,13 @@ namespace PBG.Voxel
 
                 if (ToBeFreedQueue.Count > 0)
                 {
-                    for (int i = 0; i < 200.Min(ToBeFreedQueue.Count); i++)
+                    for (int i = 0; i < 20.Min(ToBeFreedQueue.Count); i++)
                     {
                         var chunk = ToBeFreedQueue.Dequeue();
+                        chunk.SetStatus(ChunkStatus.Canceled);
                         VoxelChunkInstances.Remove(chunk);
                         GenerationQueue.Remove(chunk);
-                        RenderingQueue.Remove(chunk);
-                        RerenderingQueue.Remove(chunk);
-                        chunk.Status = ChunkStatus.Deleted;
+                        chunk.SetStatus(ChunkStatus.Deleted);
                         chunk.Allocation.DataPool?.Free(chunk);
                         chunk.Dispose();
                         FreedMap.Remove(chunk);
@@ -713,11 +858,105 @@ namespace PBG.Voxel
                     skybox.LightDirection = LightDirection;
                     skybox.Time = WorldSettings.Time;
                 }
+
+                if (GameTime.FpsUpdated)
+                {
+                    Console.WriteLine(
+                    $"Gen: {GeneratedThisSecond} | " +
+                    $"Avg Gen ms: {WorldGenerationProcess.GetAverageMs():F2} | " +
+                    $"GenQueue size: {GenerationQueue.Count} | " +
+                    $"RenderQueue size: {RenderingQueue.Count}");
+                    GeneratedThisSecond = 0;
+                }
             }
 
             DataPool.Reset();
             
             DataPool.UpdateDrawCommands(0);  
+        }
+
+        private readonly int _workerCount = 4;
+        private readonly ConcurrentQueue<VoxelChunk> _queue = new();
+        private CancellationTokenSource _cts = new();
+        private Task[] _workers = null!;
+
+        public void StartWorkers(int count = -1)
+        {
+            if (count <= 0)
+                count = Math.Max(1, Environment.ProcessorCount - 1);
+
+            _cts = new CancellationTokenSource();
+            _workers = new Task[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                int workerId = i;
+                _workers[i] = Task.Factory.StartNew(
+                    () => WorkerLoop(workerId),
+                    _cts.Token,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default);
+            }
+        }
+
+        public void StopWorkers(int timeoutMs = 3000)
+        {
+            if (_workers == null) return;
+
+            _cts.Cancel();
+
+            try
+            {
+                Task.WaitAll(_workers, timeoutMs);
+            }
+            catch (AggregateException) { /* ignore cancellation */ }
+
+            _workers = null!;
+            _cts.Dispose();
+        }
+
+        private int _count = 0;
+        private RollingAverageLongTimer _timer = new();
+
+
+        private void WorkerLoop(int workerId)
+        {
+            var sw = Stopwatch.StartNew();
+
+            while (!_cts.Token.IsCancellationRequested)
+            {
+                if (TryDequeueRendering(out var chunk))
+                {
+                    if (!NeedsNeighborsToRender || chunk.HasAllNeighbourChunks())
+                    {
+                        chunk.SetStatus(ChunkStatus.QueuedToMesh);
+                        Stopwatch meshTimer = Stopwatch.StartNew();
+                        var result = ChunkMesher.MeshChunk(chunk, out var chunkData);
+                        _timer.AddSample((long)meshTimer.Elapsed.TotalMilliseconds);
+                        if (result == ChunkMeshingStatus.Succeded && chunkData != null)
+                        {
+                            UploadQueue.Enqueue(chunkData);
+                        }
+                        chunk.SetStatus(ChunkStatus.QueuedToUpload);
+                    }
+                    else
+                    {
+                        chunk.SetStatus(ChunkStatus.FailedToMesh);
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(1);
+                }
+
+                if (workerId == 0 && sw.Elapsed.TotalSeconds >= 0.25f)
+                {
+                    var avg = _timer.GetAverageMs();
+                    Info.AverageRenderingSpeed = avg;
+
+                    sw.Restart();
+                }
+            }
         }
 
         void LateUpdate()
@@ -767,7 +1006,7 @@ namespace PBG.Voxel
                 }
             }
 
-            DataPool.FrustumPass(Camera, 0, VisibleChunks.Count);
+            DataPool.FrustumPass(Camera, 0);
         }
 
         void Render()
@@ -776,17 +1015,17 @@ namespace PBG.Voxel
             
             if (RealtimeShadows)
             {
-                if (_closeLightTimer >= 0.05f)
+                if (_closeLightTimer >= closeTimer)
                 {
                     RenderShadowMap(CloseFBO, 140, 140, 140, 1, out _closeLightSpaceMatrix);
                 }
 
-                if (_middleLightTimer >= 0.15f)
+                if (_middleLightTimer >= middleTimer)
                 {
                     RenderShadowMap(MiddleFBO, 640, 500, 500, 2, out _middleLightSpaceMatrix);
                 }
 
-                if (_farLightTimer >= 0.75f)
+                if (_farLightTimer >= farTimer)
                 {
                     RenderShadowMap(FarFBO, 2560, 2500, 1600, 3, out _farLightSpaceMatrix);
                 }
@@ -890,6 +1129,7 @@ namespace PBG.Voxel
         void Exit()
         {
             Clear();
+            StopWorkers();
         }
 
         void Dispose()
@@ -916,10 +1156,8 @@ namespace PBG.Voxel
             VoxelChunkInstances = [];
             GenerationQueue = [];
             RenderingQueue = [];
-            RerenderingQueue = [];
             ToBeFreedQueue = [];
 
-            RerenderMap = [];
             FreedMap = [];
 
             CacheManager.Clear();

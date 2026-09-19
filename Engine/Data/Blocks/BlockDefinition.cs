@@ -1,17 +1,22 @@
 using PBG.MathLibrary;
 using PBG.Physics;
-using PBG.Voxel;
+using PBG.NewVoxel;
 using static PBG.Voxel.VoxelChunkGenerator;
 
 public class BlockDefinition
 {
-    public BlockDefinitionType Type = BlockDefinitionType.Missing;
+    public BlockType Type = BlockType.Air;
+    public byte SideFullOcclusion = 0;
+
+    public BlockDefinitionType DType = BlockDefinitionType.Missing;
     public bool CanRotate = false;
     public Block Block;
     public string Name = "";
 
     public int CacheIndex = 0;
     public int VariantCount = 1;
+
+    public int GeometryIndex = 0;
 
     public Collider[][] Colliders = [];
     
@@ -56,4 +61,6 @@ public class BlockDefinition
         var bottomRight = new BlockVertexData(face.D + position, face.UvD, face.Normal, face.TextureIndex, face.Side, 3);
         vertexData.AddRange(bottomLeft, topLeft, topRight, bottomRight);
     }
+
+    public int GetSolidGeometryIndex(int side) => GeometryIndex + side * 4;
 }

@@ -3,9 +3,9 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Files;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Threads;
 using PBG.UI;
-using PBG.Voxel;
 using Silk.NET.Input;
 
 namespace PBG;
@@ -17,10 +17,12 @@ public class Game : GameWindow
     public static int Width;
     public static int Height;
 
-    public static PString MainPath = FileManager.CreatePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".projectVoxel");
+    public static PString MainPath = FileManager.CreatePath(GetRealUserAppData(), ".projectVoxel");
     public static PString AssetsPath = FileManager.CreatePath(MainPath, "assets");
     public static PString ShaderPath = FileManager.CreatePath(AssetsPath, "shaders");
+    public static PString FixedShaderPath = FileManager.CreatePath(AssetsPath, "fixedShaders");
     public static PString TexturePath = FileManager.CreatePath(AssetsPath, "textures");
+    public static PString SettingsPath = FileManager.CreatePath(AssetsPath, "settings");
 
     public static PString DataPath = FileManager.CreatePath(MainPath, "data");
     public static PString ModelPath = FileManager.CreatePath(DataPath, "models");
@@ -103,11 +105,9 @@ public class Game : GameWindow
     {
         Input.Start(Mouse);
 
-        BlockData.Init();
-        //WeaponData.Init();
         ItemDataManager.Init();
 
-        VoxelChunkGenerator.InitCache();
+        Voxel.VoxelChunkGenerator.InitCache();
 
         Type[] subClasses;
         /*
@@ -149,7 +149,7 @@ public class Game : GameWindow
         // Load mods
         
 
-        Scene.LoadScene("MainMenu");
+        Scene.LoadScene("NodeTest");
     }
 
     public override void OnRenderLoad()
@@ -215,8 +215,8 @@ public class Game : GameWindow
 
         TaskPool.Update();
 
-        if (GameTime.FpsUpdated)
-            Console.WriteLine(GameTime.Fps);
+        //if (GameTime.FpsUpdated)
+            //Console.WriteLine(GameTime.Fps);
     }
 
     public override void OnCompute()
@@ -239,6 +239,8 @@ public class Game : GameWindow
 
     public override void OnUnload()
     {
+        Scene.CurrentScene?.Exit();
+
         PBGConsole.Save();
     }
 
@@ -260,5 +262,20 @@ public class Game : GameWindow
     internal static void SetCursorState(object disabled)
     {
         throw new NotImplementedException();
+    }
+
+    static string GetRealUserAppData()
+    {
+        // When running under sudo, SUDO_USER contains the original username
+        string? user = Environment.GetEnvironmentVariable("SUDO_USER");
+        
+        if (!string.IsNullOrEmpty(user))
+        {
+            // Linux
+            return $"/home/{user}/.config";
+        }
+
+        // Normal case (not running as root)
+        return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
     }
 }

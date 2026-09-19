@@ -449,6 +449,8 @@ namespace PBG.UI
             return this;
         }
 
+        public UIElementBase SetAlpha(float alpha) => SetColor(new Vector4(Color.Xyz, alpha));
+
         public UIElementBase UpdateColor(Vector4 color)
         {
             SetColor(color);

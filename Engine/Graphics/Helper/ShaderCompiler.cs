@@ -53,19 +53,157 @@ public unsafe class ShaderCompiler
     }
 
 
-    public void CompileShader(Shader shader, ShaderInfo shaderInfo, out PBGShaderModule module)
+    public static bool ShaderNeedsFix(string baseShaderPath, string fixedShaderPath)
     {
+        var srcInfo   = new FileInfo(baseShaderPath);
+        var fixedInfo = new FileInfo(fixedShaderPath);
+
+        return !fixedInfo.Exists || srcInfo.LastWriteTimeUtc > fixedInfo.LastWriteTimeUtc;
+    }
+
+    public void CompileShader(Shader shader, ShaderInfo shaderInfo, out PBGShaderModule module)
+    {   
         module = new();
 
-        ShaderData vertexData = CompileAndReflect(shaderInfo.VertexShaderPath, ShaderKind.VertexShader);
+        // Get all the paths for the files
+        var vertPath = shaderInfo.BaseVertexShaderPath();
+        var fixedVertPath = shaderInfo.FixedVertexShaderPath();
+
+        var fragPath = shaderInfo.BaseFragmentShaderPath();
+        var fixedFragPath = shaderInfo.FixedFragmentShaderPath();
+
+        bool vertNeedsFix = ShaderNeedsFix(vertPath, fixedVertPath);
+
+        // create 2 temporary files that will be used to write the fixed shaders into if needed
+        string? tempVertexFile = null;
+        string? tempFragmentFile = null;
+
+
+        ShaderData vertexData;
         ShaderData? fragmentData = null;
-        if (shaderInfo.FragmentShaderPath != null)
+
+        try
         {
-            fragmentData = CompileAndReflect(shaderInfo.FragmentShaderPath, ShaderKind.FragmentShader);
+            // if a fragment shader is included try to fix both the vertex and fragment shader if needed
+            if (fragPath != null && fixedFragPath != null)
+            {   
+                if (vertNeedsFix || ShaderNeedsFix(fragPath, fixedFragPath))
+                {
+                    // if they need a fix, create temp files so it doesn't overwrite the fixed ones
+                    tempVertexFile = Path.GetTempFileName();
+                    tempFragmentFile = Path.GetTempFileName();
+
+                    if (!ShaderHelper.FixVertexAndFragmentShader(vertPath, tempVertexFile, fragPath, tempFragmentFile))
+                    {
+                        // if it failed it must mean one of the two files doesn't exist and we can try to used the fixed ones instead
+                        // delete the temp files as they will not be used
+                        File.Delete(tempVertexFile);
+                        File.Delete(tempFragmentFile);
+
+                        tempVertexFile = null;
+                        tempFragmentFile = null;
+
+                        if (!File.Exists(fixedVertPath))
+                            throw new Exception($"[ERROR] : The vertex shader '{Path.GetFileName(vertPath)}' is missing");
+
+                        if (!File.Exists(fixedFragPath))
+                            throw new Exception($"[ERROR] : The fragment shader '{Path.GetFileName(fragPath)}' is missing");
+
+                        // else both fixed files exist so we will use a previous version of the shader
+                    } 
+                }
+            }
+            else if (vertNeedsFix)
+            {
+                tempVertexFile = Path.GetTempFileName();
+
+                if (!ShaderHelper.FixVertexShader(vertPath, tempVertexFile))
+                {
+                    // delete the temp files as they will not be used
+                    File.Delete(tempVertexFile);
+
+                    tempVertexFile = null;
+                    
+                    if (!File.Exists(fixedVertPath))
+                        throw new Exception($"[ERROR] : The vertex shader '{Path.GetFileName(vertPath)}' is missing");
+                }
+            }
+
+            Console.WriteLine("[INFO] : Compiling vertex shader " + Path.GetFileName(vertPath));
+            
+            if (tempVertexFile != null)
+            {
+                try
+                {
+                    // if the shader was fixed try to compile that
+                    vertexData = CompileAndReflect(tempVertexFile, ShaderKind.VertexShader);
+
+                    // if the compilation succeeded we can save the fixed file
+                    File.Copy(tempVertexFile, fixedVertPath, true);
+                }
+                catch (Exception ex)
+                {
+                    if (!File.Exists(fixedVertPath))
+                        throw;
+
+                    Console.WriteLine(ex);
+
+                    // if the compilation failed try use the fixed version that was compiled previously
+                    Console.WriteLine($"[ERROR] : Failed to compile vertex shader '{Path.GetFileName(vertPath)}', falling back to previous version");
+                    vertexData = CompileAndReflect(fixedVertPath, ShaderKind.VertexShader);
+                }
+            }
+            else
+            {
+                // if nothing has changed since just use the fixed version
+                vertexData = CompileAndReflect(fixedVertPath, ShaderKind.VertexShader);
+            }
+
+            if (fixedFragPath != null)
+            {
+                Console.WriteLine("[INFO] : Compiling fragment shader " + Path.GetFileName(fragPath));
+
+                if (tempFragmentFile != null)
+                {
+                    try
+                    {
+                        // if the shader was fixed try to compile that
+                        fragmentData = CompileAndReflect(tempFragmentFile, ShaderKind.FragmentShader);
+
+                        // if the compilation succeeded we can save the fixed file
+                        File.Copy(tempFragmentFile, fixedFragPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!File.Exists(fixedFragPath))
+                            throw;
+
+                        Console.WriteLine(ex);
+
+                        // if the compilation failed try use the fixed version that was compiled previously
+                        Console.WriteLine($"[ERROR] : Failed to compile fragment shader '{Path.GetFileName(vertPath)}', falling back to previous version");
+                        fragmentData = CompileAndReflect(fixedFragPath, ShaderKind.FragmentShader);
+                    }
+                }
+                else
+                {
+                    // if nothing has changed since just use the fixed version
+                    fragmentData = CompileAndReflect(fixedFragPath, ShaderKind.FragmentShader);
+                }
+            }
         }
+        finally
+        {
+            if (tempVertexFile != null && File.Exists(tempVertexFile))
+                File.Delete(tempVertexFile);
+            if (tempFragmentFile != null && File.Exists(tempFragmentFile))
+                File.Delete(tempFragmentFile);
+        }
+
 
         ShaderModule vertModule = Shader.CreateShaderModule(vertexData.SpirV);
         ShaderModule? fragModule = null;
+
         if (fragmentData != null)
         {
             fragModule = Shader.CreateShaderModule(fragmentData.Value.SpirV);
@@ -99,7 +237,7 @@ public unsafe class ShaderCompiler
                 attributeDescriptions[i].Location = (uint)attribute.Location;
                 attributeDescriptions[i].Binding = currentBinding;
                 attributeDescriptions[i].Format = attribute.Format;
-                attributeDescriptions[i].Offset = 0; //attribute.Offset;
+                attributeDescriptions[i].Offset = attribute.Offset;
 
                 Console.WriteLine(attribute);
             }
@@ -116,6 +254,9 @@ public unsafe class ShaderCompiler
         {
             var attribute = UniformBufferAttributes[i];
             uint size;
+            #if DEBUG
+            Console.WriteLine("[INFO] : Attribute " + attribute);
+            #endif
             if (uniformBindingsMap.TryGetValue(attribute.Binding, out var index))
             {
                 var layout = module.UniformBindings[index];
@@ -342,7 +483,7 @@ public unsafe class ShaderCompiler
         PipelineMultisampleStateCreateInfo multisampling = new()
         {
             SType = StructureType.PipelineMultisampleStateCreateInfo,
-            SampleShadingEnable = false,
+            SampleShadingEnable = true,
             RasterizationSamples = SampleCountFlags.Count1Bit,
             MinSampleShading = 1.0f, // Optional
             PSampleMask = null, // Optional
@@ -654,6 +795,7 @@ public unsafe class ShaderCompiler
             VertexAttributes = []
         };
 
+
         switch (kind)
         {
             case ShaderKind.VertexShader:
@@ -744,13 +886,23 @@ public unsafe class ShaderCompiler
             var bufferName    = PtrExt.ToStr(_cross.CompilerGetName(compiler, ubos[i].BaseTypeId)) ?? throw new InvalidCastException($"[Error] : Unable to get buffer name for uniform at binding {binding}");
             var name    = PtrExt.ToStr(_cross.CompilerGetName(compiler, ubos[i].Id)) ?? throw new InvalidCastException($"[Error] : Unable to get name for uniform at binding {binding}");
 
+            #if DEBUG
+            Console.WriteLine("[INFO] : Attempting to find matching uniform buffer: " + binding + " " + bufferName + " " + name);
+            #endif
+
             if (UniformBufferBindings.TryGetValue(binding, out var existing))
             {
+                #if DEBUG
+                Console.WriteLine("exist");
+                #endif
                 existing.LayoutBinding.StageFlags |= stage;
                 UniformBufferBindings[binding] = existing;
             }
             else
             {
+                #if DEBUG
+                Console.WriteLine("doesn't exist");
+                #endif
                 var layout = new UniformBufferLayout()
                 {
                     BufferName = bufferName,

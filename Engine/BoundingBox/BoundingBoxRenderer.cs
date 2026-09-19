@@ -23,8 +23,8 @@ public class BoundingBoxRenderer : ScriptingNode
         if (!_started)
         {
             ShaderInfo bbinfo = new() { 
-                VertexShaderPath = Game.ShaderPath / "StructureEditor_vulkan/structure/boundingBox.vert",
-                FragmentShaderPath = Game.ShaderPath / "StructureEditor_vulkan/structure/boundingBox.frag" 
+                VertexShaderFile = "StructureEditor_vulkan/structure/boundingBox.vert",
+                FragmentShaderFile = "StructureEditor_vulkan/structure/boundingBox.frag" 
             };
             //bbinfo.DepthStencil.DepthTestEnable = false;
             bbinfo.DepthStencil.DepthWriteEnable = false;

@@ -8,6 +8,7 @@ public struct TextureInfo
     public bool IsStorageImage = false;
     public int Width;
     public int Height;
+    public bool UseMipMaps = false;
     public Format Format = Format.R32G32B32A32Sfloat;
     public Filter Filter = Filter.Linear;
     public SamplerAddressMode SamplerMode = SamplerAddressMode.Repeat;

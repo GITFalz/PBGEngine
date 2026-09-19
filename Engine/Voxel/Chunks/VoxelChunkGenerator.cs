@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Threads;
 
 namespace PBG.Voxel
@@ -77,18 +78,18 @@ namespace PBG.Voxel
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int ChunkDir(int v) => v < 0 ? -1 : v >= 32 ? 1 : 0;
 
-        public static bool GenerateIndirectMesh(DefaultChunkRenderingProcess process, List<Vector4i> vertexData, Vector3i worldPosition, ChunkBlocks blocks, out int vertexCount)
+        public static bool GenerateIndirectMesh(VoxelChunk chunk, List<Vector4i> vertexData, Vector3i worldPosition, ChunkBlocks blocks, out int vertexCount)
         {
             int vertCount = 0;
             //uint[] bitMap = new uint[32*32*32];
 
             //Stopwatch sw = Stopwatch.StartNew();
 
-            var renderer = process.Chunk.Renderer;
+            var renderer = chunk.Renderer;
 
             VoxelChunk[] sideChunks = new VoxelChunk[27];
             for (int i = 0; i < 27; i++)
-                sideChunks[i] = renderer.GetChunk(process.Chunk.RelativePosition + _neighbourOffsets[i]) ?? VoxelChunk.Empty;
+                sideChunks[i] = renderer.GetChunk(chunk.RelativePosition + _neighbourOffsets[i]) ?? VoxelChunk.Empty;
 
             int count = 0;
 
@@ -186,6 +187,12 @@ namespace PBG.Voxel
 
                     for (int z = 0; z < 32; z++)
                     {
+                        if (chunk.GetStatus() == ChunkStatus.Canceled)
+                        {
+                            vertexCount = vertCount;
+                            return false;
+                        }
+
                         var block = blocks.Get(x, y, z);
                         
                         if (z > 0)
@@ -258,12 +265,12 @@ namespace PBG.Voxel
 
                         var newBlockFaces = definition.NewBlockFaces[0];
 
-                        HandleFrontFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
-                        HandleRightFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
-                        HandleTopFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
-                        HandleLeftFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
-                        HandleBottomFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
-                        HandleBackFaceAO(vertexData, process, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleFrontFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleRightFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleTopFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleLeftFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleBottomFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
+                        HandleBackFaceAO(vertexData, chunk, definition, sideChunks, sideBlockMaskMem, pos, x, y, z, newBlockFaces, ref vertCount);
 
                         var iFaces = definition.NewBlockFaces[0].InternalFaces;
                         for (int i = 0; i < iFaces.Length; i++)
@@ -286,7 +293,7 @@ namespace PBG.Voxel
             /*
             Console.WriteLine($"Count: {count}, Total:          {sw.Elapsed.TotalSeconds:F6}s");
 
-            VoxelRenderer.DebugAOMasks[process.Chunk.RelativePosition] = bitMap;
+            VoxelRenderer.DebugAOMasks[chunk.RelativePosition] = bitMap;
             */
 
             return true;
@@ -304,9 +311,9 @@ namespace PBG.Voxel
             return s;
         }
 
-        private static void HandleFrontFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleFrontFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = lz == 0 ? sideChunks[10].Get(lx, ly, 31) : process.Chunk.Get(lx, ly, lz - 1);
+            Block sideBlock = lz == 0 ? sideChunks[10].Get(lx, ly, 31) : chunk.Get(lx, ly, lz - 1);
 
             if (!sideBlock.IsAir())
             {
@@ -332,9 +339,9 @@ namespace PBG.Voxel
             }
         }
 
-        private static void HandleRightFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleRightFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = lx == 31 ? sideChunks[14].Get(0, ly, lz) : process.Chunk.Get(lx + 1, ly, lz);
+            Block sideBlock = lx == 31 ? sideChunks[14].Get(0, ly, lz) : chunk.Get(lx + 1, ly, lz);
             
             if (!sideBlock.IsAir())
             {
@@ -360,9 +367,9 @@ namespace PBG.Voxel
             }
         }
 
-        private static void HandleTopFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleTopFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = ly == 31 ? sideChunks[22].Get(lx, 0, lz) : process.Chunk.Get(lx, ly + 1, lz);
+            Block sideBlock = ly == 31 ? sideChunks[22].Get(lx, 0, lz) : chunk.Get(lx, ly + 1, lz);
             
             if (!sideBlock.IsAir())
             {
@@ -388,9 +395,9 @@ namespace PBG.Voxel
             }
         }
 
-        private static void HandleLeftFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleLeftFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = lx == 0 ? sideChunks[12].Get(31, ly, lz) : process.Chunk.Get(lx - 1, ly, lz);
+            Block sideBlock = lx == 0 ? sideChunks[12].Get(31, ly, lz) : chunk.Get(lx - 1, ly, lz);
             
             if (!sideBlock.IsAir())
             {
@@ -416,9 +423,9 @@ namespace PBG.Voxel
             }
         }
 
-        private static void HandleBottomFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleBottomFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = ly == 0 ? sideChunks[4].Get(lx, 31, lz) : process.Chunk.Get(lx, ly - 1, lz);
+            Block sideBlock = ly == 0 ? sideChunks[4].Get(lx, 31, lz) : chunk.Get(lx, ly - 1, lz);
             
             if (!sideBlock.IsAir())
             {
@@ -444,9 +451,9 @@ namespace PBG.Voxel
             }
         }
 
-        private static void HandleBackFaceAO(List<Vector4i> vertexData, DefaultChunkRenderingProcess process, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
+        private static void HandleBackFaceAO(List<Vector4i> vertexData, VoxelChunk chunk, BlockDefinition definition, VoxelChunk[] sideChunks, uint sideBlockMask, int pos, int lx, int ly, int lz, NewBlockFaces newBlockFaces, ref int vertexCount)
         {
-            Block sideBlock = lz == 31 ? sideChunks[16].Get(lx, ly, 0) : process.Chunk.Get(lx, ly, lz + 1);
+            Block sideBlock = lz == 31 ? sideChunks[16].Get(lx, ly, 0) : chunk.Get(lx, ly, lz + 1);
             
             if (!sideBlock.IsAir())
             {

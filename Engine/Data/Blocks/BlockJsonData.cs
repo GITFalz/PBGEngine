@@ -1,6 +1,8 @@
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Physics;
-using PBG.Voxel;
+using Silk.NET.Vulkan;
+
 
 namespace PBG.Data;
 
@@ -17,6 +19,10 @@ public partial class BlockJSON
     public static List<List<VoxelFace>> BackFaces = [];
     public static List<List<VoxelFace>> InternalFaces = [];
 
+    public static List<VoxelFaceIndex> PreVoxelFaceIndices = [];
+    public static List<NewVoxelFace> PreVoxelFaceDatas = [];
+    public static List<int> PreGeometryIndices = [];
+
     public uint ID { get; set; } = 0;
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";
@@ -28,8 +34,26 @@ public partial class BlockJSON
     public BoxJSON[]? Collision { get; set; } = null;
     public BoxJSON[]? Geometry { get; set; } = null;
 
+    public VoxelFaceIndex FaceIndex;
+
+    public bool FrontFull = false;
+    public bool RightFull = false;
+    public bool TopFull = false;
+    public bool LeftFull = false;
+    public bool BottomFull = false;
+    public bool BackFull = false;
+
     public void Generate(BlockDefinition definition)
     {
+        definition.Type = Type switch
+        {
+            "solid" => BlockType.Solid,
+            "transparent" => BlockType.Transparent,
+            _ => BlockType.Solid
+        };
+
+        BlockData.SolidVoxelGeometryIndices[ID] = GeometryIndex;
+
         int blockCount = 1 + Variants.Length;
         List<VariantJSON> variants = [new(), ..Variants];
 
@@ -68,6 +92,12 @@ public partial class BlockJSON
 
             var variant = variants[i];
 
+
+            FaceIndex = new(PreVoxelFaceDatas.Count);
+
+            //Console.WriteLine($"Variant: {i}");
+
+            // Generate the geometry for this variant
             variant.GenerateGeometry(definition, this, Geometry, i);
             variant.PopulatePlacements(definition, i);
             variant.RotateBoxes(Collision, out var boxes, out var _);
@@ -75,6 +105,11 @@ public partial class BlockJSON
             definition.Colliders[i] = new Collider[Collision.Length];
             for (int j = 0; j < Collision.Length.Min(boxes.Count); j++)
                 definition.Colliders[i][j] = boxes[j].GetCollider();
+
+
+            FaceIndex.Count = PreVoxelFaceDatas.Count - FaceIndex.Start;
+            
+            PreVoxelFaceIndices.Add(FaceIndex);
         }
 
         if (Geometry.Length == 1 && Type == "solid")
@@ -149,6 +184,18 @@ public partial class BlockJSON
                 definition.NewBlockFaces[i] = newBlockFaces;
             }
         }
+
+        void SetFullOcclusion(bool side, int shift)
+        {
+            definition.SideFullOcclusion |= (byte)((side ? 1 : 0) << shift);
+        }
+
+        SetFullOcclusion(FrontFull,  0);
+        SetFullOcclusion(RightFull,  1);
+        SetFullOcclusion(TopFull,    2);
+        SetFullOcclusion(LeftFull,   3);
+        SetFullOcclusion(BottomFull, 4);
+        SetFullOcclusion(BackFull,   5);
     }
 
     static ulong GetCombinedBitMask(List<VoxelFace> faces)
@@ -270,8 +317,12 @@ public class VariantJSON
         }
     }
 
+    private bool IsFaceFull(Box box, int indexA, int indexB) => box.From[indexA] <= 0 && box.From[indexB] <= 0 && box.To[indexA] >= 1 && box.To[indexB] >= 1;
+
     public void GenerateGeometry(BlockDefinition definition, BlockJSON json, BoxJSON[] geometry, int index)
     {
+        definition.GeometryIndex = BlockData.FaceGeometries.Count;
+        
         RotateBoxes(geometry, out var boxes, out var faces);
 
         for (int i = 0; i < geometry.Length; i++)
@@ -281,22 +332,52 @@ public class VariantJSON
             var face = faces[i];
 
             if (!face.Contains("front"))
+            {
+                if (IsFaceFull(box, 0, 1))
+                    json.FrontFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.FrontFaces[index], (0, 0, -1),    box.From.Z == 0,    0,  0, 1,   index);
+            }
 
             if (!face.Contains("right"))
+            {
+                if (IsFaceFull(box, 2, 1))
+                    json.RightFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.RightFaces[index], (1, 0, 0),     box.To.X == 1,      1,  2, 1,   index);
+            }
 
             if (!face.Contains("top"))
+            {
+                if (IsFaceFull(box, 0, 2))
+                    json.TopFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.TopFaces[index], (0, 1, 0),     box.To.Y == 1,      2,  0, 2,   index);
+            }
 
             if (!face.Contains("left"))
+            {
+                if (IsFaceFull(box, 2, 1))
+                    json.LeftFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.LeftFaces[index], (-1, 0, 0),    box.From.X == 0,    3,  2, 1,   index);
+            }
 
             if (!face.Contains("bottom"))
+            {
+                if (IsFaceFull(box, 0, 2))
+                    json.BottomFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.BottomFaces[index], (0, -1, 0),    box.From.Y == 0,    4,  0, 2,   index);
+            }
 
             if (!face.Contains("back"))
+            {
+                if (IsFaceFull(box, 0, 1))
+                    json.BackFull = true;
+
                 GenerateFace(definition, json, boxJson, box, BlockJSON.BackFaces[index], (0, 0, 1),     box.To.Z == 1,      5,  0, 1,   index);
+            }
         }
     }
 
@@ -318,13 +399,8 @@ public class VariantJSON
             }
         }
 
-        var faceData = GetFaceCoords(box.From, box.To, side);
-        var uvData = GetFaceUvs(json, faceData, x, y);
-
-        Vector3 A = (faceData.a.a.X, faceData.a.b.Y, faceData.a.c.Z);
-        Vector3 B = (faceData.b.a.X, faceData.b.b.Y, faceData.b.c.Z);
-        Vector3 C = (faceData.c.a.X, faceData.c.b.Y, faceData.c.c.Z);
-        Vector3 D = (faceData.d.a.X, faceData.d.b.Y, faceData.d.c.Z);
+        var (A, B, C, D) = GetFaceCoords2(box.From, box.To, side);
+        var uvData = GetFaceUvs(json, A, B, C, D, x, y);
 
         Vector2 uvA = uvData[0];
         Vector2 uvB = uvData[1];
@@ -351,27 +427,76 @@ public class VariantJSON
             Side = side
         };
 
-        FaceGeometry faceA = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
-        FaceGeometry faceB = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
-        FaceGeometry faceC = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
-        FaceGeometry faceD = new() { Normal = normal, TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index };
+        FaceGeometry faceA = new()
+        {
+            Normal = normal,
+            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
+            Vertices = A,
+            Uvs = uvA,
+            Side = side
+        };
 
-        faceA.Vertices = A;
-        faceA.Uvs = uvA;
+        FaceGeometry faceB = new()
+        {
+            Normal = normal,
+            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
+            Vertices = B,
+            Uvs = uvB,
+            Side = side
+        };
 
-        faceB.Vertices = B;
-        faceB.Uvs = uvB;
+        FaceGeometry faceC = new()
+        {
+            Normal = normal,
+            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
+            Vertices = C,
+            Uvs = uvC,
+            Side = side
+        };
 
-        faceC.Vertices = C;
-        faceC.Uvs = uvC;
-
-        faceD.Vertices = D;
-        faceD.Uvs = uvD;
+        FaceGeometry faceD = new()
+        {
+            Normal = normal,
+            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
+            Vertices = D,
+            Uvs = uvD,
+            Side = side
+        };
 
         BlockData.FaceGeometries.Add(faceA);
         BlockData.FaceGeometries.Add(faceB);
         BlockData.FaceGeometries.Add(faceC);
         BlockData.FaceGeometries.Add(faceD);
+
+
+
+        // new face system
+        var face = new NewVoxelFace()
+        {
+            A = A,
+            B = B,
+            C = C,
+            D = D,
+
+            UvA = uvA,
+            UvB = uvB,
+            UvC = uvC,
+            UvD = uvD,
+
+            Normal = normal,
+
+            TextureIndex = BlockData.RealTextureIndices[json.Name][textureIndex].index,
+
+            Side = side
+        };
+
+        BlockJSON.PreVoxelFaceDatas.Add(face);
+        BlockJSON.PreGeometryIndices.Add(BlockJSON.GeometryIndex);
+
+
+        //Console.WriteLine(definition.Name + " " + side + " " + A + " " + B + " " + C + " " + D);
+
+
 
         BlockJSON.GeometryIndex+=4;
 
@@ -398,19 +523,20 @@ public class VariantJSON
         return ((from, from, from), (from, to, from), (to, to, from), (to, from, from));
     }
 
-    public static Vector2[] GetFaceUvs(
-        BlockJSON json, (
-        (Vector3 a, Vector3 b, Vector3 c) a, 
-        (Vector3 a, Vector3 b, Vector3 c) b, 
-        (Vector3 a, Vector3 b, Vector3 c) c, 
-        (Vector3 a, Vector3 b, Vector3 c) d) 
-        data, int x, int y)
+    public static (Vector3 a, Vector3 b, Vector3 c, Vector3 d) GetFaceCoords2(Vector3 from, Vector3 to, int side)
     {
-        Vector3 A = (data.a.a.X, data.a.b.Y, data.a.c.Z);
-        Vector3 B = (data.b.a.X, data.b.b.Y, data.b.c.Z);
-        Vector3 C = (data.c.a.X, data.c.b.Y, data.c.c.Z);
-        Vector3 D = (data.d.a.X, data.d.b.Y, data.d.c.Z);
-        
+        if (side == 1) return (     ExtractXYZ(to, from, from),   ExtractXYZ(to, to, from),   ExtractXYZ(to, to, to),     ExtractXYZ(to, from, to));
+        else if (side == 2) return (ExtractXYZ(from, to, from),   ExtractXYZ(from, to, to),   ExtractXYZ(to, to, to),     ExtractXYZ(to, to, from));
+        else if (side == 3) return (ExtractXYZ(from, from, to),   ExtractXYZ(from, to, to),   ExtractXYZ(from, to, from), ExtractXYZ(from, from, from));
+        else if (side == 4) return (ExtractXYZ(to, from, from),   ExtractXYZ(to, from, to),   ExtractXYZ(from, from, to), ExtractXYZ(from, from, from));
+        else if (side == 5) return (ExtractXYZ(to, from, to),     ExtractXYZ(to, to, to),     ExtractXYZ(from, to, to),   ExtractXYZ(from, from, to));
+        return (                    ExtractXYZ(from, from, from), ExtractXYZ(from, to, from), ExtractXYZ(to, to, from),   ExtractXYZ(to, from, from));
+    }
+
+    private static Vector3 ExtractXYZ(Vector3 x, Vector3 y, Vector3 z) => (x.X, y.Y, z.Z);
+
+    public static Vector2[] GetFaceUvs(BlockJSON json, Vector3 a, Vector3 b, Vector3 c, Vector3 d, int x, int y)
+    {
         Vector2 uvA = (0, 0);
         Vector2 uvB = (0, 1);
         Vector2 uvC = (1, 1);
@@ -418,10 +544,10 @@ public class VariantJSON
 
         if (json.DefaultFace.Uv == "auto")
         {
-            uvA = (A[x], A[y]);
-            uvB = (B[x], B[y]);
-            uvC = (C[x], C[y]);
-            uvD = (D[x], D[y]);
+            uvA = (a[x], a[y]);
+            uvB = (b[x], b[y]);
+            uvC = (c[x], c[y]);
+            uvD = (d[x], d[y]);
         }
         
         return [uvA, uvB, uvC, uvD];
@@ -540,7 +666,7 @@ public class BoxJSON
 
     public Faces GetFaces()
     {
-        Faces faces = new(DisabledFaces);
+        Faces faces = new([.. DisabledFaces]);
         return faces;
     }
 }

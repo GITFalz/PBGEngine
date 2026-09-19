@@ -5,8 +5,8 @@ using PBG.Assets.Scripts.NoiseNodes;
 using PBG.Data;
 using PBG.UI;
 using PBG.UI.Creator;
-using PBG.Voxel;
 using static PBG.UI.Styles;
+using PBG.NewVoxel;
 
 
 public abstract class NodeValue

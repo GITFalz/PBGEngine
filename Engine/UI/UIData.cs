@@ -55,8 +55,8 @@ namespace PBG.UI
             UiShader = new Shader(uiShaderInfo);
             UiShader.Compile();
 
-            UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest});
-            IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest});
+            UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest, UseMipMaps = false });
+            IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest, UseMipMaps = false });
             ItemTexture = ItemDataManager.Image;
 
             ShaderInfo textShaderInfo = new() 
@@ -77,7 +77,7 @@ namespace PBG.UI
             TextShader = new Shader(textShaderInfo);
             TextShader.Compile();
 
-            TextTexture = new TextureArray(new("TextAtlas.png", 14, 18) { Filter = Filter.Linear, SamplerMode = SamplerAddressMode.ClampToEdge }); 
+            TextTexture = new TextureArray(new("TextAtlas.png", 14, 18) { Filter = Filter.Linear, SamplerMode = SamplerAddressMode.ClampToEdge, UseMipMaps = false }); 
 
             modelLoc = UiShader.GetLocation("ubo.model");
             projectionLoc = UiShader.GetLocation("ubo.projection");

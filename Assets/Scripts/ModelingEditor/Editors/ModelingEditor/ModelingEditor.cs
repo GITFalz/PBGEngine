@@ -274,7 +274,7 @@ public class ModelingEditor : BaseEditor
         }
 
         Vector2 mouseDelta = Input.GetMouseDelta() * 0.001f * scale;
-        Vector3 move = camera.right * mouseDelta.X + camera.up * -mouseDelta.Y;
+        Vector3 move = camera.Right * mouseDelta.X + camera.Up * -mouseDelta.Y;
 
         move *= ModelSettings.Axis;
         if (move.Length == 0) return Vector3.Zero;

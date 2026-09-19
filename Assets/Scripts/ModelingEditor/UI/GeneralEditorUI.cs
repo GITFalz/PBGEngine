@@ -777,14 +777,12 @@ public class GeneralEditorUI : UIScript
     private static void Toggle(UIButton button, ref bool value)
     {
         value = !value;
-        button.Color = value ? (0.6f, 0.6f, 0.6f, 1) : (0.2f, 0.2f, 0.2f, 1);
-        button.UpdateColor();
+        button.UpdateColor(value ? (0.6f, 0.6f, 0.6f, 1) : (0.2f, 0.2f, 0.2f, 1));
     }
     
     private static void Toggle(UIButton button, string axis, Func<string, bool> action)
     {
-        button.Color = action(axis) ? (0.6f, 0.6f, 0.6f, 1) : (0.2f, 0.2f, 0.2f, 1);
-        button.UpdateColor();
+        button.UpdateColor(action(axis) ? (0.6f, 0.6f, 0.6f, 1) : (0.2f, 0.2f, 0.2f, 1));
     }
 
     private static void AlphaHold(UICol col)

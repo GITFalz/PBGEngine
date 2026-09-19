@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
 using PBG.Assets.Scripts.NoiseNodes;
 using PBG.MathLibrary;
-using PBG.Voxel;
+using PBG.NewVoxel;
+
 
 namespace PBG.Assets.Scripts.NoiseNodes.Nodes
 {

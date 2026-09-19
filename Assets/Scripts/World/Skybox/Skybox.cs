@@ -34,8 +34,8 @@ public class Skybox : ScriptingNode
         {
             ShaderInfo info = new()
             {
-                VertexShaderPath = Game.ShaderPath / "skybox_vulkan/skybox.vert", 
-                FragmentShaderPath = Game.ShaderPath / "skybox_vulkan/skybox.frag"
+                VertexShaderFile = "skybox_vulkan/skybox.vert", 
+                FragmentShaderFile = "skybox_vulkan/skybox.frag"
             };
             info.DepthStencil.DepthWriteEnable = false;
             info.DepthStencil.DepthCompareOp = Silk.NET.Vulkan.CompareOp.LessOrEqual;

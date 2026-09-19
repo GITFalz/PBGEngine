@@ -243,7 +243,7 @@ public class RootBone : Bone
         Vector2 mouseDelta = Input.GetMouseDelta();
     
         Vector3 worldUp = Vector3.UnitY;  // World up axis
-        Vector3 cameraRight = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.right);
+        Vector3 cameraRight = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Right);
 
         Rotation = Quaternion.FromAxisAngle(worldUp, Mathf.DegreesToRadians(mouseDelta.X * 0.1f)) * Rotation;
         Rotation = Quaternion.FromAxisAngle(cameraRight, Mathf.DegreesToRadians(mouseDelta.Y * 0.1f)) * Rotation;
@@ -258,8 +258,8 @@ public class RootBone : Bone
     {
         Vector2 mouseDelta = Input.GetMouseDelta();
 
-        Vector3 axisY = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.up);
-        Vector3 axisX = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.right);
+        Vector3 axisY = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Up);
+        Vector3 axisX = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Right);
 
         Position += axisY * -mouseDelta.Y * 0.01f;
         Position += axisX * mouseDelta.X * 0.01f;
@@ -334,7 +334,7 @@ public class ChildBone : Bone
         Vector2 mouseDelta = Input.GetMouseDelta();
 
         Vector3 worldUp = Vector3.UnitY;  // World up axis
-        Vector3 cameraRight = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.right);
+        Vector3 cameraRight = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Right);
 
         Quaternion horizontalRotation = Quaternion.FromAxisAngle(worldUp, Mathf.DegreesToRadians(mouseDelta.X * GameTime.DeltaTime * 50f));
         Quaternion verticalRotation = Quaternion.FromAxisAngle(cameraRight, Mathf.DegreesToRadians(mouseDelta.Y * GameTime.DeltaTime * 50f));
@@ -362,8 +362,8 @@ public class ChildBone : Bone
     {
         Vector2 mouseDelta = Input.GetMouseDelta();
 
-        Vector3 axisY = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.up);
-        Vector3 axisX = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.right);
+        Vector3 axisY = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Up);
+        Vector3 axisX = Vector3.Normalize(GeneralModelingEditor.Instance.Scene.DefaultCamera.Right);
 
         Vector3 worldMovement = axisY * -mouseDelta.Y * 0.01f +
                                 axisX * mouseDelta.X * 0.01f;

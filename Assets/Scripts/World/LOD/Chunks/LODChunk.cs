@@ -3,7 +3,8 @@ using PBG.MathLibrary;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Threads;
-using PBG.Voxel;
+using PBG.NewVoxel;
+
 
 public class LODChunk : LODBaseChunk
 {
@@ -127,7 +128,7 @@ public class LODChunk : LODBaseChunk
     /// </summary>
     /// <param name="blockPos"></param>
     /// <returns></returns>
-    public bool IsAir(Vector3i blockPos) => Blocks[ChunkBlocks.GetIndex(blockPos.X, blockPos.Y, blockPos.Z)].IsAir();
+    public bool IsAir(Vector3i blockPos) => Blocks[VoxelChunk.GetIndex(blockPos.X, blockPos.Y, blockPos.Z)].IsAir();
 
     public void BreakProcess() 
     {

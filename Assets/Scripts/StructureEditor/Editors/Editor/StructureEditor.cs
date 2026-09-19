@@ -6,11 +6,11 @@ using PBG.Graphics;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.UI.Creator;
-using PBG.Voxel;
 using static PBG.UI.Styles;
 
 using Silk.NET.Vulkan;
 using PBG.Graphics.Vulkan;
+using PBG.NewVoxel;
 
 public partial class StructureEditor : BaseStructureEditor
 {
@@ -78,8 +78,8 @@ public partial class StructureEditor : BaseStructureEditor
         if (!_started)
         {
             PlacementHelperShader = new Shader(new() { 
-                VertexShaderPath = Game.ShaderPath / "world_vulkan/placementHelper.vert",
-                FragmentShaderPath = Game.ShaderPath / "world_vulkan/placementHelper.frag" 
+                VertexShaderFile = "world_vulkan/placementHelper.vert",
+                FragmentShaderFile = "world_vulkan/placementHelper.frag" 
             });
             PlacementHelperShader.Compile();
             PlacementDescriptor = PlacementHelperShader.GetDescriptorSet();
@@ -121,8 +121,8 @@ public partial class StructureEditor : BaseStructureEditor
 
         foreach (var chunk in StructureTreeGenerationProcess.OldAffectedChunks)
         {
-            chunk.Blocks?.Clear();
-            Renderer.RerenderingQueue.AddLast(chunk);
+            chunk.ClearBlocks();
+            //Renderer.RerenderingQueue.AddLast(chunk);
         }
         StructureTreeGenerationProcess.OldAffectedChunks = [];
         CloseScript();
@@ -160,7 +160,7 @@ public partial class StructureEditor : BaseStructureEditor
         Editor.BlockBoundingBox.Transform.Disabled = !RenderEmptyBlock;
         if (_oldState != CursorMode.Normal && Game.IsCursorState(CursorMode.Disabled))
         {
-            bool raycast = VoxelData.Raycast(Renderer, Camera.Position, Camera.front, 100, out Hit hit);
+            bool raycast = VoxelData.Raycast(Renderer, Camera.Position, Camera.Front, 100, out Hit hit);
             if (raycast)
             {
                 Vector3i position = hit.BlockPosition + hit.Normal;
@@ -187,7 +187,7 @@ public partial class StructureEditor : BaseStructureEditor
             }
             else
             {
-                Vector3i position = Mathf.FloorToInt(Camera.Position + Camera.front * 10f);
+                Vector3i position = Mathf.FloorToInt(Camera.Position + Camera.Front * 10f);
                 if (Input.IsMousePressed(MouseButton.Right) && CurrentBlock != null)
                 {
                     var block = CurrentBlock.Block;
@@ -216,7 +216,7 @@ public partial class StructureEditor : BaseStructureEditor
 
             if (Input.IsKeyPressed(Key.I))
             {
-                var rotation = hit.Block.Rotation();
+                var rotation = Block.Rotation();
                 var definition = BlockData.BlockDefinitions[hit.Block.ID];
                 //BlockPlacement.Key((int)rotation, out var side, out var region, out var facing);
                 //Console.WriteLine($"[Info] : Looking at block '{definition.Name}' that is placed on side {side}, region {region} and facing {(BlockFacing)facing}");
@@ -428,7 +428,7 @@ public partial class StructureEditor : BaseStructureEditor
 
         foreach (var (_, chunk) in AffectedChunks)
         {
-            chunk.Blocks?.Clear();
+            chunk.ClearBlocks();
         }
 
         var size = SelectedBoundingBox.Size;
@@ -465,7 +465,7 @@ public partial class StructureEditor : BaseStructureEditor
 
         foreach (var (_, chunk) in AffectedChunks)
         {
-            Renderer.RerenderingQueue.AddLast(chunk);
+            //Renderer.RerenderingQueue.AddLast(chunk);
         }
 
         AffectedChunks = affectChunks;
@@ -521,7 +521,7 @@ public partial class StructureEditor : BaseStructureEditor
 
         foreach (var (_, chunk) in AffectedChunks)
         {
-            chunk.Blocks?.Clear();
+            chunk.ClearBlocks();
         }
 
         int maxChain = 20;
@@ -590,7 +590,7 @@ public partial class StructureEditor : BaseStructureEditor
                 var definition = BlockData.BlockDefinitions[block.ID];
                 if (definition.CanRotate)
                 {
-                    var rotation = block.Rotation();
+                    var rotation = Block.Rotation();
                     //var rotationId = definition.Placements?.RotatedKey((int)rotation, placement.Yrotation) ?? (int)rotation;
                     block.SetRotation(0);
                 }
@@ -626,7 +626,7 @@ public partial class StructureEditor : BaseStructureEditor
                         if (AffectedChunks.TryGetValue(chunkPos, out var chunk))
                         {
                             var blockPos = VoxelData.BlockToRelative(worldPos);
-                            chunk.Set(blockPos, new Block(BlockState.Solid, 3));
+                            chunk.Set(blockPos, new Block(BlockState.Solid, 4));
                             affectChunks.TryAdd(chunkPos, chunk);
                         }
                         else if (Renderer.GetChunk(chunkPos, out chunk))
@@ -634,7 +634,7 @@ public partial class StructureEditor : BaseStructureEditor
                             AffectedChunks.TryAdd(chunkPos, chunk);
                             affectChunks.TryAdd(chunkPos, chunk);
                             var blockPos = VoxelData.BlockToRelative(worldPos);
-                            chunk.Set(blockPos, new Block(BlockState.Solid, 3));
+                            chunk.Set(blockPos, new Block(BlockState.Solid, 4));
                         }
                     }
                 }  
@@ -643,7 +643,7 @@ public partial class StructureEditor : BaseStructureEditor
 
         foreach (var (_, chunk) in AffectedChunks)
         {
-            Renderer.RerenderingQueue.AddLast(chunk);
+            //Renderer.RerenderingQueue.AddLast(chunk);
         }
 
         AffectedChunks = affectChunks;

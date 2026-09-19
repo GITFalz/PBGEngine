@@ -1,8 +1,9 @@
 using PBG;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Rendering;
-using PBG.Voxel;
+
 
 [InternalSystemInit(InitPriority.Debug)]
 public static class ChunkDebugger
@@ -18,8 +19,8 @@ public static class ChunkDebugger
     {
         ShaderInfo shaderInfo = new()
         {
-            VertexShaderPath = Game.ShaderPath / "debug" / "chunk.vert",
-            FragmentShaderPath = Game.ShaderPath / "debug" / "chunk.frag",
+            VertexShaderFile = "debug".P() / "chunk.vert",
+            FragmentShaderFile = "debug".P() / "chunk.frag",
         };
 
         shaderInfo.Rasterizer.CullMode = Silk.NET.Vulkan.CullModeFlags.FrontBit;

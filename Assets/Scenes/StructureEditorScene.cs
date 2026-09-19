@@ -1,9 +1,9 @@
 using PBG;
 using PBG.Core;
 using PBG.Graphics;
+using PBG.NewVoxel;
 using PBG.Rendering;
 using PBG.UI;
-using PBG.Voxel;
 
 public class StructureEditorScene : Scene
 {
@@ -73,14 +73,16 @@ public class StructureEditorScene : Scene
         var bitMaskDebugger = new BitMaskDebugger();
         var bitMaskController = new UIController();
 
+        /*
         var voxelSettings = new VoxelRendererSettings()
         {
             GenerationType = VoxelRendererGenerationType.Cube,
             EnableTerrainGeneration = false,
             Viewport = (240, 240, 0, 60)
         };
+        */
 
-        var voxelRenderer = new VoxelRenderer(voxelSettings)
+        var voxelRenderer = new VoxelRenderer()
         {
             RealtimeShadows = false,
             NeedsNeighborsToRender = false,

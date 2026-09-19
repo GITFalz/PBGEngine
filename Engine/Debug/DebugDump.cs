@@ -7,12 +7,18 @@ public static class DebugDump
 {
     public static void ToFile<T>(IEnumerable<T> data, string fileName = "debug_dump.txt")
     {
-        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), fileName);
+        string path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            fileName);
+
         var sb = new StringBuilder();
 
         int i = 0;
         foreach (var item in data)
-            sb.AppendLine($"[{i++}] {Dump(item)}");
+        {
+            //sb.Append($"[{i++}] ");
+            DumpRecursive(item, sb, 0);
+        }
 
         File.WriteAllText(path, sb.ToString());
         Console.WriteLine($"[DebugDump] Wrote {i} entries to {path}");
@@ -38,5 +44,42 @@ public static class DebugDump
         }
         sb.Append('}');
         return sb.ToString();
+    }
+
+
+    private static void DumpRecursive(object? value, StringBuilder sb, int depth)
+    {
+        if (value is null)
+        {
+            sb.AppendLine("null");
+            return;
+        }
+
+        // Don't recurse into strings
+        if (value is string)
+        {
+            sb.AppendLine(value.ToString());
+            return;
+        }
+
+        // Handle any enumerable (arrays, List<T>, etc.)
+        if (value is System.Collections.IEnumerable enumerable)
+        {
+            sb.AppendLine("[");
+
+            int i = 0;
+            foreach (var item in enumerable)
+            {
+                sb.Append(new string(' ', (depth + 1) * 4));
+
+                DumpRecursive(item, sb, depth + 1);
+            }
+
+            sb.Append(new string(' ', depth * 4));
+            sb.AppendLine("]");
+            return;
+        }
+
+        sb.AppendLine(Dump(value));
     }
 }

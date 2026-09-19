@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using PBG.Assets.Scripts.NoiseNodes;
+using PBG.NewVoxel;
 using PBG.Threads;
-using PBG.Voxel;
+
 
 public class LODWorldGenerationProcess : ThreadProcess
 {

@@ -580,7 +580,7 @@ public class RiggingEditor : BaseEditor
 
         foreach (var bone in SelectedBones)
         {
-            bone.Rotate(Camera.front, mouseDelta.X * GameTime.DeltaTime * 50f);
+            bone.Rotate(Camera.Front, mouseDelta.X * GameTime.DeltaTime * 50f);
         }
 
         Model.Rig.RootBone.UpdateGlobalTransformation();
@@ -713,7 +713,7 @@ public class RiggingEditor : BaseEditor
         Camera camera = Camera;
 
         Vector2 mouseDelta = Input.GetMouseDelta() * (GameTime.DeltaTime * 10);
-        Vector3 move = camera.right * mouseDelta.X + camera.up * -mouseDelta.Y;
+        Vector3 move = camera.Right * mouseDelta.X + camera.Up * -mouseDelta.Y;
 
         return move;
     }

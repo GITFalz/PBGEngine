@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Rendering;
 using Silk.NET.Vulkan;
 
@@ -12,8 +13,8 @@ namespace PBG.Voxel;
 public class ChunkDataPool
 {
     public List<GPUChunkDataPool> DataPool = [];
-    public const uint CHUNK_COUNT_PER_POOL = 8196;
-    public const uint SLOT_SIZE = 8196; // in vertex count (Vector4i * N)
+    public const uint CHUNK_COUNT_PER_POOL = 4096;
+    public const uint SLOT_SIZE = 1024;
 
     public readonly IVoxelRenderer Renderer;
     public bool Updated = false;
@@ -47,10 +48,10 @@ public class ChunkDataPool
             DataPool[i].Reset();
     }
 
-    public void FrustumPass(Camera camera, int passIndex, int chunkCount)
+    public void FrustumPass(Camera camera, int passIndex)
     {
         for (int i = 0; i < DataPool.Count; i++)
-            DataPool[i].FrustumPass(camera, passIndex, chunkCount);
+            DataPool[i].FrustumPass(camera, passIndex);
     }
 
     public void UpdateDrawCommands(int passIndex = 0)
@@ -390,7 +391,7 @@ public class GPUChunkDataPool : IDisposable
         MaxSlotsLocation = FrustumCullingCompute.GetLocation("ubo.uMaxSlots");
     }
 
-    public unsafe void FrustumPass(Camera camera, int passIndex, int chunkCount)
+    public unsafe void FrustumPass(Camera camera, int passIndex)
     {
         var descriptor = _cullingDescriptors[GFX.CurrentFrame][passIndex];
 

@@ -20,6 +20,8 @@ namespace PBG.Rendering
         public float SPEED { get; private set; } = 75f;
         public int SCREEN_WIDTH { get; set; }
         public int SCREEN_HEIGHT { get; set; }
+        public float SCREEN_NEAR { get; set; } = 0.1f;
+        public float SCREEN_FAR { get; set; } = 10000f;
         public float VERTICAL_SENSITIVITY { get; private set; } = 20f;
         public float HORIZONTAL_SENSITIVITY { get; private set; } = 20f;
         public float SCROLL_SENSITIVITY { get; private set; } = 0.4f;
@@ -45,9 +47,9 @@ namespace PBG.Rendering
 
         public string Cardinal { get => GetCardinal(); }
 
-        public Vector3 up = Vector3.UnitY;
-        public Vector3 front = -Vector3.UnitZ;
-        public Vector3 right = Vector3.UnitX;
+        public Vector3 Up = Vector3.UnitY;
+        public Vector3 Front = -Vector3.UnitZ;
+        public Vector3 Right = Vector3.UnitX;
 
         public Vector2 lastPos;
 
@@ -60,6 +62,16 @@ namespace PBG.Rendering
         private Vector2 _currentMouseDelta = Vector2.Zero;
 
         public CameraMode _cameraMode = CameraMode.Fixed;
+        public CameraProjection CameraProjection
+        {
+            get => _cameraProjection;
+            set
+            {
+                _cameraProjection = value;
+                UpdateProjectionMatrix();
+            }
+        }
+        private CameraProjection _cameraProjection = CameraProjection.Perspective;
 
         private Dictionary<CameraMode, Action> _cameraModes;
         private Action _updateAction = () => { };
@@ -81,6 +93,30 @@ namespace PBG.Rendering
         {
             SCREEN_WIDTH = width;
             SCREEN_HEIGHT = height;
+            Position = position;
+
+            _cameraModes = new Dictionary<CameraMode, Action>
+            {
+                {CameraMode.Free, FreeCamera},
+                {CameraMode.Fixed, FixedCamera},
+                {CameraMode.Follow, FollowCamera},
+                {CameraMode.Centered, CenteredCamera},
+                {CameraMode.Orbit, OrbitCamera}
+            };
+
+            FirstMove = FirstMove1;
+
+            _updateAction = _cameraModes[_cameraMode];
+
+            FrustumSSBO = new(6);
+        }
+
+        public Camera(int width, int height, int near, int far, Vector3 position)
+        {
+            SCREEN_WIDTH = width;
+            SCREEN_HEIGHT = height;
+            SCREEN_NEAR = near;
+            SCREEN_FAR = far;
             Position = position;
 
             _cameraModes = new Dictionary<CameraMode, Action>
@@ -138,24 +174,40 @@ namespace PBG.Rendering
         {
             SCREEN_WIDTH = (Game.Width - (_left + _right)).Max(1);
             SCREEN_HEIGHT = (Game.Height - (_top + _bottom)).Max(1);
-            GetProjectionMatrix();
+            UpdateProjectionMatrix();
         }
 
         public Matrix4 GetViewMatrix()
         {
-            ViewMatrix = Matrix4.CreateLookAt(Position, Position + front, up);
+            ViewMatrix = Matrix4.CreateLookAt(Position, Position + Front, Up);
             return ViewMatrix;
         }
 
-        public Matrix4 GetProjectionMatrix()
+        public Matrix4 UpdateProjectionMatrix()
         {
-            ProjectionMatrix = Matrix4.CreatePerspective(
-                Mathf.DegToRad(FOV),
-                (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT,
-                0.1f,
-                10000f
-            );
+            ProjectionMatrix = _cameraProjection switch
+            {
+                CameraProjection.Perspective => GetPerspectiveProjectionMatrix(),
+                CameraProjection.Orthographic => GetOrthograhpicProjectionMatrix(),
+                CameraProjection.OrthographicOffCenter => GetOrthograhpicOffCenterProjectionMatrix(),
+                _ => GetPerspectiveProjectionMatrix(),
+            };
             return ProjectionMatrix;
+        }
+
+        public Matrix4 GetPerspectiveProjectionMatrix()
+        {
+            return Matrix4.CreatePerspective(Mathf.DegToRad(FOV), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, SCREEN_NEAR, SCREEN_FAR);
+        }
+
+        public Matrix4 GetOrthograhpicProjectionMatrix()
+        {
+            return Matrix4.CreateOrthographic(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_NEAR, SCREEN_FAR);
+        }
+
+        public Matrix4 GetOrthograhpicOffCenterProjectionMatrix()
+        {
+            return Matrix4.CreateOrthographicOffCenter(-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, -SCREEN_HEIGHT / 2, SCREEN_NEAR, SCREEN_FAR);
         }
         
         public void CalculateFrustumPlanes()
@@ -206,7 +258,6 @@ namespace PBG.Rendering
                 viewProjectionMatrixNumerics.M44 - viewProjectionMatrixNumerics.M43
             );
 
-            // Normalize the planes
             for (int i = 0; i < 6; i++)
             {
                 var plane = frustumPlanes[i];
@@ -217,11 +268,6 @@ namespace PBG.Rendering
 
                 frustumPlanes[i] = plane;
             }
-
-            //FrustumSSBO.Update(_gpuPlanes);
-
-            //GL.BindBuffer(BufferTarget.UniformBuffer, FrustumUBO);
-            //GL.NamedBufferSubData(FrustumUBO, 0, 96, _gpuPlanes);
         }
 
         public void BindPlanes(int bindingPoint)
@@ -269,13 +315,19 @@ namespace PBG.Rendering
 
         public void UpdateVectors()
         {
-            front.X = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Cos(Mathf.DegToRad(Yaw));
-            front.Y = MathF.Sin(Mathf.DegToRad(Pitch));
-            front.Z = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Sin(Mathf.DegToRad(Yaw));
+            Front.X = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Cos(Mathf.DegToRad(Yaw));
+            Front.Y = MathF.Sin(Mathf.DegToRad(Pitch));
+            Front.Z = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Sin(Mathf.DegToRad(Yaw));
 
-            front = Vector3.Normalize(front);
-            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            up = Vector3.Normalize(Vector3.Cross(right, front));
+            Front = Vector3.Normalize(Front);
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
+        }
+
+        public void UpdateRightUpVectors()
+        {
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
         }
 
         public Vector3 Yto0(Vector3 v)
@@ -286,19 +338,14 @@ namespace PBG.Rendering
 
         public Vector3 FrontYto0()
         {
-            Vector3 v = front;
+            Vector3 v = Front;
             v.Y = 0;
             return Vector3.Normalize(v);
         }
 
-        public Vector3 Front()
-        {
-            return front;
-        }
-
         public Vector3 RightYto0()
         {
-            Vector3 v = right;
+            Vector3 v = Right;
             v.Y = 0;
             return Vector3.Normalize(v);
         }
@@ -344,8 +391,8 @@ namespace PBG.Rendering
 
             if (input != Vector2.Zero)
             {
-                Position += Yto0(front) * input.Y * speed;
-                Position -= Yto0(right) * input.X * speed;
+                Position += Yto0(Front) * input.Y * speed;
+                Position -= Yto0(Right) * input.X * speed;
             }
 
             if (Input.IsKeyDown(Key.Space))
@@ -412,9 +459,9 @@ namespace PBG.Rendering
             Position.Y = Center.Y - Distance * Mathf.Sin(pitchRad);
             Position.Z = Center.Z - Distance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad);
 
-            front = Vector3.Normalize(Center - Position);
-            right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            up = Vector3.Normalize(Vector3.Cross(right, front));
+            Front = Vector3.Normalize(Center - Position);
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
         }
 
         public void FirstMove1()
@@ -452,6 +499,13 @@ namespace PBG.Rendering
         Follow,
         Centered,
         Orbit
+    }
+
+    public enum CameraProjection
+    {
+        Perspective,
+        Orthographic,
+        OrthographicOffCenter
     }
 }
 

@@ -6,7 +6,7 @@ using PBG.Graphics;
 using PBG.Hash;
 using PBG.Rendering;
 using PBG.Threads;
-using PBG.Voxel;
+using PBG.NewVoxel;
 
 
 public class StructureMeshRenderer
@@ -220,7 +220,7 @@ public class StructureTreeGenerationProcess : ThreadProcess
     {
         foreach (var chunk in OldAffectedChunks)
         {
-            chunk.Blocks = new(chunk);
+            chunk.ClearBlocks();
         }
         return TreeGenerator.Run(_info, _position, SetBlock);
     }
@@ -255,12 +255,12 @@ public class StructureTreeGenerationProcess : ThreadProcess
         {
             foreach (var (_, chunk) in _chunks)
             {
-                _renderer.RerenderingQueue.AddLast(chunk);
+                //_renderer.RerenderingQueue.AddLast(chunk);
                 OldAffectedChunks.Remove(chunk);
             }
             foreach (var chunk in OldAffectedChunks)
             {
-                _renderer.RerenderingQueue.AddLast(chunk);
+                //_renderer.RerenderingQueue.AddLast(chunk);
             }
             OldAffectedChunks.Clear();
             foreach (var (_, chunk) in _chunks)

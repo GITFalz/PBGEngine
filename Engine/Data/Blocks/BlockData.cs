@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using PBG.Data;
 using PBG.Files;
@@ -8,8 +9,9 @@ using Silk.NET.Vulkan;
 using StbImageResizeSharp;
 using StbImageSharp;
 
-namespace PBG.Voxel
+namespace PBG.NewVoxel
 {
+    [InternalSystemInit(InitPriority.Data)]
     public static class BlockData
     {
         public static string CoreBlockDataPath = FileManager.CreatePath(Game.MainPath, "data", "core", "blocks");
@@ -23,6 +25,16 @@ namespace PBG.Voxel
 
         public static int BLOCK_COUNT = 0;
         public static BlockDefinition[] BlockDefinitions = [];
+
+        // New face system
+        public static VoxelFaceIndex[]  VoxelDataIndices = [];
+        public static NewVoxelFace[]    VoxelFaceDatas = [];
+        public static int[]             VoxelGeometryIndices = [];
+
+
+        public static int[]             VariantStartIndices = [];
+        public static int[]             SolidVoxelGeometryIndices = [];
+
 
         public static BlockPalette Palette = new();
 
@@ -82,7 +94,7 @@ namespace PBG.Voxel
                 }
 
                 if (!Palette.Ids.ContainsKey(blockJson.Name))
-                    Palette.Ids.Add(blockJson.Name, (uint)Palette.Ids.Count);
+                    Palette.Ids.Add(blockJson.Name, (uint)Palette.Ids.Count + 1);
 
                 blockJson.ID = id;
 
@@ -157,21 +169,34 @@ namespace PBG.Voxel
                 fullTextureData.Add(texture);
             }
 
-            BlockTextureArray = new(fullTextureData, new("", maxWidth, maxHeight) { SamplerMode = SamplerAddressMode.ClampToEdge, Filter = Filter.Nearest });
+            BlockTextureArray = new(fullTextureData, new("", maxWidth, maxHeight) { SamplerMode = SamplerAddressMode.Repeat, Filter = Filter.Nearest, UseMipMaps = true });
         }
 
         public static void LoadModels()
         {
-            BlockDefinitions = new BlockDefinition[Palette.Ids.Count];
             BLOCK_COUNT = Palette.Ids.Count;
 
-            uint i = 0;
+            BlockDefinitions            = new BlockDefinition[BLOCK_COUNT + 1];
+            SolidVoxelGeometryIndices   = new int[BLOCK_COUNT + 1];
+            VariantStartIndices         = new int[BLOCK_COUNT + 1];
+
+            BlockDefinitions[0] = new()
+            {
+                Name = "Air",
+                Block = Block.Air
+            };
+
+            BlockJSON.PreVoxelFaceIndices.Add(new());
+
+            uint i = 1;
             foreach (var (name, id) in Palette.Ids)
             {
                 var definition = new BlockDefinition();
+                int variantIndex = BlockJSON.PreVoxelFaceIndices.Count;
+
                 if (BlockJsonDictionary.TryGetValue(name, out var blockJson))
                 {
-                    definition.Type = BlockDefinitionType.Present;
+                    definition.DType = BlockDefinitionType.Present;
                     definition.Name = name;
                     definition.Block = new(BlockState.Solid, blockJson.ID);
 
@@ -179,9 +204,20 @@ namespace PBG.Voxel
                     BlockNames.Add(name, blockJson.ID);
                     _ = new BlockItemData(definition, i);
                 }
-                BlockDefinitions[i] = definition;
+
+                BlockDefinitions[id] = definition;
+                VariantStartIndices[id] = variantIndex;
+
                 i++;
             }
+
+            VoxelDataIndices = [.. BlockJSON.PreVoxelFaceIndices];
+            VoxelFaceDatas = [.. BlockJSON.PreVoxelFaceDatas];
+            VoxelGeometryIndices = [.. BlockJSON.PreGeometryIndices];
+
+            BlockJSON.PreVoxelFaceIndices.Clear();
+            BlockJSON.PreVoxelFaceDatas.Clear();
+            BlockJSON.PreGeometryIndices.Clear();
 
             FaceGeometrySSBO = new([..FaceGeometries]);
             FaceGeometries = [];
@@ -194,24 +230,74 @@ namespace PBG.Voxel
 
         public class BlockRegistry
         {
-            public uint NextId { get; set; } = 0;
+            public uint NextId { get; set; } = 1;
             public Dictionary<string, uint> Ids { get; set; } = [];
         }
 
-        public static bool GetBlock(string name, [NotNullWhen(true)] out uint id)
+        public static bool GetBlockID(string name, [NotNullWhen(true)] out uint id)
         {
             return BlockNames.TryGetValue(name, out id);
         }
 
-        public static bool GetBlock(string name, out Block block)
+        public static bool GetBlockFull(string name, [NotNullWhen(true)] out Block block)
         {
-            block = Block.Air;
-            if (!GetBlock(name, out uint id))
+            if (!BlockNames.TryGetValue(name, out var blockId))
+            {
+                block = Block.Air;
                 return false;
-            
-            block = new Block(BlockState.Solid, id);
+            }
+
+            var definition = BlockDefinitions[blockId];
+
+            block = new(blockId);
+
+            block.SetState((uint)definition.Type);
+
             return true;
         }
+
+        public static bool GetBlockInfo(string name, out BlockInfo info)
+        {
+            info = new();
+            if (!BlockNames.TryGetValue(name, out var blockId))
+            {
+                return false;
+            }
+
+            var definition = BlockDefinitions[blockId];
+
+            info.ID = blockId;
+            info.Type = (uint)definition.Type;
+            info.Occlusion = definition.SideFullOcclusion;
+
+            return true;
+        }
+    }
+
+    public struct BlockInfo
+    {
+        public uint ID;
+        public uint Type;
+        public uint Occlusion;
+    }
+
+    public struct NewVoxelFace
+    {
+        public Vector3 A;
+        public Vector3 B;
+        public Vector3 C;
+        public Vector3 D;
+
+        public Vector2 UvA;
+        public Vector2 UvB;
+        public Vector2 UvC;
+        public Vector2 UvD;
+
+        public Vector3 Normal;
+
+        public int TextureIndex;
+
+        public int Side;
     }
 
     public class NewBlockFaces
@@ -220,17 +306,23 @@ namespace PBG.Voxel
         public ulong[] BitMasks = [];
         public VoxelFace[] InternalFaces = [];
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VoxelFace[] GetFaces(int side) => Faces[side];
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ulong GetBitMask(int side) => BitMasks[side];
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsOccluded(NewBlockFaces faces, int sideA, int sideB) => !IsNotOccluded(faces, sideA, sideB);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsNotOccluded(NewBlockFaces faces, int sideA, int sideB) => (GetBitMask(sideA) & ~faces.GetBitMask(sideB)) != 0;
     }
 
     public abstract class BaseBlockFaces
     {
-        public abstract bool GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB);
-        public abstract void GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, int side);
+        public abstract bool GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB);
+        public abstract void GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, int side);
         public abstract VoxelFace[] GetFaces(int side);
         public abstract ulong GetBitMask(int side);
 
@@ -242,7 +334,7 @@ namespace PBG.Voxel
     {
         public VoxelFace[] Faces = [];
 
-        public override bool GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB)
+        public override bool GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB)
         {
             if (IsNotOccluded(faces, sideA, sideB))
             {
@@ -252,7 +344,7 @@ namespace PBG.Voxel
             return false;
         }
 
-        public override void GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, int side)
+        public override void GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, int side)
         {
             blockGetter.AddFace(Faces[side], position);
         }
@@ -268,7 +360,7 @@ namespace PBG.Voxel
         public ulong[] BitMasks = [];
         public VoxelFace[] InternalFaces = [];
 
-        public override bool GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB)
+        public override bool GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, BaseBlockFaces faces, int sideA, int sideB)
         {
             if (IsNotOccluded(faces, sideA, sideB))
             {
@@ -281,7 +373,7 @@ namespace PBG.Voxel
             return false;
         }
         
-        public override void GenerateFaces(BaseVoxelChunkHandler blockGetter, Vector3 position, int side)
+        public override void GenerateFaces(Voxel.BaseVoxelChunkHandler blockGetter, Vector3 position, int side)
         {
             for (int i = 0; i < Faces[side].Length; i++)
             {
@@ -362,7 +454,7 @@ namespace PBG.Voxel
 public unsafe struct FaceGeometry
 {
     public Vector3 Vertices;
-    private float _p1;
+    public int Side;
     public Vector2 Uvs;
     private float _p2, p3;
     public Vector3 Normal;
@@ -383,6 +475,13 @@ public class BlockPlacement
     {
         return Placements[side, region, dir];
     }
+}
+
+public enum BlockType
+{
+    Air = 0,
+    Solid = 1,
+    Transparent = 2,
 }
 
 public enum BlockDefinitionType

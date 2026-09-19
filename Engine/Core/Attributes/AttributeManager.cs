@@ -47,4 +47,16 @@ public static class AttributeManager
             method?.Invoke(null, null);
         }
     }
+
+    public static IEnumerable<(T, FieldInfo)> GetFields<T>(Type type, BindingFlags flags) where T : Attribute
+    {
+        List<(T, FieldInfo)> fields = [];
+        foreach (var field in type.GetFields(flags))
+        {
+            var attr = field.GetCustomAttribute<T>();
+            if (attr != null)
+                fields.Add((attr, field));
+        }
+        return fields;
+    }
 }

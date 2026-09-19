@@ -23,8 +23,8 @@ public class ConnectionRenderer
         if (!_started)
         {
             ShaderInfo info = new() {
-                VertexShaderPath = Game.ShaderPath / "Noise_vulkan/ConnectorLine.vert",
-                FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/ConnectorLine.frag",
+                VertexShaderFile = "Noise_vulkan/ConnectorLine.vert",
+                FragmentShaderFile = "Noise_vulkan/ConnectorLine.frag",
             };
             
             ConnectorLineShader = new(info);

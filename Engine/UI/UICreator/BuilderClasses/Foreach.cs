@@ -109,7 +109,7 @@ public class Forloop : IUIChild
                 _elements.Add(element);
         }
     }
-
+    
     public Forloop(int start, int count, Func<IUIChild?> action)
     {
         for (int i = start; i < count; i++)

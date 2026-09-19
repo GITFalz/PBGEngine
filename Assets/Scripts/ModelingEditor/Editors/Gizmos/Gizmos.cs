@@ -171,7 +171,7 @@ public abstract class Gizmo(Camera camera, Matrix4 projection)
         return color / (float)count;
     }
 
-    protected Vector3 GetCameraScaleVector() => new Vector3(Mathf.SignNo0(-Camera.front.X), Mathf.SignNo0(-Camera.front.Y), Mathf.SignNo0(-Camera.front.Z));
+    protected Vector3 GetCameraScaleVector() => new Vector3(Mathf.SignNo0(-Camera.Front.X), Mathf.SignNo0(-Camera.Front.Y), Mathf.SignNo0(-Camera.Front.Z));
 }
 
 public class TransformGizmo(Camera camera, Matrix4 projection) : Gizmo(camera, projection)
@@ -350,7 +350,7 @@ public class RotationGizmo(Camera camera, Matrix4 projection) : Gizmo(camera, pr
             _ => Vector3.Zero
         };
 
-        if ((Camera.front[a[axis].X] * Camera.front[a[axis].Y]) < 0)
+        if ((Camera.Front[a[axis].X] * Camera.Front[a[axis].Y]) < 0)
         {
             (end, start) = (start, end);
         }

@@ -3,14 +3,15 @@ using PBG.MathLibrary;
 using PBG.Assets.Scripts.NoiseNodes;
 using PBG.Data;
 using PBG.Threads;
-using PBG.Voxel;
+
 using PBG.Graphics;
 using PBG;
 using Silk.NET.Vulkan;
+using PBG.NewVoxel;
 
-public class WorldGenerator : VoxelRendererGenerator
+public class WorldGenerator
 {
-    public static RollingAverageTimer timer = new();
+    public static RollingAverageLongTimer timer = new();
 
     public static ComputeShader? HeightMapCompute;
     public static Descriptor? _descriptor;
@@ -52,8 +53,9 @@ public class WorldGenerator : VoxelRendererGenerator
         _descriptor.BindTexture(texture, 0);
     }
 
-    public override void GenerateChunk(VoxelRenderer renderer)
+    public void GenerateChunk(VoxelRenderer renderer)
     {
+        /*
         if (CacheManager.GenerationQueue.Count > 0)
         {
             for (int i = 0; i < 5.Min(CacheManager.GenerationQueue.Count); i++)
@@ -84,12 +86,7 @@ public class WorldGenerator : VoxelRendererGenerator
 
                     NoiseNodeManager.RunMain(chunk);
                     
-                    chunk.Status = ChunkStatus.Generated;
-                    if (chunk.Blocks != null && chunk.Blocks.HasBlocks)
-                    {
-                        //Console.WriteLine("test 2: " + chunk.WorldPosition);
-                        //renderer.RenderingQueue.AddLast(chunk);
-                    }
+                    chunk.SetStatus(ChunkStatus.Generated);
 
                     chunk.Renderer.Counter++;
                         
@@ -103,6 +100,7 @@ public class WorldGenerator : VoxelRendererGenerator
 
             Info.AverageChunkGenerationSpeed(timer.GetAverageMs());
         }
+        */
     }
 
     public void Compute(Vector3i worldPosition)
@@ -170,7 +168,7 @@ public class WorldGenerationProcess : ThreadProcess
     {
         _renderer = renderer;
         _chunk = chunk;
-        _chunk.Process = this;
+        //_chunk.Process = this;
     }
 
     private const int SampleCount = 100;
@@ -220,20 +218,24 @@ public class WorldGenerationProcess : ThreadProcess
 
     public override void OnCompleteBase()
     {
+        /*
         AddSample(_ms);
 
         float avg = GetAverageMs();
         Info.AverageChunkGenerationSpeed(avg);
 
-        //Console.WriteLine(Succeded);
+        VoxelRenderer.GeneratedThisSecond++;
 
         _chunk.Process = null;
 
         if (Succeded && _chunk.Blocks != null)
         {
-            _chunk.Status = ChunkStatus.Generated;
+            _chunk.SetStatus(ChunkStatus.Generated);
             if (_chunk.Blocks.HasBlocks)
-                _renderer.RenderingQueue.AddLast(_chunk);
+            {
+                _chunk.TryEnqueueRendering();
+            }
         }
+        */
     }
 }

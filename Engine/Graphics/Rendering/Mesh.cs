@@ -36,8 +36,8 @@ public unsafe class Mesh : ScriptingNode, IDisposable
         {
             _shader = new Shader(new()
             {
-                VertexShaderPath = Path.Combine(Game.ShaderPath, "mesh_vulkan", "mesh.vert"),
-                FragmentShaderPath = Path.Combine(Game.ShaderPath, "mesh_vulkan", "mesh.frag")
+                VertexShaderFile = "mesh_vulkan".P() / "mesh.vert",
+                FragmentShaderFile = "mesh_vulkan".P() / "mesh.frag"
             });
 
             _shader.BindVertexBuffer<MeshVertex>(0);

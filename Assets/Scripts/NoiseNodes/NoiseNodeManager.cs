@@ -4,8 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using PBG.MathLibrary;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Threads;
-using PBG.Voxel;
 
 namespace PBG.Assets.Scripts.NoiseNodes
 {
@@ -425,21 +425,30 @@ namespace PBG.Assets.Scripts.NoiseNodes
         }
     }
 
-    public class GetterValue(ValueType valueType, Expression? setterValue, Expression defaultValue)
+    public class GetterValue
     {
-        public ValueType ValueType = valueType;
+        public ValueType ValueType;
+        public Expression? SetterValue;
+        public Expression DefaultValue;
+
+        public GetterValue(ValueType valueType, Expression? setterValue, Expression defaultValue)
+        {
+            ValueType = valueType;
+            SetterValue = setterValue;
+            DefaultValue = defaultValue;
+        }
 
         public Expression GetExpression()
         {
-            return setterValue ?? defaultValue;
+            return SetterValue ?? DefaultValue;
         }
 
-        public Expression Float() => ExpressionHelper.ConvertTo(valueType, ValueType.Float, GetExpression());
-        public Expression Int() => ExpressionHelper.ConvertTo(valueType, ValueType.Int, GetExpression());
-        public Expression Vector2() => ExpressionHelper.ConvertTo(valueType, ValueType.Vector2, GetExpression());
-        public Expression Vector2i() => ExpressionHelper.ConvertTo(valueType, ValueType.Vector2i, GetExpression());
-        public Expression Vector3() => ExpressionHelper.ConvertTo(valueType, ValueType.Vector3, GetExpression());
-        public Expression Vector3i() => ExpressionHelper.ConvertTo(valueType, ValueType.Vector3i, GetExpression());
+        public Expression Float() => ExpressionHelper.ConvertTo(ValueType, ValueType.Float, GetExpression());
+        public Expression Int() => ExpressionHelper.ConvertTo(ValueType, ValueType.Int, GetExpression());
+        public Expression Vector2() => ExpressionHelper.ConvertTo(ValueType, ValueType.Vector2, GetExpression());
+        public Expression Vector2i() => ExpressionHelper.ConvertTo(ValueType, ValueType.Vector2i, GetExpression());
+        public Expression Vector3() => ExpressionHelper.ConvertTo(ValueType, ValueType.Vector3, GetExpression());
+        public Expression Vector3i() => ExpressionHelper.ConvertTo(ValueType, ValueType.Vector3i, GetExpression());
     }
 
     public class SetterValue(NodeOutputField outputField)

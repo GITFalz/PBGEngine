@@ -23,14 +23,12 @@ public abstract class NodeConnector(UIButton button, NodeBase node)
     public void Select()
     {
         IsSelected = true;
-        Button.Color = new Vector4(Color * 1.5f, 1);
-        Button.UpdateColor();
+        Button.UpdateColor(new Vector4(Color * 1.5f, 1));
     }
 
     public void Deselect()
     {
         IsSelected = false;
-        Button.Color = new Vector4(Color, 1);
-        Button.UpdateColor();
+        Button.UpdateColor(new Vector4(Color, 1));
     }
 }

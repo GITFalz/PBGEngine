@@ -273,10 +273,20 @@ public unsafe sealed partial class VulkanDevice
 
         var requiredExtensions = new HashSet<string>(_deviceExtensions);
 
+        Console.WriteLine("[DEBUG] : Extensions");
         foreach (var extension in availableExtensions) 
         {
-            if (((nint)extension.ExtensionName).ToStr() is string value)
-                requiredExtensions.Remove(value);
+            var name = ((nint)extension.ExtensionName).ToStr();
+            if (name is string value)
+            {
+                if (requiredExtensions.Remove(value))
+                    Console.WriteLine(name + " : available");
+            }
+        }
+
+        foreach (var extension in requiredExtensions)
+        {
+            Console.WriteLine(extension + " : not available");
         }
 
         return requiredExtensions.Count == 0;
@@ -294,9 +304,12 @@ public unsafe sealed partial class VulkanDevice
         fixed (QueueFamilyProperties* pQueueFamilies = queueFamilies)
         Vk.GetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, pQueueFamilies);
 
+        Console.WriteLine("[DEBUG] : Queue families");
+
         uint i = 0;
         foreach (var queueFamily in queueFamilies) 
         {
+            Console.WriteLine(queueFamily.QueueFlags + " " + queueFamily.QueueCount);
             if ((queueFamily.QueueFlags & QueueFlags.GraphicsBit) != 0) 
             {
                 indices.GraphicsFamily = i;
@@ -317,6 +330,18 @@ public unsafe sealed partial class VulkanDevice
             i++;
         }
 
+        foreach (var queueFamily in queueFamilies) 
+        {
+            if ((queueFamily.QueueFlags & QueueFlags.ComputeBit) != 0 && !((queueFamily.QueueFlags & QueueFlags.GraphicsBit) != 0))
+            {
+                Console.WriteLine("Has separate compute");
+                indices.ComputeFamily = i;
+                break;
+            }
+        }
+
+        indices.ComputeFamily ??= indices.GraphicsFamily;
+
         return indices;
     }
 
@@ -328,6 +353,9 @@ public unsafe sealed partial class VulkanDevice
 
         if (!supportedFeatures.MultiDrawIndirect)
             throw new Exception("GPU does not support MultiDrawIndirect!");
+
+        if (!supportedFeatures.FillModeNonSolid)
+            throw new Exception("GPU does not support FillModeNonSolid!");
             
         QueueFamilyIndices indices = FindQueueFamilies(PhysicalDevice);
 
@@ -361,16 +389,32 @@ public unsafe sealed partial class VulkanDevice
             PNext             = &vulkan11Features   // chain 1.1 features after 1.2 features
         };
 
+        var sync2Features = new PhysicalDeviceSynchronization2Features
+        {
+            SType               = StructureType.PhysicalDeviceSynchronization2Features,
+            Synchronization2    = true,
+            PNext               = &vulkan12Features
+        };
+
+        var timelineFeatures = new PhysicalDeviceTimelineSemaphoreFeatures
+        {
+            SType               = StructureType.PhysicalDeviceTimelineSemaphoreFeatures,
+            TimelineSemaphore   = true,
+            PNext               = &sync2Features
+        };
+
         var deviceFeatures2 = new PhysicalDeviceFeatures2
         {
             SType = StructureType.PhysicalDeviceFeatures2,
-            PNext = &vulkan12Features
+            PNext = &timelineFeatures
         };
 
         PhysicalDeviceFeatures deviceFeatures = new()
         {
             SamplerAnisotropy = true,
-            MultiDrawIndirect  = true
+            SampleRateShading = true,
+            MultiDrawIndirect  = true,
+            FillModeNonSolid = true
         };
 
         DeviceCreateInfo createInfo = new()
@@ -395,6 +439,15 @@ public unsafe sealed partial class VulkanDevice
 
             Vk.GetDeviceQueue(Device, indices.GraphicsFamily!.Value, 0, out GraphicsQueue);
             Vk.GetDeviceQueue(Device, indices.PresentFamily!.Value, 0, out PresentQueue);
+
+            if (indices.ComputeFamily != null)
+            {
+                Vk.GetDeviceQueue(Device, indices.ComputeFamily.Value, 0, out ComputeQueue);
+            }
+            else
+            {
+                ComputeQueue = GraphicsQueue;
+            }
         }
         finally
         {

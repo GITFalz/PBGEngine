@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 
 namespace PBG.Voxel
 {
@@ -13,6 +14,7 @@ namespace PBG.Voxel
         public List<uint> UniqueBlockTypes { get; private set; } = [];
         public int NonAirBlocks = 0;
         public bool HasBlocks => UniqueBlockTypes.Count > 0;
+        public bool HasNoBlocks => UniqueBlockTypes.Count == 0;
 
         public ChunkBlocks(VoxelChunk chunk)
         {

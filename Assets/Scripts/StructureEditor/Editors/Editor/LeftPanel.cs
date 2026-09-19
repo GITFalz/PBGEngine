@@ -1,8 +1,9 @@
 using PBG;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.UI;
 using PBG.UI.Creator;
-using PBG.Voxel;
+
 using static PBG.UI.Styles;
 
 public partial class StructureEditor

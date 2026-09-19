@@ -6,9 +6,10 @@ using PBG.Compiler;
 using PBG.Compiler.Lines;
 using PBG.Files;
 using PBG.MathLibrary;
-using PBG.Voxel;
+using PBG.NewVoxel;
 
-public static class StructureLoader
+
+public unsafe static class StructureLoader
 {
     private static string _structurePath => Path.Combine(Game.CustomPath, "structures");
 

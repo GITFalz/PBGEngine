@@ -5,6 +5,7 @@ namespace PBG.Graphics.Vulkan;
 public struct QueueFamilyIndices
 {
     public uint? GraphicsFamily;
+    public uint? ComputeFamily;
     public uint? PresentFamily;
     public readonly bool IsComplete => GraphicsFamily.HasValue && PresentFamily.HasValue;
 }

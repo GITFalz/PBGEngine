@@ -2,10 +2,10 @@ using PBG;
 using PBG.Core;
 using PBG.Data;
 using PBG.MathLibrary;
+using PBG.NewVoxel;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
-using PBG.Voxel;
 
 public class WorldScene : Scene
 {
@@ -30,7 +30,7 @@ public class WorldScene : Scene
         skybox.Day = new Vector3(0.41f, 0.62f, 0.78f);
         skybox.Night = new Vector3(0.05f, 0.07f, 0.24f);
         var voxelRenderer = new VoxelRenderer();
-        voxelRenderer.ChunkGenerator = new WorldGenerator();
+        //voxelRenderer.ChunkGenerator = new WorldGenerator();
         var LODVoxelRenderer = new LODVoxelRenderer();
 
         worldNode.AddComponent(worldManager, skybox, playerUI, voxelRenderer, LODVoxelRenderer);

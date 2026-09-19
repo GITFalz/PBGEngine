@@ -1,4 +1,6 @@
-﻿namespace PBG.Voxel
+﻿using PBG.NewVoxel;
+
+namespace PBG.Voxel
 {
     public struct Block
     {

@@ -3,11 +3,11 @@ using System.Text.RegularExpressions;
 using PBG.MathLibrary;
 using PBG;
 using PBG.Graphics;
-using PBG.Voxel;
 using System.Runtime.InteropServices;
 using PBG.Data;
 
 using PBG.UI;
+using PBG.NewVoxel;
 
 public class GLSLManager
 {
@@ -126,8 +126,8 @@ public class GLSLManager
 
         ShaderInfo info = new()
         {
-            VertexShaderPath = Game.ShaderPath / "Utils_vulkan/Rectangle.vert", 
-            FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/WorldNoise.frag"
+            VertexShaderFile = "Utils_vulkan/Rectangle.vert", 
+            FragmentShaderFile = "Noise_vulkan/WorldNoise.frag"
         };
         info.Rasterizer.CullMode = Silk.NET.Vulkan.CullModeFlags.None;
 

@@ -1,7 +1,8 @@
+using PBG;
 using PBG.Data;
 using PBG.MathLibrary;
 using PBG.Physics;
-using PBG.Voxel;
+
 
 using CameraMode = PBG.Rendering.CameraMode;
 
@@ -62,6 +63,20 @@ public class PlayerGameState : PlayerBaseState
         {
             Camera.Center = eyePosition;
         }
+
+        if (Input.IsKeyPressed(Key.E))
+        {
+            if (Game.GetCursorState() == CursorMode.Disabled)
+            {
+                Game.SetCursorState(CursorMode.Normal);
+                Camera.SetCameraMode(CameraMode.Fixed);
+            }
+            else if (Game.GetCursorState() == CursorMode.Normal)
+            {
+                Game.SetCursorState(CursorMode.Disabled);
+                Camera.SetCameraMode(CameraMode.Follow);
+            }
+        }
         
         if (Input.IsKeyPressed(Key.Q))
         {
@@ -75,27 +90,6 @@ public class PlayerGameState : PlayerBaseState
             if (Player.Model != null) Player.Model.IsShown = Camera.GetCameraMode() == CameraMode.Orbit;
             if (Player.WeaponModel != null) Player.WeaponModel.IsShown = Camera.GetCameraMode() == CameraMode.Orbit;
         }
-
-        /* 
-        -- Block interactions (need to be moved to a separate class later) --
-
-        if (VoxelData.Raycast(World, eyePosition, Camera.front, 4, out Hit hit))
-        {
-            if (!hit.Block.IsAir() && Input.IsMousePressed(MouseButton.Left))
-            {
-                World.SetBlock(hit.BlockPosition, Block.Air);
-            }
-            if (_blockPlaceTimer >= 0.2f && !World.GetBlock(hit.BlockPosition + hit.Normal) && Input.IsMouseDown(MouseButton.Right))
-            {
-                var block = new Block(BlockState.Solid, 0);
-                if (!Player.PhysicsBody.CollidesWidthBlockAt(hit.BlockPosition + hit.Normal, block))
-                {
-                    World.SetBlock(hit.BlockPosition + hit.Normal, block);
-                    _blockPlaceTimer = 0;
-                }
-            }
-        }
-        */
 
         CurrentState.Update();
 
@@ -113,8 +107,6 @@ public class PlayerGameState : PlayerBaseState
         {
             Player.WeaponModel.Rotation = rotation;
         }   
-
-        //_blockPlaceTimer += GameTime.DeltaTime;
     }
 
     public override void FixedUpdate()

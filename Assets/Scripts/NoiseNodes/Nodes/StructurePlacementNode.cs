@@ -2,7 +2,8 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using PBG.MathLibrary;
 using PBG.MathLibrary;
-using PBG.Voxel;
+using PBG.NewVoxel;
+
 
 namespace PBG.Assets.Scripts.NoiseNodes.Nodes;
 

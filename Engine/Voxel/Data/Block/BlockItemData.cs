@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Voxel;
+using PBG.NewVoxel;
 using Silk.NET.Vulkan;
 
 public class BlockItemData : ItemData
@@ -44,9 +44,9 @@ public class BlockItemData : ItemData
         vbo.Dispose();
     }
 
-    private class IconVoxelHandler(List<BlockVertexData> vertices, List<uint> indices) : BaseVoxelChunkHandler((0, 0, 0), [])
+    private unsafe class IconVoxelHandler(List<BlockVertexData> vertices, List<uint> indices) : BaseVoxelChunkHandler((0, 0, 0), VoxelChunk.Empty.Blocks)
     {
-        public override Block GetBlock(Vector3i position) => PBG.Voxel.Block.Air;
+        public override Block GetBlock(Vector3i position) => PBG.NewVoxel.Block.Air;
         public override void AddFace(VoxelFace face, Vector3 position)
         {
             uint o = (uint)vertices.Count;

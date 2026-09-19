@@ -1323,7 +1323,7 @@ public class ModelingEditingMode : ModelingBase
         if (Model.SelectedVertices.Count == 0)
             return;
 
-        Vector3 axis = Camera.front * ModelSettings.Axis;
+        Vector3 axis = Camera.Front * ModelSettings.Axis;
         if (axis.Length == 0) return;
         axis.Normalize();
 

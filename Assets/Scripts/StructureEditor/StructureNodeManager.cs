@@ -93,8 +93,8 @@ public class StructureNodeManager : ScriptingNode
         {
             ShaderInfo gridInfo = new()
             {
-                VertexShaderPath = Game.ShaderPath / "Noise_vulkan/noiseGrid.vert",
-                FragmentShaderPath = Game.ShaderPath / "Noise_vulkan/noiseGrid.frag"
+                VertexShaderFile = "Noise_vulkan/noiseGrid.vert",
+                FragmentShaderFile = "Noise_vulkan/noiseGrid.frag"
             };
             NoiseGridShader = new(gridInfo);
             NoiseGridShader.Compile();
@@ -393,7 +393,7 @@ public class StructureNodeManager : ScriptingNode
             {
                 TreeUpdateAnalyser = false;
                 structureNodeUI.TreeAnalyserLoadingBar.Width = UISize.Percent(TreeAnalyserProgress * 100f);
-                structureNodeUI.TreeAnalyserLoadingBar.Color = new Vector4(LoadingBarColor(TreeAnalyserProgress), 1f);
+                structureNodeUI.TreeAnalyserLoadingBar.SetColor(new Vector4(LoadingBarColor(TreeAnalyserProgress), 1f));
                 structureNodeUI.TreeAnalyserLoadingBar.ApplyChanges(UIChange.Scale | UIChange.Color);
             }
         }

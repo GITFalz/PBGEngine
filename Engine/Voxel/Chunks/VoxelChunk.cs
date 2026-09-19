@@ -27,7 +27,8 @@ namespace PBG.Voxel
         public Vector3i WorldPosition;
         public Matrix4 ModelMatrix;
 
-        public ChunkStatus Status = ChunkStatus.Empty;
+        private object _statusLock = new();
+        private ChunkStatus _status = ChunkStatus.Empty;
 
         public Allocation Allocation;
         public int[] ChunkInfoSlot;
@@ -35,6 +36,8 @@ namespace PBG.Voxel
         public bool HasBlocks = false;
         public bool ForceDisabled = false;
         public bool Visible = false;
+
+        public int failedQueue = 0;
 
         public ChunkBlocks? Blocks = null;
 
@@ -85,12 +88,28 @@ namespace PBG.Voxel
 
         public void BreakProcess() 
         {
-            if (Status != ChunkStatus.Deleted)
+            if (_status != ChunkStatus.Deleted)
             {
                 Process?.Break();
                 Process?.TryRemoveProcess();
             }
         } 
+
+        public void SetStatus(ChunkStatus status)
+        {
+            lock (_statusLock)
+            {
+                _status = status;
+            }
+        }
+
+        public ChunkStatus GetStatus()
+        {
+            lock (_statusLock)
+            {
+                return _status;
+            }
+        }
 
         private bool _isDisposed = false;
 
@@ -99,7 +118,7 @@ namespace PBG.Voxel
             Process?.Break();
             Process?.TryRemoveProcess();
 
-            Status = ChunkStatus.Deleted;
+            _status = ChunkStatus.Deleted;
 
             if (_isDisposed)
             {
@@ -115,42 +134,97 @@ namespace PBG.Voxel
             ForceDisabled = true;
             Blocks = null;
         }
+        
+        public bool IsReadyToMesh()
+        {
+            if (Blocks == null || Blocks.HasNoBlocks || _status < ChunkStatus.Generated)
+                return false;
+
+            return HasAllNeighbourChunks();
+        }
 
         public bool HasAllNeighbourChunks()
         {
             int yStart = RelativePosition.Y <= 0 ? 0 : -1;
             for (int x = -1; x <= 1; x++)
+            for (int y = yStart; y <= 1; y++)
+            for (int z = -1; z <= 1; z++)
             {
-                for (int y = yStart; y <= 1; y++)
-                {
-                    for (int z = -1; z <= 1; z++)
-                    {
-                        if (x == 0 && y == 0 && z == 0)
-                            continue;
+                if (x == 0 && y == 0 && z == 0)
+                    continue;
 
-                        if (!Renderer.GetChunk(RelativePosition + (x, y, z), out var neighborChunk))
-                        {
-                            return false;
-                        }
-
-                        if (neighborChunk.Status < ChunkStatus.Generated)
-                        {
-                            return false;
-                        }
-                    }
-                }
+                if (!Renderer.GetChunk(RelativePosition + (x, y, z), out var neighborChunk) || neighborChunk._status < ChunkStatus.Generated)
+                    return false;
             }
             return true;
+        }
+
+        public void FailedMesh() => Interlocked.Exchange(ref failedQueue, 1);
+
+        public void CheckFailedNeighbours()
+        {
+            int yStart = RelativePosition.Y <= 0 ? 0 : -1;
+            for (int x = -1; x <= 1; x++)
+            for (int y = yStart; y <= 1; y++)
+            for (int z = -1; z <= 1; z++)
+            {
+                if (x == 0 && y == 0 && z == 0)
+                    continue;
+
+                if (!Renderer.GetChunk(RelativePosition + (x, y, z), out var neighborChunk))
+                {
+                    
+                }
+            }
+            //return true;
+        }
+
+
+        public void TryEnqueueRendering()
+        {
+            if (HasAllNeighbourChunks())
+            {
+                EnqueueRendering();
+                _status = ChunkStatus.QueuedToMesh;
+            }
+            else
+            {
+                _status = ChunkStatus.FailedToMesh;
+            }
+
+            int yStart = RelativePosition.Y <= 0 ? 0 : -1;
+            for (int x = -1; x <= 1; x++)
+            for (int y = yStart; y <= 1; y++)
+            for (int z = -1; z <= 1; z++)
+            {
+                if (x == 0 && y == 0 && z == 0)
+                    continue;
+
+                if (Renderer.GetChunk(RelativePosition + (x, y, z), out var neighborChunk) && neighborChunk._status == ChunkStatus.FailedToMesh)
+                {
+                    neighborChunk._status = ChunkStatus.QueuedToMesh;
+                    neighborChunk.EnqueueRendering();
+                }
+            }
+        }
+
+        public void EnqueueRendering()
+        {
+            Renderer.EnqueueRendering(this);
         }
     }
 }
 
 public enum ChunkStatus
 {
+    Canceled = -2,
     Deleted = -1,
     Empty = 0,
     Generated = 1,
-    Rendered = 2,
+    FailedToMesh = 2,
+    QueuedToMesh = 3,
+    QueuedToUpload = 4,
+    Rendered = 5,
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]

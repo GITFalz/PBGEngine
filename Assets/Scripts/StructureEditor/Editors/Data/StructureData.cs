@@ -4,7 +4,8 @@ using PBG.Compiler.Lines;
 using PBG.Hash;
 using PBG.MathLibrary;
 using PBG.UI;
-using PBG.Voxel;
+using PBG.NewVoxel;
+
 
 public class StructureBoundingBox(Vector3i size, Vector3i position)
 {

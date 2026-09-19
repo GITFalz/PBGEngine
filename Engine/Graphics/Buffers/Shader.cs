@@ -1,16 +1,12 @@
 using System.Runtime.InteropServices;
-using PBG.Graphics.Vulkan;
-using Silk.NET.Shaderc;
 using Silk.NET.Vulkan;
-using static ShaderCompiler;
-using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace PBG.Graphics;
 
 public struct ShaderInfo 
 {
-    public PString VertexShaderPath = "";
-    public PString? FragmentShaderPath = null;
+    public PString VertexShaderFile = "";
+    public PString? FragmentShaderFile = null;
     public RenderPass RenderPass = VulkanInstance.Instance.ClearRenderPass.RenderPass;
 
     public PipelineRasterizationStateCreateInfo Rasterizer = new()
@@ -62,11 +58,18 @@ public struct ShaderInfo
     
     public ShaderInfo(string vertShader, string fragShader)
     {
-        VertexShaderPath = vertShader;
-        FragmentShaderPath = fragShader;
+        VertexShaderFile = vertShader;
+        FragmentShaderFile = fragShader;
     }
 
     public ShaderInfo() {}
+
+
+    public readonly string BaseVertexShaderPath() => ShaderHelper.BaseShaderPath(VertexShaderFile);
+    public readonly string FixedVertexShaderPath() => ShaderHelper.FixedShaderPath(VertexShaderFile);
+
+    public readonly string? BaseFragmentShaderPath() => FragmentShaderFile == null ? null : ShaderHelper.BaseShaderPath(FragmentShaderFile);
+    public readonly string? FixedFragmentShaderPath() => FragmentShaderFile == null ? null : ShaderHelper.FixedShaderPath(FragmentShaderFile);
 }
 
 public unsafe class Shader : BufferBase, IShader
@@ -89,10 +92,10 @@ public unsafe class Shader : BufferBase, IShader
     public Shader(ShaderInfo info)
     {
         _shaderInfo = info;
-        Name = Path.GetRelativePath(Game.ShaderPath, info.VertexShaderPath + "-" + info.FragmentShaderPath);
+        Name = Path.GetRelativePath(Game.ShaderPath, info.VertexShaderFile + "-" + info.FragmentShaderFile);
     }
 
-    public string GetPath() => _shaderInfo.VertexShaderPath;
+    public string GetPath() => _shaderInfo.VertexShaderFile;
 
     public void BindVertexBuffer(uint bindingPoint, uint stride)
     {
@@ -168,7 +171,7 @@ public unsafe class Shader : BufferBase, IShader
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] : Failed to reload shader {_shaderInfo.VertexShaderPath}, {ex.Message}");
+            Console.WriteLine($"[ERROR] : Failed to reload shader {_shaderInfo.VertexShaderFile}, {ex.Message}");
             return;
         }
     }

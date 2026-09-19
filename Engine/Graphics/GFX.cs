@@ -7,7 +7,7 @@ namespace PBG.Graphics;
 
 public unsafe class GFX
 {
-    public const int MAX_FRAMES_IN_FLIGHT = 4;
+    public const int MAX_FRAMES_IN_FLIGHT = 2;
     internal static int RenderCallCount = 0;
     public static uint CurrentFrame => _renderer.CurrentFrame;
     
@@ -15,6 +15,7 @@ public unsafe class GFX
     public static Device Device => _vulkanDevice.Device;
 
     public static CommandPool CommandPool => _vulkanCommandBuffers.CommandPool;
+
     public static CommandBuffer CommandBuffer => _vulkanCommandBuffers.CommandBuffers[CurrentFrame];
 
     public static Extent2D SwapChainExtent => _vulkanSwapchain.SwapChainExtent;
@@ -36,6 +37,8 @@ public unsafe class GFX
     private static VulkanFramebuffer _vulkanFramebuffer = null!;
     private static VulkanSyncObject _vulkanSyncObject = null!;
 
+    private static VulkanQuery _vulkanQuery = null!;
+
     private static (int x, int y, uint width, uint height) _viewport;
 
     public GFX(
@@ -49,7 +52,8 @@ public unsafe class GFX
         VulkanCommandBuffers vulkanCommandBuffers,
         VulkanDepthBuffer vulkanDepthBuffer,
         VulkanFramebuffer vulkanFramebuffer,
-        VulkanSyncObject vulkanSyncObject
+        VulkanSyncObject vulkanSyncObject,
+        VulkanQuery vulkanQuery
     ) {
         _renderer = renderer;
 
@@ -64,10 +68,15 @@ public unsafe class GFX
         _vulkanDepthBuffer = vulkanDepthBuffer;
         _vulkanFramebuffer = vulkanFramebuffer;
         _vulkanSyncObject = vulkanSyncObject;
+
+        _vulkanQuery = vulkanQuery;
     }
 
     #region Device
     public static void DeviceWaitIdle() => Vk.DeviceWaitIdle(Device);
+
+    public static void GraphicsQueueWaitIdle() => Vk.QueueWaitIdle(_vulkanDevice.GraphicsQueue);
+    public static void ComputeQueueWaitIdle() => Vk.QueueWaitIdle(_vulkanDevice.ComputeQueue);
     #endregion
        
 
@@ -178,9 +187,21 @@ public unsafe class GFX
         BufferBase.SetDebug(imageMemory);
         #endif
     }
+
+    public static void CreateImageArray(uint width, uint height, uint layerCount, uint mipLevels, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, out Image image, out DeviceMemory imageMemory)
+    {  
+        _vulkanImage.CreateImageArray(width, height, layerCount, mipLevels, format, tiling, usage, properties, out image, out imageMemory);
+        #if DEBUG
+        BufferBase.SetDebug(image);
+        BufferBase.SetDebug(imageMemory);
+        #endif
+    }
     
     public static void TransitionImageArrayLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout, uint layerCount)
     => _vulkanImage.TransitionImageArrayLayout(image, format, oldLayout, newLayout, layerCount);
+
+    public static void TransitionImageArrayLayout(Image image, Format format, ImageLayout oldLayout, ImageLayout newLayout, uint layerCount, uint mipLevels)
+    => _vulkanImage.TransitionImageArrayLayout(image, format, oldLayout, newLayout, layerCount, mipLevels);
     
     public static void CopyBufferToImageArray(Buffer buffer, Image image, uint width, uint height, uint layerCount)
     => _vulkanImage.CopyBufferToImageArray(buffer, image, width, height, layerCount);
@@ -192,6 +213,20 @@ public unsafe class GFX
         BufferBase.SetDebug(imageView);
         #endif
         return imageView;
+    }
+
+    public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags, uint layerCount, uint mipLevels)
+    {  
+        var imageView = _vulkanImage.CreateImageView(image, format, aspectFlags, layerCount, mipLevels);
+        #if DEBUG
+        BufferBase.SetDebug(imageView);
+        #endif
+        return imageView;
+    }
+
+    public static void GenerateMipmaps(Image image, Format format, int texWidth, int texHeight, uint layerCount, uint mipLevels)
+    {
+        _vulkanImage.GenerateMipmaps(image, format, texWidth, texHeight, layerCount, mipLevels);
     }
     
     public static Result CreateFramebuffer(FramebufferCreateInfo* pCreateInfo, AllocationCallbacks* pAllocator, out Silk.NET.Vulkan.Framebuffer pFramebuffer)
@@ -239,6 +274,15 @@ public unsafe class GFX
 
     public static void UpdateBufferRange<T>(T[] array, Buffer buffer, ulong offsetBytes, ulong sizeBytes) where T : unmanaged
     => _vulkanBuffer.UpdateBufferRange(array, buffer, offsetBytes, sizeBytes);
+
+    public static void CopyBuffer(Buffer srcBuffer, Buffer dstBuffer, ulong size, ulong srcOffset = 0, ulong dstOffset = 0)
+    => _vulkanBuffer.CopyBuffer(srcBuffer, dstBuffer, size, srcOffset, dstOffset);
+
+    public static void RecordUpload(Buffer src, Buffer dst, ulong size, ulong srcOffset = 0, ulong dstOffset = 0)
+    => _vulkanBuffer.RecordUpload(CommandBuffer, src, dst, size, srcOffset, dstOffset);
+
+    public static void RecordUpload(Buffer src, Buffer dst, List<(ulong Offset, ulong Size)> ranges)
+    => _vulkanBuffer.RecordUpload(CommandBuffer, src, dst, ranges);
     
 
     #region Clean up
@@ -350,8 +394,13 @@ public unsafe class GFX
 
 
     #region Command buffer
+    public static void EndCommandBuffer(CommandBuffer commandBuffer) => Vk.EndCommandBuffer(commandBuffer);
+
     public static CommandBuffer BeginSingleTimeCommands() => _vulkanDevice.BeginSingleTimeCommands();
     public static void EndSingleTimeCommands(CommandBuffer commandBuffer) => _vulkanDevice.EndSingleTimeCommands(commandBuffer);
+
+    public static CommandBuffer BeginSingleTimeComputeCommands() => _vulkanDevice.BeginSingleTimeComputeCommands();
+    public static void EndSingleTimeComputeCommands(CommandBuffer commandBuffer) => _vulkanDevice.EndSingleTimeComputeCommands(commandBuffer);
     #endregion
 
 
@@ -427,8 +476,68 @@ public unsafe class GFX
         Vk.CmdDrawIndirectCount(commandBuffer, buffer, offset, countBuffer, countOffset, maxDrawCount, stride);
         RenderCallCount++;
     }
+
+
+    public static void ShaderBarrier(Buffer buffer, ulong offsetInBytes, ulong sizeInBytes)
+    {
+        BufferMemoryBarrier barrier = new()
+        {
+            SType               = StructureType.BufferMemoryBarrier,
+            SrcAccessMask       = AccessFlags.TransferWriteBit,
+            DstAccessMask       = AccessFlags.ShaderReadBit,
+            SrcQueueFamilyIndex = Vk.QueueFamilyIgnored,
+            DstQueueFamilyIndex = Vk.QueueFamilyIgnored,
+            Buffer              = buffer,
+            Offset              = offsetInBytes,
+            Size                = sizeInBytes
+        };
+
+        Vk.CmdPipelineBarrier(CommandBuffer, PipelineStageFlags.TransferBit,
+            PipelineStageFlags.VertexShaderBit | PipelineStageFlags.FragmentShaderBit,
+            0, 0, null, 1, &barrier, 0, null);
+    }
     #endregion
 
+    
+    #region Sync objects
+    public static ulong GetTimelineValue() => _vulkanSyncObject.GetTimelineValue();
+    public static ulong AllocateTimelineValue() => _vulkanSyncObject.AllocateTimelineValue();
+    public static void SubmitToComputeQueue(CommandBuffer commandBuffer, ulong signalValue)
+    {
+        var timelineInfo = new TimelineSemaphoreSubmitInfo
+        {
+            SType = StructureType.TimelineSemaphoreSubmitInfo,
+            SignalSemaphoreValueCount = 1,
+            PSignalSemaphoreValues = &signalValue
+        };
+
+        fixed (Silk.NET.Vulkan.Semaphore* pSem = &_vulkanSyncObject.TimelineSemaphore)
+        {
+            var submit = new SubmitInfo
+            {
+                SType = StructureType.SubmitInfo,
+                PNext = &timelineInfo,
+                CommandBufferCount = 1,
+                PCommandBuffers = &commandBuffer,
+                SignalSemaphoreCount = 1,
+                PSignalSemaphores = pSem
+            };
+
+            var result = Vk.QueueSubmit(_vulkanDevice.ComputeQueue, 1, in submit, default);
+            if (result != Result.Success)
+                throw new Exception("[ERROR] : Failed to submit command buffer to compute queue");
+        }
+    }
+    #endregion
+    
+
+
+    #region Query
+    public static void ResetQueryPool(CommandBuffer cmd) => _vulkanQuery.ResetQueryPool(cmd);
+    public static void WriteTimestamp(CommandBuffer cmd, PipelineStageFlags stageFlags, uint query) => _vulkanQuery.WriteTimestamp(cmd, stageFlags, query);
+    public static void ReadTimestamp(out ulong start, out ulong end) => _vulkanQuery.ReadTimestamp(out start, out end);
+    public static double GetTimestampMs() => _vulkanQuery.GetTimestampMs();
+    #endregion
 }
 public enum BufferType
 {
