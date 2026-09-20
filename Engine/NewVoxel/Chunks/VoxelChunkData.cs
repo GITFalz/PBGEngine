@@ -5,7 +5,7 @@ namespace PBG.NewVoxel;
 public class VoxelChunkData(VoxelChunk chunk)
 {
     public VoxelChunk Chunk = chunk;
-    public Vector4i[] VertexData = [];
+    public Vector2u[] VertexData = [];
 
     public void Clear()
     {

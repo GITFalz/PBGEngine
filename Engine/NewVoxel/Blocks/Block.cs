@@ -14,9 +14,9 @@ namespace PBG.NewVoxel
         public const uint INV_VARIANT_MASK = ~VARIANT_MASK; // binary: 1111 1111 1110 0000 0011 1111 1111 1111
 
 
-        public const int  STATE_SHIFT = 28;
-        public const uint STATE_MASK = 0xF0000000;      // binary: 1111 0000 0000 0000 0000 0000 0000 0000
-        public const uint INV_STATE_MASK = ~STATE_MASK; // binary: 0000 1111 1111 1111 1111 1111 1111 1111
+        public const int  OCCLUSION_SHIFT = 26;
+        public const uint OCCLUSION_MASK = 0xFC000000;      // binary: 1111 1100 0000 0000 0000 0000 0000 0000
+        public const uint INV_OCCLUSION_MASK = ~OCCLUSION_MASK; // binary: 0000 0011 1111 1111 1111 1111 1111 1111
 
         public static Block Air = new Block(BlockState.Air, 0);
 
@@ -65,13 +65,15 @@ namespace PBG.NewVoxel
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly uint State() => (blockData & STATE_MASK) >> STATE_SHIFT;
+        public readonly uint Occlusion() => (blockData & OCCLUSION_MASK) >> OCCLUSION_SHIFT;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly uint GetState() => (blockData & STATE_MASK) >> STATE_SHIFT;
+        public readonly uint GetOcclusion() => (blockData & OCCLUSION_MASK) >> OCCLUSION_SHIFT;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetState(uint state) => blockData = (blockData & INV_STATE_MASK) | ((state << STATE_SHIFT) & STATE_MASK);
+        public void SetOcclusion(uint state) => blockData = (blockData & INV_OCCLUSION_MASK) | ((state << OCCLUSION_SHIFT) & OCCLUSION_MASK);
+
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly bool IsAir() => (blockData & ID_MASK) == 0; //State() == 0;
@@ -88,22 +90,17 @@ namespace PBG.NewVoxel
         /// <param name="side"></param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly int GetSolidGeometryIndex(int side)
-        {
-            /*
-            ref var faceIndices = ref BlockData.VoxelFaceIndices[BlockId()];
-            return BlockData.VoxelGeometryIndices[faceIndices.Start + side];
-            */
-
-            return BlockData.SolidVoxelGeometryIndices[Math.Min(ID, BlockData.BLOCK_COUNT)] + side * 4;
-        }
+        public readonly int GetSolidGeometryIndex(int side) => BlockData.SolidVoxelGeometryIndices[Math.Min(ID, BlockData.BLOCK_COUNT)] + side * 4;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetSolidGeometryIndex(int id, int side) => BlockData.SolidVoxelGeometryIndices[Math.Min(id, BlockData.BLOCK_COUNT)] + side * 4;
 
         public static bool operator ==(Block a, Block b) => a.blockData == b.blockData;
         public static bool operator !=(Block a, Block b) => a.blockData != b.blockData;
 
         public override string ToString()
         {
-            return $"Block: {BlockId()}, State: {State()}, Rotation: {Rotation()}";
+            return $"Block: {BlockId()}, Occlusion: {Occlusion()}, Rotation: {Rotation()}";
         }
     }
 

@@ -84,7 +84,7 @@ public unsafe static partial class VoxelChunkGenerator
         return GreedyMesher4Solid.GenerateMesh(chunk, vertexData, worldPosition, workerId, out vertexCount);
     }
 
-    public static bool GenerateGreedyMesh5(VoxelChunk chunk, List<Vector4i> vertexData, Vector3i worldPosition, int workerId, out int vertexCount)
+    public static bool GenerateGreedyMesh5(VoxelChunk chunk, List<Vector2u> vertexData, Vector3i worldPosition, int workerId, out int vertexCount)
     {
         return GreedyMesher5.GenerateMesh(chunk, vertexData, worldPosition, workerId, out vertexCount);
     }

@@ -608,6 +608,8 @@ public unsafe static class ChunkGenerationAvx2
                 V256i row3 = GenerateBlocksOrderedYByte(x, 16, z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
                 V256i row4 = GenerateBlocksOrderedYByte(x, 24, z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
 
+                
+
                 V256b row = VH.ShortenToV256b(row1, row2, row3, row4);
 
                 *(V256b*)(chunk.ByteBlocks + x * 32 + z * 1024) = row;
@@ -626,8 +628,6 @@ public unsafe static class ChunkGenerationAvx2
         V256i isSteep, V256i isSnowCap,
         V256f xGravel, V256f zGravel)
     {
-        int blockIndex = y + x * 32 + z * 1024;
-
         V256f worldY = V256F.New(y + baseY) + laneOffsets;
         V256i worldYI = worldY.ToInt();
 

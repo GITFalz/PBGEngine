@@ -25,7 +25,7 @@ public unsafe struct MeshMapping
         }
     }
     
-    public void AddFace(Vector4i faceData)
+    public void AddFace(Vector2u faceData)
     {
         if (CurrentAllocation.VertexCount == NewChunkDataPool.SLOT_SIZE)
         {
@@ -45,6 +45,8 @@ public unsafe struct MeshMapping
 
         *(CurrentAllocation.Memory + CurrentAllocation.VertexCount) = faceData;
         CurrentAllocation.VertexCount++;
+
+        VoxelRenderer.TotalVertexCount++;
     }
 
     public void Upload()
@@ -55,7 +57,7 @@ public unsafe struct MeshMapping
             return;
         }
 
-        uint stride = Vector4i.ByteSize;
+        uint stride = Vector2u.ByteSize;
 
         var uploadData = new UploadData()
         {

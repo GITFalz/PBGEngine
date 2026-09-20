@@ -34,20 +34,6 @@ public unsafe static class ChunkGeneration
     static int BLOCK_MOSSY_STONE;
     static int BLOCK_STONE_STAIR;
 
-    static uint BLOCK_TEST_OCCLUSION;
-    static uint BLOCK_GRASS_OCCLUSION;
-    static uint BLOCK_DIRT_OCCLUSION;
-    static uint BLOCK_STONE_OCCLUSION;
-    static uint BLOCK_GRAVEL_OCCLUSION;
-    static uint BLOCK_LOG_OCCLUSION;
-    static uint BLOCK_LEAF_OCCLUSION;
-    static uint BLOCK_SNOW_OCCLUSION;
-    static uint BLOCK_LIMESTONE_OCCLUSION;
-    static uint BLOCK_GRANITE_OCCLUSION;
-    static uint BLOCK_ANDESITE_OCCLUSION;
-    static uint BLOCK_MOSSY_STONE_OCCLUSION;
-    static uint BLOCK_STONE_STAIR_OCCLUSION;
-
     const float WorldHeight = 224.0f; // 7 chunks * 32 blocks
     const float SeaLevel    = 64.0f;  // baseline ground height
     const float MaxPeak     = 200.0f; // cap so peaks stay below world top
@@ -58,35 +44,33 @@ public unsafe static class ChunkGeneration
     static readonly V256f MaxPeakV256f     = V256F.New(200.0f); // cap so peaks stay below world top
     static readonly V256f SnowLineV256f    = V256F.New(150.0f); // terrain above this height gets capped in snow
     
-    private static int GetBlock(string name, out uint occlusion)
+    private static int GetBlock(string name)
     {
         if (!BlockData.GetBlockInfo(name, out var info))
         {
-            occlusion = 0;
             return 0;
         }
 
         var block = new Block(info.ID);
-        block.SetState(info.Type);
-        occlusion = info.Occlusion;
+        block.SetOcclusion(0b111111);
         return (int)block.blockData;
     }
 
     public static void Init()
     {
-        BLOCK_TEST = GetBlock("test_block", out BLOCK_TEST_OCCLUSION);
-        BLOCK_GRASS = GetBlock("grass_block", out BLOCK_GRASS_OCCLUSION);
-        BLOCK_DIRT = GetBlock("dirt_block", out BLOCK_DIRT_OCCLUSION);
-        BLOCK_STONE = GetBlock("stone_block", out BLOCK_STONE_OCCLUSION);
-        BLOCK_GRAVEL = GetBlock("gravel_block", out BLOCK_GRAVEL_OCCLUSION);
-        BLOCK_LOG = GetBlock("log_block", out BLOCK_LOG_OCCLUSION);
-        BLOCK_LEAF = GetBlock("leaf_block", out BLOCK_LEAF_OCCLUSION);
-        BLOCK_SNOW = GetBlock("snow_block", out BLOCK_SNOW_OCCLUSION);
-        BLOCK_LIMESTONE = GetBlock("limestone_block", out BLOCK_LIMESTONE_OCCLUSION);
-        BLOCK_GRANITE = GetBlock("granite_block", out BLOCK_GRANITE_OCCLUSION);
-        BLOCK_ANDESITE = GetBlock("andesite_block", out BLOCK_ANDESITE_OCCLUSION);
-        BLOCK_MOSSY_STONE = GetBlock("mossy_stone_block", out BLOCK_MOSSY_STONE_OCCLUSION);
-        BLOCK_STONE_STAIR = GetBlock("stone_stair_block", out BLOCK_STONE_STAIR_OCCLUSION);
+        BLOCK_TEST = GetBlock("test_block");
+        BLOCK_GRASS = GetBlock("grass_block");
+        BLOCK_DIRT = GetBlock("dirt_block");
+        BLOCK_STONE = GetBlock("stone_block");
+        BLOCK_GRAVEL = GetBlock("gravel_block");
+        BLOCK_LOG = GetBlock("log_block");
+        BLOCK_LEAF = GetBlock("leaf_block");
+        BLOCK_SNOW = GetBlock("snow_block");
+        BLOCK_LIMESTONE = GetBlock("limestone_block");
+        BLOCK_GRANITE = GetBlock("granite_block");
+        BLOCK_ANDESITE = GetBlock("andesite_block");
+        BLOCK_MOSSY_STONE = GetBlock("mossy_stone_block");
+        BLOCK_STONE_STAIR = GetBlock("stone_stair_block");
 
         int threadCount = VoxelRenderer.GenerationThreads;
 

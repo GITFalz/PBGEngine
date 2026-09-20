@@ -11,8 +11,8 @@ using VH = VoxelHelper;
 
 public unsafe static class GreedyMesher6
 {
-    public readonly static V256u StateMaskV256 = V256U.New(Block.STATE_MASK);
-    public readonly static V256u SolidMaskV256 = V256U.New(1 << Block.STATE_SHIFT);
+    public readonly static V256u StateMaskV256 = V256U.New(0xFu << 28);
+    public readonly static V256u SolidMaskV256 = V256U.New(1 << 28);
 
     public static void GetVector256BitMap(VoxelChunk chunk, Block* blocks, ref NeighbourChunks neighbours, int workerId)
     {
@@ -622,7 +622,7 @@ public unsafe static class GreedyMesher6
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(0);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
+                    //mapping\.AddFace(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
                 }
             }
 
@@ -694,7 +694,7 @@ public unsafe static class GreedyMesher6
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(5);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
+                    //mapping\.AddFace(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
                 }
             }
         }
@@ -772,7 +772,7 @@ public unsafe static class GreedyMesher6
                 int packedAo = VH.GetPackedAO(ao);
 
                 var geometryIndex = block.GetSolidGeometryIndex(1);
-                mapping.AddFace(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
+                //mapping\.AddFace(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
             }
         }
     }
@@ -847,7 +847,7 @@ public unsafe static class GreedyMesher6
                 int packedAo = VH.GetPackedAO(ao);
 
                 var geometryIndex = block.GetSolidGeometryIndex(3);
-                mapping.AddFace(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
+                //mapping\.AddFace(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
             }
         }
     }
@@ -924,7 +924,7 @@ public unsafe static class GreedyMesher6
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(2);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    //mapping\.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
                 }
             }
 
@@ -996,7 +996,7 @@ public unsafe static class GreedyMesher6
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(4);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    //mapping\.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
                 }
             }
         }

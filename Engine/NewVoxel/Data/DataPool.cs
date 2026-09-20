@@ -247,7 +247,7 @@ public unsafe class GPUChunkDataPool : IDisposable
 
     private NewChunkDataPool _chunkDataPool;
 
-    public SSBO<Vector4i> MeshSSBO;
+    public SSBO<Vector2u> MeshSSBO;
     public ulong SizeInBytes;
     private uint _chunkSize;
 
@@ -294,7 +294,7 @@ public unsafe class GPUChunkDataPool : IDisposable
         _chunkDataPool = chunkDataPool;
 
         _chunkSize = size;
-        SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector4i>();
+        SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector2u>();
 
         MeshSSBO = new(count * size, hostVisible: false, useStaging: true);
 
@@ -453,18 +453,18 @@ public unsafe class GPUChunkDataPool : IDisposable
             VertexCount = 0,
             Offset = (uint)index,
             Size = 1,
-            Memory = ((Vector4i*)MeshSSBO.GetMappedPointer(frame)) + index * _chunkSize,
+            Memory = ((Vector2u*)MeshSSBO.GetMappedPointer(frame)) + index * _chunkSize,
             FrameIndex = frame,
         };
 
         return true;
     }
 
-    public void Update(VoxelChunk chunk, Vector4i[] data, int vertexCount)
+    public void Update(VoxelChunk chunk, Vector2u[] data, int vertexCount)
     {
         _chunkDataPool.Updated = true;
         
-        nint stride = Marshal.SizeOf<Vector4i>();
+        nint stride = Marshal.SizeOf<Vector2u>();
         MeshSSBO.Update(data, (ulong)(chunk.Allocation.Offset * _chunkSize * stride), (ulong)(vertexCount * stride));
 
         uint remaining = (uint)vertexCount;
@@ -877,7 +877,7 @@ public unsafe struct Allocation(VoxelChunk chunk)
     public uint VertexCount;
     public uint Offset;
     public uint Size;
-    public Vector4i* Memory = null;
+    public Vector2u* Memory = null;
     public uint FrameIndex;
 
     public readonly uint Start => Offset;
@@ -899,6 +899,8 @@ public unsafe struct Allocation(VoxelChunk chunk)
     {
         if (Size == 0)
             return;
+
+        VoxelRenderer.TotalVertexCount -= VertexCount;
 
         DataPool.RemoveAllocation(this);
         Memory = null;

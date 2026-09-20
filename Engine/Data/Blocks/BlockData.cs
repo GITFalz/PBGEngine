@@ -250,8 +250,7 @@ namespace PBG.NewVoxel
             var definition = BlockDefinitions[blockId];
 
             block = new(blockId);
-
-            block.SetState((uint)definition.Type);
+            block.SetOcclusion(definition.SideFullOcclusion);
 
             return true;
         }

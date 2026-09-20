@@ -138,6 +138,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         {
             GFX.DeviceWaitIdle();
             WorldShader.Shader.RenewDescriptors();
+            WireframeWorldShader.RenewDescriptors();
+            BlankWorldShader.RenewDescriptors();
         }
 
 

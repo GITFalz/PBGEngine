@@ -515,22 +515,52 @@ public class VariantJSON
         (Vector3 a, Vector3 b, Vector3 c) d
     ) GetFaceCoords(Vector3 from, Vector3 to, int side)
     {
-        if (side == 1) return ((to, from, from), (to, to, from), (to, to, to), (to, from, to));
-        else if (side == 2) return ((from, to, from), (from, to, to), (to, to, to), (to, to, from));
-        else if (side == 3) return ((from, from, to), (from, to, to), (from, to, from), (from, from, from));
-        else if (side == 4) return ((to, from, from), (to, from, to), (from, from, to), (from, from, from));
-        else if (side == 5) return ((to, from, to), (to, to, to), (from, to, to), (from, from, to));
-        return ((from, from, from), (from, to, from), (to, to, from), (to, from, from));
+        if (side == 1) return (
+            (to, from, from), 
+            (to, to, from), 
+            (to, to, to), 
+            (to, from, to)
+        );
+        else if (side == 2) return (
+            (from, to, from), 
+            (from, to, to), 
+            (to, to, to), 
+            (to, to, from)
+        );
+        else if (side == 3) return (
+            (from, from, to), 
+            (from, to, to), 
+            (from, to, from), 
+            (from, from, from)
+        );
+        else if (side == 4) return (
+            (to, from, from), 
+            (to, from, to), 
+            (from, from, to), 
+            (from, from, from)
+        );
+        else if (side == 5) return (
+            (to, from, to), 
+            (to, to, to), 
+            (from, to, to), 
+            (from, from, to)
+        );
+        return (
+            (from, from, from), 
+            (from, to, from), 
+            (to, to, from), 
+            (to, from, from)
+        );
     }
 
     public static (Vector3 a, Vector3 b, Vector3 c, Vector3 d) GetFaceCoords2(Vector3 from, Vector3 to, int side)
     {
-        if (side == 1) return (     ExtractXYZ(to, from, from),   ExtractXYZ(to, to, from),   ExtractXYZ(to, to, to),     ExtractXYZ(to, from, to));
-        else if (side == 2) return (ExtractXYZ(from, to, from),   ExtractXYZ(from, to, to),   ExtractXYZ(to, to, to),     ExtractXYZ(to, to, from));
-        else if (side == 3) return (ExtractXYZ(from, from, to),   ExtractXYZ(from, to, to),   ExtractXYZ(from, to, from), ExtractXYZ(from, from, from));
-        else if (side == 4) return (ExtractXYZ(to, from, from),   ExtractXYZ(to, from, to),   ExtractXYZ(from, from, to), ExtractXYZ(from, from, from));
-        else if (side == 5) return (ExtractXYZ(to, from, to),     ExtractXYZ(to, to, to),     ExtractXYZ(from, to, to),   ExtractXYZ(from, from, to));
-        return (                    ExtractXYZ(from, from, from), ExtractXYZ(from, to, from), ExtractXYZ(to, to, from),   ExtractXYZ(to, from, from));
+        if (side == 1) return (     (to.X,   from.Y, from.Z),   (to.X,   to.Y,   from.Z),   (to.X,   to.Y,   to.Z  ),   (to.X,   from.Y, to.Z  ));
+        else if (side == 2) return ((from.X, to.Y,   from.Z),   (from.X, to.Y,   to.Z  ),   (to.X,   to.Y,   to.Z  ),   (to.X,   to.Y,   from.Z));
+        else if (side == 3) return ((from.X, from.Y, to.Z  ),   (from.X, to.Y,   to.Z  ),   (from.X, to.Y,   from.Z),   (from.X, from.Y, from.Z));
+        else if (side == 4) return ((to.X,   from.Y, from.Z),   (to.X,   from.Y, to.Z  ),   (from.X, from.Y, to.Z  ),   (from.X, from.Y, from.Z));
+        else if (side == 5) return ((to.X,   from.Y, to.Z  ),   (to.X,   to.Y,   to.Z  ),   (from.X, to.Y,   to.Z  ),   (from.X, from.Y, to.Z  ));
+        return (                    (from.X, from.Y, from.Z),   (from.X, to.Y,   from.Z),   (to.X,   to.Y,   from.Z),   (to.X,   from.Y, from.Z));
     }
 
     private static Vector3 ExtractXYZ(Vector3 x, Vector3 y, Vector3 z) => (x.X, y.Y, z.Z);

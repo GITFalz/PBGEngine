@@ -11,10 +11,10 @@ using VH = VoxelHelper;
 
 public unsafe static class GreedyMesher5
 {
-    public readonly static V256u StateMaskV256 = V256U.New(Block.STATE_MASK);
-    public readonly static V256u SolidMaskV256 = V256U.New(1 << Block.STATE_SHIFT);
+    public readonly static V256u StateMaskV256 = V256U.New(0xFu << 28);
+    public readonly static V256u SolidMaskV256 = V256U.New(1 << 28);
 
-    public static void GetVector256BitMap(VoxelChunk chunk, Block* blocks, List<Vector4i> vertexData, ref NeighbourChunks neighbours, int workerId)
+    public static void GetVector256BitMap(VoxelChunk chunk, Block* blocks, ref NeighbourChunks neighbours, int workerId)
     {
         /*
         uint* ptr10 = (uint*)neighbours.Blocks10 + indexNz;
@@ -270,7 +270,7 @@ public unsafe static class GreedyMesher5
 
 
     
-    public static bool GenerateMesh(VoxelChunk chunk, List<Vector4i> vertexData, Vector3i worldPosition, int workerId, out int vertexCount)
+    public static bool GenerateMesh(VoxelChunk chunk, List<Vector2u> vertexData, Vector3i worldPosition, int workerId, out int vertexCount)
     {
         vertexCount = 0;
         int vertCount = 0;
@@ -281,7 +281,7 @@ public unsafe static class GreedyMesher5
 
         NeighbourChunks neighbours = new(renderer, chunk.RelativePosition);
 
-        GetVector256BitMap(chunk, blocks, vertexData, ref neighbours, workerId);
+        GetVector256BitMap(chunk, blocks, ref neighbours, workerId);
 
         var meshData = VoxelChunkMesher.MeshDatas[workerId];
         
@@ -450,7 +450,7 @@ public unsafe static class GreedyMesher5
                         for (int j = start; j < end; j++)
                         {
                             var geometryIndex = BlockData.VoxelGeometryIndices[j];
-                            vertexData.Add(new(geometryIndex, pos, 0, 0));
+                            vertexData.Add(new((uint)(geometryIndex | (pos << 14)), 0));
                         }
                     }
                 }
@@ -542,7 +542,7 @@ public unsafe static class GreedyMesher5
         return true;
     }
 
-    public static void HandleGreedyFrontAndBack(Block* blocks, List<Vector4i> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* frontData, uint* backData, int z)
+    public static void HandleGreedyFrontAndBack(Block* blocks, List<Vector2u> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* frontData, uint* backData, int z)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -611,10 +611,17 @@ public unsafe static class GreedyMesher5
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(0);
+                    uint pos = (uint)(trailingZeros | (i << 5) | (z << 10));
+                    uint side = 0;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(0);
-                    vertexData.Add(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
+                    vertexData.Add(new(vx, vy));
                 }
             }
 
@@ -683,10 +690,17 @@ public unsafe static class GreedyMesher5
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(5);
+                    uint pos = (uint)(trailingZeros | (i << 5) | (z << 10));
+                    uint side = 5;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(5);
-                    vertexData.Add(new(geometryIndex, trailingZeros | (i << 5) | (z << 10), packedAo, h | (w << 5)));
+                    vertexData.Add(new(vx, vy));
                 }
             }
         }
@@ -694,7 +708,7 @@ public unsafe static class GreedyMesher5
 
 
 
-    public static void HandleGreedyRight(Block* blocks, List<Vector4i> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* data, int x)
+    public static void HandleGreedyRight(Block* blocks, List<Vector2u> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* data, int x)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -761,15 +775,22 @@ public unsafe static class GreedyMesher5
                 w--;
                 h--;
 
-                int packedAo = VH.GetPackedAO(ao);
+                uint geometryIndex = (uint)block.GetSolidGeometryIndex(1);
+                uint pos = (uint)(x | (i << 5) | (trailingZeros << 10));
+                uint side = 1;
+                
+                uint size = (uint)(w | (h << 5));
+                uint packedAo = (uint)VH.GetPackedAO(ao);
+                
+                uint vx = geometryIndex | (pos << 14) | (side << 29);
+                uint vy = size | (packedAo << 10);
 
-                var geometryIndex = block.GetSolidGeometryIndex(1);
-                vertexData.Add(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
+                vertexData.Add(new(vx, vy));
             }
         }
     }
 
-    public static void HandleGreedyLeft(Block* blocks, List<Vector4i> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* data, int x)
+    public static void HandleGreedyLeft(Block* blocks, List<Vector2u> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* data, int x)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -836,16 +857,23 @@ public unsafe static class GreedyMesher5
                 w--;
                 h--;
 
-                int packedAo = VH.GetPackedAO(ao);
+                uint geometryIndex = (uint)block.GetSolidGeometryIndex(3);
+                uint pos = (uint)(x | (i << 5) | (trailingZeros << 10));
+                uint side = 3;
+                
+                uint size = (uint)(w | (h << 5));
+                uint packedAo = (uint)VH.GetPackedAO(ao);
+                
+                uint vx = geometryIndex | (pos << 14) | (side << 29);
+                uint vy = size | (packedAo << 10);
 
-                var geometryIndex = block.GetSolidGeometryIndex(3);
-                vertexData.Add(new(geometryIndex, x | (i << 5) | (trailingZeros << 10), packedAo, (w << 5) | (h << 10)));
+                vertexData.Add(new(vx, vy));
             }
         }
     }
 
 
-    public static void HandleGreedyTopAndBottom(Block* blocks, List<Vector4i> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* topData, uint* bottomData, int y)
+    public static void HandleGreedyTopAndBottom(Block* blocks, List<Vector2u> vertexData, ulong* bitMap, ulong* aoTypeMap, uint* typeMap, uint* topData, uint* bottomData, int y)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -913,10 +941,17 @@ public unsafe static class GreedyMesher5
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(2);
+                    uint pos = (uint)(trailingZeros | (y << 5) | (i << 10));
+                    uint side = 2;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(2);
-                    vertexData.Add(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    vertexData.Add(new(vx, vy));
                 }
             }
 
@@ -985,10 +1020,17 @@ public unsafe static class GreedyMesher5
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(4);
+                    uint pos = (uint)(trailingZeros | (y << 5) | (i << 10));
+                    uint side = 4;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(4);
-                    vertexData.Add(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    vertexData.Add(new(vx, vy));
                 }
             }
         }

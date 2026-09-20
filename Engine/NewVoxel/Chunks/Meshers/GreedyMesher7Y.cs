@@ -35,8 +35,8 @@ public unsafe static class GreedyMesher7Y
         }
     }
 
-    public readonly static V256u StateMaskV256 = V256U.New(Block.STATE_MASK);
-    public readonly static V256u SolidMaskV256 = V256U.New(1 << Block.STATE_SHIFT);
+    public readonly static V256u StateMaskV256 = V256U.New(0xFu << 28);
+    public readonly static V256u SolidMaskV256 = V256U.New(1 << 28);
 
     public static void GetBitMaps(VoxelChunk chunk, ref NeighbourChunks neighbours, int workerId)
     {
@@ -582,7 +582,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO2(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(0);
-                    mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
+                    //mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
                 }
 
                 frontAoType1 = frontAoType2;
@@ -660,7 +660,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO2(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(5);
-                    mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
+                    //mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
                 }
 
                 backAoType1 = backAoType2;
@@ -757,7 +757,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO2(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(1);
-                    mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
+                    //mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
                 }
 
                 rightAoType1 = rightAoType2;
@@ -835,7 +835,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO2(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(3);
-                    mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
+                    //mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
                 }
 
                 leftAoType1 = leftAoType2;
@@ -933,7 +933,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(2);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    //mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
                 }
 
                 topAoType1 = topAoType2;
@@ -1011,7 +1011,7 @@ public unsafe static class GreedyMesher7Y
                     int packedAo = VH.GetPackedAO(ao);
 
                     var geometryIndex = block.GetSolidGeometryIndex(4);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    //mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
                 }
 
                 bottomAoType1 = bottomAoType2;

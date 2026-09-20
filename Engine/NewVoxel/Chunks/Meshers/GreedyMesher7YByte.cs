@@ -35,8 +35,6 @@ public unsafe static class GreedyMesher7YByte
         }
     }
 
-    public readonly static V256u StateMaskV256 = V256U.New(Block.STATE_MASK);
-    public readonly static V256u SolidMaskV256 = V256U.New(1 << Block.STATE_SHIFT);
 
     public static void GetBitMaps(VoxelChunk chunk, ref NeighbourChunks neighbours, int workerId)
     {
@@ -626,10 +624,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO2(ao);
+                    uint geometryIndex = (uint)Block.GetSolidGeometryIndex(block, 0);
+                    uint pos = (uint)(i | (trailingZeros << 5) | (z << 10));
+                    uint side = 0;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = new Block(block).GetSolidGeometryIndex(0);
-                    mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 frontAoType1 = frontAoType2;
@@ -704,10 +709,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO2(ao);
+                    uint geometryIndex = (uint)Block.GetSolidGeometryIndex(block, 5);
+                    uint pos = (uint)(i | (trailingZeros << 5) | (z << 10));
+                    uint side = 5;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = new Block(block).GetSolidGeometryIndex(5);
-                    mapping.AddFace(new(geometryIndex, i | (trailingZeros << 5) | (z << 10), packedAo, w | (h << 5)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 backAoType1 = backAoType2;
@@ -801,10 +813,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO2(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(1);
+                    uint pos = (uint)(x | (trailingZeros << 5) | (i << 10));
+                    uint side = 1;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(1);
-                    mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 rightAoType1 = rightAoType2;
@@ -879,10 +898,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO2(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(3);
+                    uint pos = (uint)(x | (trailingZeros << 5) | (i << 10));
+                    uint side = 3;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(3);
-                    mapping.AddFace(new(geometryIndex, x | (trailingZeros << 5) | (i << 10), packedAo, (h << 5) | (w << 10)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 leftAoType1 = leftAoType2;
@@ -977,10 +1003,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(2);
+                    uint pos = (uint)(trailingZeros | (y << 5) | (i << 10));
+                    uint side = 2;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(2);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 topAoType1 = topAoType2;
@@ -1055,10 +1088,17 @@ public unsafe static class GreedyMesher7YByte
                     w--;
                     h--;
 
-                    int packedAo = VH.GetPackedAO(ao);
+                    uint geometryIndex = (uint)block.GetSolidGeometryIndex(4);
+                    uint pos = (uint)(trailingZeros | (y << 5) | (i << 10));
+                    uint side = 4;
+                    
+                    uint size = (uint)(w | (h << 5));
+                    uint packedAo = (uint)VH.GetPackedAO2(ao);
+                    
+                    uint vx = geometryIndex | (pos << 14) | (side << 29);
+                    uint vy = size | (packedAo << 10);
 
-                    var geometryIndex = block.GetSolidGeometryIndex(4);
-                    mapping.AddFace(new(geometryIndex, trailingZeros | (y << 5) | (i << 10), packedAo, h | (w << 10)));
+                    mapping.AddFace(new(vx, vy));
                 }
 
                 bottomAoType1 = bottomAoType2;

@@ -27,7 +27,7 @@ public static class ChunkMesher
                 return ChunkMeshingStatus.Failed;
 
             chunkData = new(chunk);
-            List<Vector4i> vertexData = [];
+            List<Vector2u> vertexData = [];
 
             WorldNodeEditor.GlobalCount++;
             bool result = VoxelChunkGenerator.GenerateGreedyMesh5(chunk, vertexData, chunk.WorldPosition, workerID, out _);
