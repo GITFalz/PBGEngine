@@ -52,4 +52,13 @@ public unsafe static class V256B
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static V256b CompareEqual(this V256b left, V256b right) => Avx2.CompareEqual(left, right);
+
+    /// <summary>
+    /// Assumes the V256b is populated by only ones or zero or bits could spill over
+    /// </summary>
+    /// <param name="left"></param>
+    /// <param name="right"></param>
+    /// <returns></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static V256b ShiftOneLeft(this V256b vector, byte shift) => (vector.AsUInt32() << shift).AsByte();
 }

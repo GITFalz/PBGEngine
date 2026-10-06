@@ -29,13 +29,15 @@ public unsafe class FBO : GpuRessource, IResizeable
 
     public FBO(int width, int height) : this((uint)width, (uint)height) {}
     public FBO(uint width, uint height) : this(() => width, () => height) {}
-    public FBO(Func<uint> widthAction, Func<uint> heightAction) : base()
+    public FBO(Func<uint> widthAction, Func<uint> heightAction)
     {
         _widthAction = widthAction;
         _heightAction = heightAction;
 
         Width = _widthAction();
         Height = _heightAction();
+
+        CreateBase();
 
         _fbos.Add(this);
     }

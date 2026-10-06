@@ -169,7 +169,7 @@ namespace PBG.NewVoxel
                 fullTextureData.Add(texture);
             }
 
-            BlockTextureArray = new(fullTextureData, new("", maxWidth, maxHeight) { SamplerMode = SamplerAddressMode.Repeat, Filter = Filter.Nearest, UseMipMaps = true });
+            BlockTextureArray = new(fullTextureData, new("", maxWidth, maxHeight) { SamplerMode = SamplerAddressMode.Repeat, MagFilter = Filter.Nearest, MinFilter = Filter.Linear, UseMipMaps = true });
         }
 
         public static void LoadModels()

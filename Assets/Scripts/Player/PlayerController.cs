@@ -242,7 +242,7 @@ public class PlayerController : ScriptingNode
         WeaponModel?.Update();
         CurrentState.Update();
 
-        //World.Transform.Position.Xz = Transform.Position.Xz;
+        World.Transform.Position.Xz = Transform.Position.Xz;
 
         if (Input.IsKeyAndControlPressed(Key.P))
         {

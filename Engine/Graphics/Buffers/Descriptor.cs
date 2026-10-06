@@ -311,7 +311,10 @@ public unsafe class Descriptor : BufferBase, IResizeable
             framebuffer.OnDispose = _ => _boundFramebuffers.Remove(framebuffer);
         }
 
-        BindSampler(framebuffer.colorView, framebuffer.sampler, DescriptorType.CombinedImageSampler, ImageLayout.ShaderReadOnlyOptimal, binding);
+        using (GFX.ResizeLock)
+        {
+            BindSampler(framebuffer.colorView, framebuffer.sampler, DescriptorType.CombinedImageSampler, ImageLayout.ShaderReadOnlyOptimal, binding);
+        }
     }
 
     public void BindFramebufferDepth(FBO framebuffer, uint binding)
@@ -327,7 +330,10 @@ public unsafe class Descriptor : BufferBase, IResizeable
             framebuffer.OnDispose = _ => _boundFramebuffers.Remove(framebuffer);
         }
 
-        BindSampler(framebuffer.depthView, framebuffer.sampler, DescriptorType.CombinedImageSampler, ImageLayout.ShaderReadOnlyOptimal, binding);
+        using (GFX.ResizeLock)
+        {
+            BindSampler(framebuffer.depthView, framebuffer.sampler, DescriptorType.CombinedImageSampler, ImageLayout.ShaderReadOnlyOptimal, binding);
+        }
     }
 
     public void UnbindBuffer(GPUBufferBase buffer)

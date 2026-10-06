@@ -18,6 +18,7 @@ public static class DebugDump
         {
             //sb.Append($"[{i++}] ");
             DumpRecursive(item, sb, 0);
+            i++;
         }
 
         File.WriteAllText(path, sb.ToString());

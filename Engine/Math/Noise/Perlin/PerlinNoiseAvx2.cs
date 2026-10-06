@@ -5,6 +5,7 @@ namespace PBG.Noise;
 
 public static class PerlinNoiseAvx2
 {
+    public static V256f Noise01(V256f x, V256f y) => (Noise(x, y) + V256F.One) * V256F.Half;
     public static V256f Noise(V256f x, V256f y)
     {
         // Integer lattice coordinates

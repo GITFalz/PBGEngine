@@ -64,4 +64,8 @@ public unsafe static class V256U
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static V256u CompareEqual(this V256u left, V256u right) => Avx2.CompareEqual(left, right);
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static V256f ToFloat(this V256u vector) => Avx.ConvertToVector256Single(vector.AsInt32());
 }

@@ -138,6 +138,16 @@ public unsafe class ShaderCompiler
                     // if the shader was fixed try to compile that
                     vertexData = CompileAndReflect(tempVertexFile, ShaderKind.VertexShader);
 
+                    if (!File.Exists(fixedVertPath))
+                    {
+                        string? directory = Path.GetDirectoryName(fixedVertPath);
+
+                        if (directory != null)
+                            Directory.CreateDirectory(directory);
+
+                        File.WriteAllText(fixedVertPath, "");
+                    }
+
                     // if the compilation succeeded we can save the fixed file
                     File.Copy(tempVertexFile, fixedVertPath, true);
                 }
@@ -169,6 +179,16 @@ public unsafe class ShaderCompiler
                     {
                         // if the shader was fixed try to compile that
                         fragmentData = CompileAndReflect(tempFragmentFile, ShaderKind.FragmentShader);
+
+                        if (!File.Exists(fixedFragPath))
+                        {
+                            string? directory = Path.GetDirectoryName(fixedFragPath);
+
+                            if (directory != null)
+                                Directory.CreateDirectory(directory);
+
+                            File.WriteAllText(fixedFragPath, "");
+                        }
 
                         // if the compilation succeeded we can save the fixed file
                         File.Copy(tempFragmentFile, fixedFragPath, true);

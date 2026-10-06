@@ -116,7 +116,7 @@ namespace PBG.MathLibrary
         public static Vector3 Pow(Vector3 power, Vector3 value) => ((float)Math.Pow(power.X, value.X), (float)Math.Pow(power.Y, value.Y), (float)Math.Pow(power.Z, value.Z));
         public static double Pow(double power, double value) => Math.Pow(power, value);
 
-        public static float Sqrt(float value) => (float)Math.Sqrt(value);
+        public static float Sqrt(float value) => (float)MathF.Sqrt(value);
         public static Vector2 Sqrt(Vector2 value) => ((float)Math.Sqrt(value.X), (float)Math.Sqrt(value.Y));
         public static Vector3 Sqrt(Vector3 value) => ((float)Math.Sqrt(value.X), (float)Math.Sqrt(value.Y), (float)Math.Sqrt(value.Z));
         public static double Sqrt(double value) => Math.Sqrt(value);
@@ -213,17 +213,50 @@ namespace PBG.MathLibrary
         #endregion
 
         #region ATAN2
-        public static float Atan2(float a, float b) => (float)Math.Atan2(a, b);
-        public static int Atan2(int a, int b) => (int)Math.Atan2(a, b);
+        private const float PI = 3.141592653589793f;
+        private const float PI_OVER_2 = 1.5707963267948966f;
+
+        public static float Atan2(int y, int x) => Atan2((float)y, (float)x);
+        public static float Atan2(float y, float x)
+        {
+            if (x == 0f && y == 0f) 
+                return 0f;
+
+            float absX = x < 0 ? -x : x;
+            float absY = y < 0 ? -y : y;
+            
+            bool swap = absY > absX;
+            
+            float num = swap ? absX : absY;
+            float den = swap ? absY : absX;
+
+            float t = num / den;
+            float t2 = t * t;
+            
+            float angle = t * (0.999866f - t2 * (0.330299f - t2 * (0.180141f - t2 * 0.055156f)));
+
+            if (swap) 
+            {
+                angle = PI_OVER_2 - angle;
+            }
+            if (x < 0.0) 
+            {
+                angle = PI - angle;
+            }
+            if (y < 0.0) 
+            {
+                angle = -angle;
+            }
+
+            return angle;
+        }
+
 
         public static Vector2 Atan2(Vector2 a, Vector2 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y));
-        public static Vector2i Atan2(Vector2i a, Vector2i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y));
 
         public static Vector3 Atan2(Vector3 a, Vector3 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z));
-        public static Vector3i Atan2(Vector3i a, Vector3i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z));
 
         public static Vector4 Atan2(Vector4 a, Vector4 b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z), Atan2(a.W, b.W));
-        public static Vector4i Atan2(Vector4i a, Vector4i b) => (Atan2(a.X, b.X), Atan2(a.Y, b.Y), Atan2(a.Z, b.Z), Atan2(a.W, b.W));
         #endregion
 
 
@@ -238,6 +271,8 @@ namespace PBG.MathLibrary
         public static Vector4i Flip(this Vector4i v) => (v.W, v.Z, v.Y, v.X);
         #endregion
 
+
+        
         /// <summary>
         /// turns the range [a, b] into [0, 1] based on t
         /// </summary>

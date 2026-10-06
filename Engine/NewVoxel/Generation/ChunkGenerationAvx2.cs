@@ -20,6 +20,7 @@ public unsafe static class ChunkGenerationAvx2
     static V256i BLOCK_GRASS_V;
     static V256i BLOCK_DIRT_V;
     static V256i BLOCK_STONE_V;
+    static V256i BLOCK_SAND_V;
     static V256i BLOCK_GRAVEL_V;
     static V256i BLOCK_LOG_V;
     static V256i BLOCK_LEAF_V;
@@ -48,7 +49,7 @@ public unsafe static class ChunkGenerationAvx2
     static readonly V256f _v6 = V256F.New(0.35f);
     static readonly V256f _v7 = V256F.New(0.75f);
 
-    static readonly V256f _v8 = V256F.New(0.006f);
+    static readonly V256f _v8 = V256F.New(0.002f);
 
 
 
@@ -66,6 +67,7 @@ public unsafe static class ChunkGenerationAvx2
         BLOCK_GRASS_V = GetBlock("grass_block");
         BLOCK_DIRT_V = GetBlock("dirt_block");
         BLOCK_STONE_V = GetBlock("stone_block");
+        BLOCK_SAND_V = GetBlock("sand_block");
         BLOCK_GRAVEL_V = GetBlock("gravel_block");
         BLOCK_LOG_V = GetBlock("log_block");
         BLOCK_LEAF_V = GetBlock("leaf_block");
@@ -239,25 +241,27 @@ public unsafe static class ChunkGenerationAvx2
     }
 
 
-    public static void Vector256Height(int baseX, int baseZ, ChunkGeneration.CacheHandler<float> handler)
+    public static void Vector256Height(VoxelChunk chunk, int baseX, int baseZ, ChunkGeneration.CacheHandler<float> handler)
     {
         float* height  = handler.Cache[0];
         float* heightX = handler.Cache[1];
         float* heightZ = handler.Cache[2];
 
+        int lodLevel = chunk.LodMult;
+
         V256f one = V256F.One;
-        V256f xOffsets = V256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
+        V256f xOffsets = V256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f) * lodLevel;
 
         int ptrIndex = 0;
-            
-        // Process 8 columns at a time in X
-        for (int z = 0; z < 32; z++)
-        {
-            V256f wz = V256.Create((float)(baseZ + z));
 
-            for (int x = 0; x < 32; x += 8)
+        // Process 8 columns at a time in X
+        for (int z = 0; z < CHUNK_SIZE; z++)
+        {
+            V256f wz = V256.Create((float)(baseZ + z * lodLevel));
+
+            for (int x = 0; x < CHUNK_SIZE; x += 8)
             {
-                V256f wx = V256F.Add(V256F.New((float)(baseX + x)), xOffsets);
+                V256f wx = V256F.Add(V256F.New((float)(baseX + x * lodLevel)), xOffsets);
                 V256f h = GetTerrainHeightSimd(wx, wz);
                 V256f hx = GetTerrainHeightSimd(Avx.Add(wx, one), wz);
                 V256f hz = GetTerrainHeightSimd(wx, Avx.Add(wz, one));
@@ -317,127 +321,6 @@ public unsafe static class ChunkGenerationAvx2
         }
     }
 
-    static readonly V256u _full = V256U.New(0xFFFFFFFF);
-    static readonly V256u _oneMask = V256U.New(1);
-
-    public static void Vector256Populate(VoxelChunk chunk, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<V256f> handler)
-    {
-        chunk.HasBlocks = true;
-        Block* blocks = chunk.Blocks;
-
-        V256f* height  = handler.Cache[0];
-        V256f* heightX = handler.Cache[1];
-        V256f* heightZ = handler.Cache[2];
-
-        // Lane i must carry x+i, not a broadcast of x - each of the 8 lanes
-        // represents a *different* column, and per-column noise (gravel, stone
-        // variant) depends on this varying correctly across lanes.
-        V256f laneOffsets = Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
-
-        for (int x = 0; x < CHUNK_SIZE; x += 8)
-        {
-            V256f worldX = V256F.Add(V256F.New(x + baseX), laneOffsets);
-
-            V256f xGravel = V256F.Multiply(worldX, _v10);
-
-            for (int z = 0; z < CHUNK_SIZE; z++)
-            {
-                int idx = (x >> 3) + (z * 4);
-
-                V256f worldZ = V256F.New(z + baseZ);
-
-                V256f terrainHeightF = height[idx];
-                V256i terrainHeight = V256I.FloorToInt(terrainHeightF);
-
-                V256f slope = V256F.Add(V256F.Abs(terrainHeightF - heightX[idx]), V256F.Abs(V256F.Subtract(terrainHeightF, heightZ[idx])));
-                V256i isSteep = Avx.CompareGreaterThan(slope, TwoPFive).AsInt32();
-                V256i isSnowCap = Avx.CompareGreaterThan(terrainHeightF, SnowLineV256f).AsInt32();
-
-                V256f zGravel = V256F.Multiply(worldZ, _v10);
-
-                // Start one below baseY so the increment at the top of the
-                // loop lands on baseY for y == 0, not baseY + 1.
-                V256i worldYI = V256I.New(baseY - 1);
-
-                for (int y = 0; y < CHUNK_SIZE; y++)
-                {
-                    if (y == 0 && chunk.WorldPosition.Y == 0)
-                    {
-                        SetBlocksV256i(chunk, blocks, BLOCK_STONE_V, x, y, z);
-                        continue;
-                    }
-
-                    worldYI = V256I.Add(worldYI, V256I.One);
-
-                    V256i isAir = Avx2.CompareGreaterThan(worldYI, terrainHeight);
-
-                    if (V256I.AllTrue(isAir))
-                    {
-                        SetBlocksV256i(chunk, blocks, V256I.Zero, x, y, z);
-                        continue;
-                    }
-
-                    // Derive worldY fresh from worldYI every iteration instead
-                    // of maintaining a separate accumulator - keeps it from
-                    // ever drifting out of sync after an air-skip above.
-                    V256f worldY = Avx.ConvertToVector256Single(worldYI);
-
-                    V256i blockId = V256I.Zero;
-
-                    V256i depth = V256I.Subtract(terrainHeight, worldYI);
-
-                    V256i isSurface = Avx2.CompareEqual(depth, V256I.Zero);
-                    V256i isShallow = Avx2.And(
-                        Avx2.CompareGreaterThan(depth, V256I.Zero),
-                        V256I.CompareLessThanOrEqual(depth, V256I.Three)
-                    );
-                    V256i isDeep = Avx2.CompareGreaterThan(depth, V256I.New(3));
-
-                    V256i stoneVariant = GetStoneVariantSimd(worldX, worldY, worldZ, terrainHeightF);
-                    V256i needsGravel = Avx2.And(isDeep, isSteep);
-
-                    V256f gravelNoise;
-                    if (Avx.TestZ(needsGravel, needsGravel))
-                    {
-                        gravelNoise = V256F.Zero;
-                    }
-                    else
-                    {
-                        var yGravel = V256F.Multiply(worldY, _v11);
-                        gravelNoise = PerlinNoiseAvx2.Noise(
-                            V256F.Add(V256F.Add(xGravel, yGravel), V256F.New(500f)),
-                            V256F.Add(V256F.Subtract(zGravel, yGravel), V256F.New(500f))
-                        );
-                    }
-
-                    // Bitcast the mask, don't numerically convert it -
-                    // ConvertToVector256Int32 turns the true-lane bit pattern
-                    // (NaN as a float) into 0x80000000 instead of -1.
-                    V256i isGravel = Avx.CompareGreaterThan(gravelNoise, V256F.New(0.6f)).AsInt32();
-                    isGravel = Avx2.And(isSteep, isGravel);
-
-                    V256i surfaceID = BLOCK_GRASS_V;
-                    surfaceID = V256I.IfElseFull(isSnowCap, BLOCK_SNOW_V, surfaceID);
-                    surfaceID = V256I.IfElseFull(isSteep, stoneVariant, surfaceID);
-
-                    V256i shallowID = BLOCK_DIRT_V;
-                    shallowID = V256I.IfElseFull(isSnowCap, V256I.IfElseFull(Avx2.CompareEqual(depth, V256I.One), BLOCK_SNOW_V, BLOCK_STONE_V), shallowID);
-                    shallowID = V256I.IfElseFull(isSteep, stoneVariant, shallowID);
-
-                    V256i deepID = stoneVariant;
-                    deepID = V256I.IfElseFull(isGravel, BLOCK_GRAVEL_V, deepID);
-
-                    blockId = V256I.IfElseFull(isSurface, surfaceID, blockId);
-                    blockId = V256I.IfElseFull(isShallow, shallowID, blockId);
-                    blockId = V256I.IfElseFull(isDeep, deepID, blockId);
-
-                    SetBlocksV256i(chunk, blocks, blockId, x, y, z);
-                }
-            }
-        }
-    }
-
-    static V256f laneOffsets = Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
 
     private static int GetAirBlockCount(V256i row1, V256i row2, V256i row3, V256i row4)
     {
@@ -456,29 +339,34 @@ public unsafe static class ChunkGenerationAvx2
         return Bit.PopCount(combined);
     }
  
-    public static void Vector256PopulateOrderedY(VoxelChunk chunk, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<float> handler)
+
+    public static void Vector256PopulateOrderedYByte(byte* blocks, int lodLevel, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<float> handler)
     {
-        chunk.HasBlocks = true;
-
-        var blocks = chunk.Blocks;
-        var countMap = chunk.CountMap;
-
         float* height  = handler.Cache[0];
         float* heightX = handler.Cache[1];
         float* heightZ = handler.Cache[2];
 
         int index = 0;
 
+        int yIncrement = 8 * lodLevel;
+
+        V256f laneOffsets = Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f) * lodLevel;
+
+        V256i lodV = V256I.New(lodLevel - 1);
+        V256i invLodV = lodV ^ V256U.MaxValue.AsInt32();
+
+        var rows = stackalloc V256i[4];
+
         for (int z = 0; z < CHUNK_SIZE; z++)
         {  
-            V256f worldZ = V256F.New(z + baseZ);
+            V256f worldZ = V256F.New(z * lodLevel + baseZ);
             V256i worldZI = worldZ.ToInt();
 
             V256f zGravel = worldZ * _v10;
 
             for (int x = 0; x < CHUNK_SIZE; x++)
             {  
-                V256f worldX = V256F.New(x + baseX);
+                V256f worldX = V256F.New(x * lodLevel + baseX);
                 V256i worldXI = worldX.ToInt();
 
                 V256f xGravel = worldX * _v10;
@@ -494,9 +382,9 @@ public unsafe static class ChunkGenerationAvx2
                 V256i isSteep   = slope.CompareG(TwoPFive).AsInt32();
                 V256i isSnowCap = terrainHeight.CompareG(SnowLineV256f).AsInt32();
 
-                for (int y = 0; y < CHUNK_SIZE; y+=8)
-                {  
-                    int blockIndex = y + x * 32 + z * 1024;
+                for (int i = 0; i < 4; i++)
+                {
+                    int y = i * yIncrement;
 
                     V256f worldY = V256F.New(y + baseY) + laneOffsets;
                     V256i worldYI = worldY.ToInt();
@@ -505,13 +393,13 @@ public unsafe static class ChunkGenerationAvx2
 
                     if (V256I.AllTrue(isAir))
                     {
-                        *(V256u*)(blocks + blockIndex) = V256u.Zero;
+                        rows[i] = V256I.Zero;
                         continue;
                     }
 
                     V256i blockId = V256I.Zero;
 
-                    V256i depth = terrainHeightI - worldYI;
+                    V256i depth = (terrainHeightI & invLodV) - worldYI;
 
                     V256i isSurface = depth.CompareE(V256I.Zero);
                     V256i isShallow = depth.CompareG(V256I.Zero) & depth.CompareLE(V256I.Three);
@@ -555,316 +443,251 @@ public unsafe static class ChunkGenerationAvx2
 
                     blockId = isBottom.IfThenElse(BLOCK_STONE_V, blockId);
 
-                    *(V256i*)(blocks + blockIndex) = blockId;
+                    rows[i] = blockId;
                 }
+
+                V256b row = VH.ShortenToV256b(rows[0], rows[1], rows[2], rows[3]);
+
+                *(V256b*)(blocks + x * 32 + z * 1024) = row;
 
                 index++;
             }
         }
     }
 
-
-    public static void Vector256PopulateOrderedYByte(VoxelChunk chunk, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<float> handler)
+    public static void HeightVoronoiTest(VoxelChunk chunk, int baseX, int baseZ, ChunkGeneration.CacheHandler<float> handler)
     {
-        chunk.HasBlocks = true;
-
-        var blocks = chunk.Blocks;
-        var countMap = chunk.CountMap;
-
         float* height  = handler.Cache[0];
-        float* heightX = handler.Cache[1];
-        float* heightZ = handler.Cache[2];
+        int lodLevel = chunk.LodMult;
 
+        V256f one = V256F.One;
+        V256f xOffsets = V256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f) * lodLevel;
+
+        int ptrIndex = 0;
+
+        V256f SmoothLerp(V256f min, V256f max, V256f value, float smoothing)
+        {
+            var t = ((value - min) / (max - min)).Clamp01();
+
+            // Smoothstep
+            var smooth = t * t * (V256F.New(3f) - V256F.New(2f) * t);
+
+            // Blend between linear and smooth
+            t = V256F.Lerp(t, smooth, V256F.New(smoothing));
+
+            return min + (max - min) * t;
+        }
+
+        V256f GetMountainMask(V256f x, V256f y)
+        {
+            var n0 = PerlinNoiseAvx2.Noise01(
+                x * V256F.New(0.0005f),
+                y * V256F.New(0.0005f));
+
+            var n1 = PerlinNoiseAvx2.Noise01(
+                x * V256F.New(0.001f),
+                y * V256F.New(0.001f));
+
+            var n2 = PerlinNoiseAvx2.Noise01(
+                x * V256F.New(0.004f),
+                y * V256F.New(0.004f));
+
+            var mountainNoise =
+                n0 * V256F.New(0.65f) +
+                n1 * V256F.New(0.25f) +
+                n2 * V256F.New(0.10f);
+
+            return SmoothLerp(
+                V256F.New(0f),
+                V256F.New(0.3f),
+                mountainNoise, 
+                1f);
+        }
+
+        V256f MountainNoise(V256f x, V256f y)
+        {
+            V256f noise = V256F.Zero;
+
+            V256f amplitude = V256F.One;
+            V256f frequency = V256F.New(0.0015f);
+
+            // Large mountain formations
+            noise += PerlinNoiseAvx2.Noise01(x * frequency, y * frequency) * amplitude;
+
+            amplitude *= V256F.New(0.5f);
+            frequency *= V256F.New(2.0f);
+
+            // Medium-scale formations
+            noise += PerlinNoiseAvx2.Noise01(x * frequency, y * frequency) * amplitude;
+
+            amplitude *= V256F.New(0.5f);
+            frequency *= V256F.New(2.0f);
+
+            // Mountain detail
+            noise += PerlinNoiseAvx2.Noise01(x * frequency, y * frequency) * amplitude;
+
+            amplitude *= V256F.New(0.5f);
+            frequency *= V256F.New(2.0f);
+
+            // Small detail
+            noise += PerlinNoiseAvx2.Noise01(x * frequency, y * frequency) * amplitude;
+
+            // Normalize because amplitudes sum to 1.875
+            noise *= V256F.New(1.0f / 1.875f);
+
+            // Make high areas more mountainous
+            noise *= noise;
+
+            return noise;
+        }
+
+        // Process 8 columns at a time in X
+        for (int z = 0; z < CHUNK_SIZE; z++)
+        {
+            V256f wz = V256.Create((float)(baseZ + z * lodLevel));
+
+            for (int x = 0; x < CHUNK_SIZE; x += 8)
+            {
+                V256f wx = V256F.Add(V256F.New((float)(baseX + x * lodLevel)), xOffsets);
+
+                var displacementx = PerlinNoiseAvx2.Noise01(wx * V256F.New(0.1f), wz * V256F.New(0.1f));
+                var displacementy = PerlinNoiseAvx2.Noise01(wx * V256F.New(0.1f) + V256F.New(1000), wz * V256F.New(0.1f) + V256F.New(1000));
+
+                displacementx *= V256F.New(0.25f);
+                displacementy *= V256F.New(0.25f);
+
+                //var terrainHeight = MountainNoise(worldX, worldZ);
+                var terrainNoise = VoronoiNoiseAvx2.DistanceVoronoi(wx * V256F.New(0.02f) + displacementx, wz * V256F.New(0.02f) + displacementy);
+                //terrainNoise *= V256F.One - VoronoiNoiseAvx2.EdgeVoronoi(worldX * V256F.New(0.02f), worldZ * V256F.New(0.02f));
+                terrainNoise *= V256F.New(0.25f);
+
+                var terrainHeight = MountainNoise(wx, wz);
+                
+                terrainNoise *= (terrainHeight - V256F.New(0.2f)).Clamp01();
+
+                terrainHeight += terrainNoise;
+                terrainHeight *= V256F.New(500f);
+
+                var mountainMask = GetMountainMask(wx, wz);
+
+                var plainsNoise = MountainNoise(wx + displacementx, wz + displacementy) * V256F.New(5f);
+
+                terrainHeight = V256F.Lerp(V256F.New(50) + plainsNoise, terrainHeight, mountainMask);
+                terrainHeight += V256F.New(65);
+
+                *(V256f*)(height  + ptrIndex) = terrainHeight;
+
+                ptrIndex += 8;
+            }
+        }
+    }
+
+    /*
+    public static void PopulateVoronoiTest(byte* blocks, int lodLevel, int baseX, int baseY, int baseZ)
+    {
+        float* height  = handler.Cache[0];
         int index = 0;
+
+        int yIncrement = 8 * lodLevel;
+
+        V256f laneOffsets = Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f) * lodLevel;
+
+        V256i lodV = V256I.New(lodLevel - 1);
+        V256i invLodV = lodV ^ V256U.MaxValue.AsInt32();
+
+        var rows = stackalloc V256i[4];
 
         for (int z = 0; z < CHUNK_SIZE; z++)
         {  
-            V256f worldZ = V256F.New(z + baseZ);
+            V256f worldZ = V256F.New(z * lodLevel + baseZ);
             V256i worldZI = worldZ.ToInt();
-
-            V256f zGravel = worldZ * _v10;
 
             for (int x = 0; x < CHUNK_SIZE; x++)
             {  
-                V256f worldX = V256F.New(x + baseX);
+                V256f worldX = V256F.New(x * lodLevel + baseX);
                 V256i worldXI = worldX.ToInt();
 
-                V256f xGravel = worldX * _v10;
+                var terrainHeight = V256F.New(height[index]);
+                terrainHeight *= V256F.New(150);
+                var terrainHeightI = terrainHeight.ToInt();
 
-                V256f terrainHeight  = V256F.New(height[index]);
-                V256f terrainHeightX = V256F.New(heightX[index]);
-                V256f terrainHeightZ = V256F.New(heightZ[index]);
+                // height code
 
-                V256i terrainHeightI = terrainHeight.FloorToInt();
+                for (int i = 0; i < 4; i++)
+                {
+                    int y = i * yIncrement;
 
-                V256f slope     = V256F.Abs(terrainHeight - terrainHeightX) + V256F.Abs(terrainHeight - terrainHeightZ);
+                    V256f worldY = V256F.New(y + baseY) + laneOffsets;
+                    V256i worldYI = worldY.ToInt();
 
-                V256i isSteep   = slope.CompareG(TwoPFive).AsInt32();
-                V256i isSnowCap = terrainHeight.CompareG(SnowLineV256f).AsInt32();
+                    V256i isSolid = terrainHeightI.CompareGE(worldYI);
 
+                    V256i block = isSolid.IfThenElse(BLOCK_STONE_V, V256I.Zero);
 
-                V256i row1 = GenerateBlocksOrderedYByte(x, 0,  z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
-                V256i row2 = GenerateBlocksOrderedYByte(x, 8,  z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
-                V256i row3 = GenerateBlocksOrderedYByte(x, 16, z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
-                V256i row4 = GenerateBlocksOrderedYByte(x, 24, z, baseX, baseY, baseZ, worldX, worldZ, terrainHeight, terrainHeightI, isSteep, isSnowCap, xGravel, zGravel);
+                    rows[i] = block;
 
-                
+                    // block code
+                }
 
-                V256b row = VH.ShortenToV256b(row1, row2, row3, row4);
+                V256b row = VH.ShortenToV256b(rows[0], rows[1], rows[2], rows[3]);
 
-                *(V256b*)(chunk.ByteBlocks + x * 32 + z * 1024) = row;
+                *(V256b*)(blocks + x * 32 + z * 1024) = row;
 
                 index++;
             }
         }
     }
+    */
 
-
-    public static V256i GenerateBlocksOrderedYByte(
-        int x, int y, int z, 
-        int baseX, int baseY, int baseZ, 
-        V256f worldX, V256f worldZ, 
-        V256f terrainHeight, V256i terrainHeightI,
-        V256i isSteep, V256i isSnowCap,
-        V256f xGravel, V256f zGravel)
+    public static void PopulateVoronoiTest(byte* blocks, int lodLevel, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<float> handler)
     {
-        V256f worldY = V256F.New(y + baseY) + laneOffsets;
-        V256i worldYI = worldY.ToInt();
+        var height = handler.Cache[0];
+        int index = 0;
 
-        V256i isAir = worldYI.CompareG(terrainHeightI);
+        int yIncrement = 8 * lodLevel;
 
-        if (V256I.AllTrue(isAir))
-        {
-            return V256I.Zero;
-        }
+        V256f laneOffsets = Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f) * lodLevel;
 
-        V256i blockId = V256I.Zero;
+        V256i lodV = V256I.New(lodLevel - 1);
+        V256i invLodV = lodV ^ V256U.MaxValue.AsInt32();
 
-        V256i depth = terrainHeightI - worldYI;
+        var rows = stackalloc V256i[4];
 
-        V256i isSurface = depth.CompareE(V256I.Zero);
-        V256i isShallow = depth.CompareG(V256I.Zero) & depth.CompareLE(V256I.Three);
-
-        V256i isDeep = depth.CompareG(V256I.Three);
-
-        V256i stoneVariant = GetStoneVariantSimd(worldX, worldY, worldZ, terrainHeight);
-        V256i needsGravel = isDeep & isSteep;
-
-        V256f gravelNoise;
-        if (Avx.TestZ(needsGravel, needsGravel))
-        {
-            gravelNoise = V256F.Zero;
-        }
-        else
-        {
-            var yGravel = worldY * _v11;
-            gravelNoise = PerlinNoiseAvx2.Noise(xGravel + yGravel + V256F.New(500f), zGravel - yGravel + V256F.New(500f));
-        }
-
-        V256i isGravel = gravelNoise.CompareG(V256F.New(0.6f)).AsInt32();
-        isGravel = isSteep & isGravel;
-
-        V256i surfaceID = BLOCK_GRASS_V;
-        surfaceID = isSnowCap.IfThenElse(BLOCK_SNOW_V, surfaceID);
-        surfaceID = isSteep.IfThenElse(stoneVariant, surfaceID);
-
-        V256i shallowID = BLOCK_DIRT_V;
-        V256i snowStone = depth.CompareE(V256I.One).IfThenElse(BLOCK_SNOW_V, BLOCK_STONE_V);
-        shallowID = isSnowCap.IfThenElse(snowStone, shallowID);
-        shallowID = isSteep.IfThenElse(stoneVariant, shallowID);
-
-        V256i deepID = stoneVariant;
-        deepID = isGravel.IfThenElse(BLOCK_GRAVEL_V, deepID);
-
-        blockId = isSurface.IfThenElse(surfaceID, blockId);
-        blockId = isShallow.IfThenElse(shallowID, blockId);
-        blockId = isDeep.IfThenElse(deepID, blockId);
-
-        V256i isBottom = worldYI.CompareE(V256I.Zero);
-
-        blockId = isBottom.IfThenElse(BLOCK_STONE_V, blockId);
-
-        return blockId;
-    }
-
-
-    public static void Vector256PopulateOrderedBlockMap(VoxelChunk chunk, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<V256f> handler)
-    {
-        chunk.HasBlocks = true;
-        var blockMap = chunk.BlockMap;
-        var countMap = chunk.CountMap;
-
-        for (int y = 0; y < CHUNK_SIZE; y++)
+        for (int z = 0; z < CHUNK_SIZE; z++)
         {  
-            for (int z = 0; z < CHUNK_SIZE; z++)
-            {
-                var row1 = GenerateBlocksOrdered(chunk,  0, y, z, baseX, baseY, baseZ, handler);
-                var row2 = GenerateBlocksOrdered(chunk,  8, y, z, baseX, baseY, baseZ, handler);
-                var row3 = GenerateBlocksOrdered(chunk, 16, y, z, baseX, baseY, baseZ, handler);
-                var row4 = GenerateBlocksOrdered(chunk, 24, y, z, baseX, baseY, baseZ, handler);
+            V256f worldZ = V256F.New(z * lodLevel + baseZ);
+            V256i worldZI = worldZ.ToInt();
 
-                var blockCount = 32 - GetAirBlockCount(row1, row2, row3, row4);
+            for (int x = 0; x < CHUNK_SIZE; x++)
+            {  
+                V256f worldX = V256F.New(x * lodLevel + baseX);
+                V256i worldXI = worldX.ToInt();
 
-                int zy = z + y * 32;
+                var terrainHeight = V256F.New(height[index]);
+                var terrainHeightI = terrainHeight.ToInt() & invLodV;
 
-                var count = countMap[zy];
-                countMap[zy] = (byte)blockCount;
-                
-                if (blockCount == 0)
+                // height code
+
+                for (int i = 0; i < 4; i++)
                 {
-                    if (count != 0)
-                    {
-                        MemoryHelper.Free(blockMap[zy]);
-                        blockMap[zy] = VoxelChunk.EmptyMap[zy];
-                    }
-                    // else: was already air, still air — do nothing
+                    int y = i * yIncrement;
+
+                    V256f worldY = V256F.New(y + baseY) + laneOffsets;
+                    V256i worldYI = worldY.ToInt();
+
+                    V256i isSolid = terrainHeightI.CompareGE(worldYI);
+
+                    V256i block = isSolid.IfThenElse(BLOCK_STONE_V, V256I.Zero);
+
+                    rows[i] = block;
                 }
-                else if (count == 0)
-                {
-                    var row = blockMap[zy] = MemoryHelper.Alloc<Block>(32);
-                    *(V256i*)(row +  0) = row1;
-                    *(V256i*)(row +  8) = row2;
-                    *(V256i*)(row + 16) = row3;
-                    *(V256i*)(row + 24) = row4;
-                }
-                else
-                {
-                    var row = blockMap[zy];
-                    *(V256i*)(row +  0) = row1;
-                    *(V256i*)(row +  8) = row2;
-                    *(V256i*)(row + 16) = row3;
-                    *(V256i*)(row + 24) = row4;
-                }
-                // else do nothing
+
+                V256b row = VH.ShortenToV256b(rows[0], rows[1], rows[2], rows[3]);
+
+                *(V256b*)(blocks + x * 32 + z * 1024) = row;
+
+                index++;
             }
         }
-    }
-
-    private static V256i GenerateBlocksOrdered(VoxelChunk chunk, int x, int y, int z, int baseX, int baseY, int baseZ, ChunkGeneration.CacheHandler<V256f> handler)
-    {
-        V256f* height  = handler.Cache[0];
-        V256f* heightX = handler.Cache[1];
-        V256f* heightZ = handler.Cache[2];
-
-        // X
-        V256f worldX = V256F.Add(V256F.New(x + baseX), laneOffsets);
-        V256i worldXI = Avx.ConvertToVector256Int32(worldX);
-
-        V256f xGravel = V256F.Multiply(worldX, _v10);
-
-        // Y
-        V256f worldY = V256F.New(y + baseY);
-        V256i worldYI = Avx.ConvertToVector256Int32(worldY);
-
-        // Z
-        V256f worldZ = V256F.New(z + baseZ);
-        V256i worldZI = Avx.ConvertToVector256Int32(worldZ);
-
-        V256f zGravel = V256F.Multiply(worldZ, _v10);
-
-
-        // Get heightmap data
-        int idx = (x >> 3) + (z * 4);
-
-        V256f terrainHeightF = height[idx];
-        V256i terrainHeight = V256I.FloorToInt(terrainHeightF);
-
-        V256f slope = V256F.Add(V256F.Abs(terrainHeightF - heightX[idx]), V256F.Abs(V256F.Subtract(terrainHeightF, heightZ[idx])));
-        V256i isSteep = Avx.CompareGreaterThan(slope, TwoPFive).AsInt32();
-        V256i isSnowCap = Avx.CompareGreaterThan(terrainHeightF, SnowLineV256f).AsInt32();
-
-        
-        // generation code
-        if (y == 0 && chunk.WorldPosition.Y == 0)
-        {
-            SetBlocksV256i2(chunk, BLOCK_STONE_V, x, y, z);
-            return BLOCK_STONE_V;
-        }
-
-        V256i isAir = Avx2.CompareGreaterThan(worldYI, terrainHeight);
-
-        if (V256I.AllTrue(isAir))
-        {
-            SetBlocksV256i2(chunk, V256I.Zero, x, y, z);
-            return V256I.Zero;
-        }
-
-        // Derive worldY fresh from worldYI every iteration instead
-        // of maintaining a separate accumulator - keeps it from
-        // ever drifting out of sync after an air-skip above.
-        
-
-        V256i blockId = V256I.Zero;
-
-        V256i depth = V256I.Subtract(terrainHeight, worldYI);
-
-        V256i isSurface = Avx2.CompareEqual(depth, V256I.Zero);
-        V256i isShallow = Avx2.And(
-            Avx2.CompareGreaterThan(depth, V256I.Zero),
-            V256I.CompareLessThanOrEqual(depth, V256I.Three)
-        );
-        V256i isDeep = Avx2.CompareGreaterThan(depth, V256I.New(3));
-
-        V256i stoneVariant = GetStoneVariantSimd(worldX, worldY, worldZ, terrainHeightF);
-        V256i needsGravel = Avx2.And(isDeep, isSteep);
-
-        V256f gravelNoise;
-        if (Avx.TestZ(needsGravel, needsGravel))
-        {
-            gravelNoise = V256F.Zero;
-        }
-        else
-        {
-            var yGravel = V256F.Multiply(worldY, _v11);
-            gravelNoise = PerlinNoiseAvx2.Noise(
-                V256F.Add(V256F.Add(xGravel, yGravel), V256F.New(500f)),
-                V256F.Add(V256F.Subtract(zGravel, yGravel), V256F.New(500f))
-            );
-        }
-
-        V256i isGravel = Avx.CompareGreaterThan(gravelNoise, V256F.New(0.6f)).AsInt32();
-        isGravel = Avx2.And(isSteep, isGravel);
-
-        V256i surfaceID = BLOCK_GRASS_V;
-        surfaceID = V256I.IfElseFull(isSnowCap, BLOCK_SNOW_V, surfaceID);
-        surfaceID = V256I.IfElseFull(isSteep, stoneVariant, surfaceID);
-
-        V256i shallowID = BLOCK_DIRT_V;
-        shallowID = V256I.IfElseFull(isSnowCap, V256I.IfElseFull(Avx2.CompareEqual(depth, V256I.One), BLOCK_SNOW_V, BLOCK_STONE_V), shallowID);
-        shallowID = V256I.IfElseFull(isSteep, stoneVariant, shallowID);
-
-        V256i deepID = stoneVariant;
-        deepID = V256I.IfElseFull(isGravel, BLOCK_GRAVEL_V, deepID);
-
-        blockId = V256I.IfElseFull(isSurface, surfaceID, blockId);
-        blockId = V256I.IfElseFull(isShallow, shallowID, blockId);
-        blockId = V256I.IfElseFull(isDeep, deepID, blockId);
-
-        SetBlocksV256i2(chunk, blockId, x, y, z);
-        return blockId;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SetBlocksV256i(VoxelChunk chunk, Block* blockPtr, V256i blocks, int x, int y, int z)
-    {
-        const uint INV_8_BIT_MASK = ~0xFFu;
-        int blockIndex = x + z * 32 + y * 1024;
-
-        *(V256i*)(blockPtr + blockIndex) = blocks;
-
-        var isAir = blocks.CompareE(V256I.Zero);
-        uint mask = ~isAir.GetExtractedMSB();
-        uint old = chunk.SolidMap[z + y * 32] & (INV_8_BIT_MASK << x);
-        chunk.SolidMap[z + y * 32] = old | (mask << x);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SetBlocksV256i2(VoxelChunk chunk, V256i blocks, int x, int y, int z)
-    {
-        const uint INV_8_BIT_MASK = ~0xFFu;
-        var isAir = blocks.CompareE(V256I.Zero);
-        uint mask = ~isAir.GetExtractedMSB();
-        uint old = chunk.SolidMap[z + y * 32] & (INV_8_BIT_MASK << x);
-        chunk.SolidMap[z + y * 32] = old | (mask << x);
     }
 }

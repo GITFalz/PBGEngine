@@ -13,27 +13,54 @@ using Silk.NET.Vulkan;
 
 namespace PBG.NewVoxel;
 
+[InternalSystemInit(InitPriority.Shader)]
 public class NewChunkDataPool
 {
+    public static ComputeShader FrustumCullingCompute;
+    public static int PlanesLocation = -1;
+    public static int MaxSlotsLocation = -1;
+    public static int PlayerPositionLocation = -1;
+    public static int MaxDistanceLocation = -1;
+
+    public static void Init()
+    {
+        FrustumCullingCompute = new(new()
+        {
+            ComputeShaderPath = Game.ShaderPath / "computeShaders" / "world_vulkan" / "renderLoop.comp"
+        });
+
+        FrustumCullingCompute.Compile();
+
+        PlanesLocation = FrustumCullingCompute.GetLocation("ubo.planes");
+        MaxSlotsLocation = FrustumCullingCompute.GetLocation("ubo.uMaxSlots");
+        PlayerPositionLocation = FrustumCullingCompute.GetLocation("ubo.playerPosition");
+        MaxDistanceLocation = FrustumCullingCompute.GetLocation("ubo.maxDistance");
+    }
+
+
+
     public List<GPUChunkDataPool> DataPool = [];
     public const uint CHUNK_COUNT_PER_POOL = 4096;
     public const uint SLOT_SIZE = 1024;
 
     public readonly VoxelRenderer Renderer;
+    public readonly int LODLevel;
     public bool Updated = false;
 
     private object _lock = new();
     private Task? _dataPoolTask = null;
+    private int _generating = 0;
 
-    public NewChunkDataPool(VoxelRenderer renderer)
+    public NewChunkDataPool(VoxelRenderer renderer, int lodLevel)
     {
         Renderer = renderer;
+        LODLevel = lodLevel;
     }
 
     public bool TryAllocate(VoxelChunk chunk, uint size, out Allocation alloc)
     {
         if (DataPool.Count == 0)
-            DataPool.Add(new(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE));
+            DataPool.Add(new(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE, LODLevel));
 
         for (int i = 0; i < DataPool.Count; i++)
         {
@@ -41,7 +68,7 @@ public class NewChunkDataPool
                 return true;
         }
 
-        DataPool.Add(new(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE));
+        DataPool.Add(new(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE, LODLevel));
         if (DataPool[^1].TryAllocate(chunk, size, out alloc))
             return true;
 
@@ -50,45 +77,45 @@ public class NewChunkDataPool
 
     public bool TryAllocate2(VoxelChunk chunk, [NotNullWhen(true)] out Allocation? alloc)
     {
-        // 1. Try all existing pools (fast path)
+        // Fast path
         for (int i = 0; i < DataPool.Count; i++)
         {
             if (DataPool[i].TryAllocate2(chunk, out alloc))
             {
-                // We just used a slot → maybe we should start growing a spare
                 EnsureSparePool();
                 return true;
             }
         }
 
-        // 2. No free slots. Try to force a new pool (this is the only place we may wait)
+        // Slow path
+        Task? task;
+
         lock (_lock)
         {
-            // Re-check under lock in case another thread just added one
+            // Someone may have added a pool while we were searching.
             for (int i = 0; i < DataPool.Count; i++)
             {
                 if (DataPool[i].TryAllocate2(chunk, out alloc))
                     return true;
             }
 
-            // Still nothing → we have to create one now (this is the rare case you want to avoid)
-            if (_dataPoolTask != null)
-            {
-                _dataPoolTask.Wait();   // only wait if one was already in flight
-                _dataPoolTask = null;
-            }
-            else
-            {
-                // Last resort: block and create
-                Task.Run(() =>
-                {
-                    DataPool.Add(new GPUChunkDataPool(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE));
-                }).Wait();
-            }
+            task = _dataPoolTask;
 
-            // Now the last pool should have space
-            return DataPool[^1].TryAllocate2(chunk, out alloc);
+            if (task == null)
+            {
+                // Nobody is generating one.
+                // We become the thread that does it.
+                AddDataPool();
+                
+                return DataPool[^1].TryAllocate2(chunk, out alloc);
+            }
         }
+
+        // IMPORTANT: lock is released before waiting.
+        task.GetAwaiter().GetResult();
+
+        // The pool has now been added.
+        return DataPool[^1].TryAllocate2(chunk, out alloc);
     }
 
     // Keep one spare pool ready whenever possible
@@ -97,34 +124,58 @@ public class NewChunkDataPool
         lock (_lock)
         {
             // Already have an empty one? Nothing to do.
-            if (DataPool.Any(p => p.AllocationCount == 0))
-                return;
+            try
+            {
+                bool empty = false;
+                for (int i = 0; i < DataPool.Count; i++)
+                {
+                    empty |= DataPool[i].AllocationCount == 0;
+                }
+                if (empty)
+                    return;
+            }
+            catch
+            {
+                DebugLog.Warning("Race condition when looping over data pools");
+            }
 
             // Already scheduled a creation? Don't schedule another.
             if (_dataPoolTask != null)
                 return;
 
-            /*
-            _dataPoolTask = MainThreadDispatcher.Enqueue(() =>
-            {
-                var newPool = new GPUChunkDataPool(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE);
-                lock (_lock)
-                {
-                    DataPool.Add(newPool);
-                    _dataPoolTask = null;
-                }
-            });
-            */
-
             _dataPoolTask = Task.Run(() =>
             {
-                var newPool = new GPUChunkDataPool(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE);
-                lock (_lock)
+                try
                 {
-                    DataPool.Add(newPool);
-                    _dataPoolTask = null;
+                    AddDataPool();
+                }
+                catch (Exception ex)
+                {
+                    DebugLog.Error(ex.Message);
+                    throw;
+                }
+                finally
+                {
+                    lock (_lock)
+                    {
+                        _dataPoolTask = null;
+                    }
                 }
             });
+        }
+    }
+
+    private void AddDataPool()
+    {
+        try
+        {
+            var newPool = new GPUChunkDataPool(this, CHUNK_COUNT_PER_POOL, SLOT_SIZE, LODLevel);
+            DataPool.Add(newPool);
+        }
+        catch (Exception ex)
+        {
+            DebugLog.Error(ex.Message);
+            throw;
         }
     }
 
@@ -149,7 +200,7 @@ public class NewChunkDataPool
     public void UpdateDrawCommands(int passIndex = 0)
     {
         for (int i = 0; i < DataPool.Count; i++)
-            DataPool[i].UpdateDrawCommands(passIndex);
+            DataPool[i].UpdateBuffers(passIndex);
     }
 
     public void HandleUploads()
@@ -226,23 +277,19 @@ public struct UploadData
     public ulong Gen;
     public uint Index;
     public uint VertexCount;
-    public ulong OffsetInBytes;
-    public ulong SizeInBytes;
 
     public override string ToString()
     {
-        return $"chunk: {Chunk.RelativePosition}, index: {Index}, vertex count: {VertexCount}, offset: {OffsetInBytes}, size: {SizeInBytes}";
+        return $"chunk: {Chunk.RelativePosition}, index: {Index}, vertex count: {VertexCount}";
     }   
 }
 
-[InternalSystemInit(InitPriority.Shader)]
 public unsafe class GPUChunkDataPool : IDisposable
 {
     private static int _counter = 0;
 
     public int ID { get; private set; } = _counter++;
 
-    private BoundingBoxRenderer _boundingBoxDebug = new();
     private HashSet<VoxelChunk> _chunkMap = [];
 
     private NewChunkDataPool _chunkDataPool;
@@ -267,16 +314,14 @@ public unsafe class GPUChunkDataPool : IDisposable
     private Matrix4[] _matrices;
 
     private SSBO<ChunkInfo> _chunkInfoSSBO;
-    private ChunkInfo[] _chunkInfo = [];
+    public ChunkInfo[] ChunkInfo = [];
 
     private int[][] _chunkCounts;
-    private int[] _visibleChunks = new int[PASS_COUNT];
 
     private bool _updateChunkData = false;
     private uint _updateStart = NewChunkDataPool.CHUNK_COUNT_PER_POOL;
     private uint _updateEnd = 0;
 
-    //public List<Allocation> Allocations = [];
     public BitArray AllocationArray = new((int)NewChunkDataPool.CHUNK_COUNT_PER_POOL);
     public int AllocationCount = 0;
     private object _allocationLock = new();
@@ -289,16 +334,15 @@ public unsafe class GPUChunkDataPool : IDisposable
     public bool Full = false;
     private double _emptyTime = 0;
 
-    public GPUChunkDataPool(NewChunkDataPool chunkDataPool, uint count, uint size)
+    public GPUChunkDataPool(NewChunkDataPool chunkDataPool, uint count, uint size, int lodLevel)
     {
         _chunkDataPool = chunkDataPool;
 
         _chunkSize = size;
+
         SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector2u>();
 
         MeshSSBO = new(count * size, hostVisible: false, useStaging: true);
-
-        //Allocations.Add(new() { DataPool = this, Offset = 0, Size = count });
 
         _descriptors            = new Descriptor[PASS_COUNT];
         _wireframeDescriptors   = new Descriptor[PASS_COUNT];
@@ -306,56 +350,57 @@ public unsafe class GPUChunkDataPool : IDisposable
         _prePassDescriptors     = new Descriptor[PASS_COUNT];
         _cullingDescriptors     = new Descriptor[GFX.MAX_FRAMES_IN_FLIGHT][];
 
-        _chunkInfoSSBO          = new SSBO<ChunkInfo>(count, true);
+        _chunkInfoSSBO = new SSBO<ChunkInfo>(count, true);
 
-        _indirectSSBOs          = new IDBO<DrawCommand>[GFX.MAX_FRAMES_IN_FLIGHT][];
-        _indirectCountSSBOs     = new IDBO<uint>[GFX.MAX_FRAMES_IN_FLIGHT][];
-        _drawCommands           = new DrawCommand[GFX.MAX_FRAMES_IN_FLIGHT][][];
-        _chunkCounts            = new int[GFX.MAX_FRAMES_IN_FLIGHT][];
+        _indirectSSBOs      = new IDBO<DrawCommand>[GFX.MAX_FRAMES_IN_FLIGHT][];
+        _indirectCountSSBOs = new IDBO<uint>[GFX.MAX_FRAMES_IN_FLIGHT][];
+        _drawCommands       = new DrawCommand[GFX.MAX_FRAMES_IN_FLIGHT][][];
+        _chunkCounts        = new int[GFX.MAX_FRAMES_IN_FLIGHT][];
 
-        _matrixSSBO             = new(count);
+        _matrixSSBO = new(count);
 
-        _matrices               = new Matrix4[count];
-        _chunkInfo              = new ChunkInfo[count];
+        _matrices  = new Matrix4[count];
+        ChunkInfo = new ChunkInfo[count];
 
         for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
         {
             UploadQueues[i] = [];
 
-            _indirectSSBOs[i] = new IDBO<DrawCommand>[PASS_COUNT];
+            _indirectSSBOs[i]      = new IDBO<DrawCommand>[PASS_COUNT];
             _indirectCountSSBOs[i] = new IDBO<uint>[PASS_COUNT];
-            _drawCommands[i] = new DrawCommand[PASS_COUNT][];
-            _chunkCounts[i] = new int[PASS_COUNT];
+            _drawCommands[i]       = new DrawCommand[PASS_COUNT][];
+            _chunkCounts[i]        = new int[PASS_COUNT];
             _cullingDescriptors[i] = new Descriptor[PASS_COUNT];
 
             for (int j = 0; j < PASS_COUNT; j++)
             {
                 var indirectSSBO = new IDBO<DrawCommand>(count, true);
                 var indirectCountSSBO = new IDBO<uint>([0], true);
-                var cullingDescriptor = FrustumCullingCompute.GetDescriptorSet();  
+                var cullingDescriptor = NewChunkDataPool.FrustumCullingCompute.GetDescriptorSet();
 
                 cullingDescriptor.BindSSBO(_chunkInfoSSBO, 0);
                 cullingDescriptor.BindIDBO(indirectSSBO, 1);
                 cullingDescriptor.BindIDBO(indirectCountSSBO, 2);
 
-                _indirectSSBOs[i][j] = indirectSSBO;
+                _indirectSSBOs[i][j]      = indirectSSBO;
                 _indirectCountSSBOs[i][j] = indirectCountSSBO;
                 _drawCommands[i][j] = new DrawCommand[count];
                 _cullingDescriptors[i][j] = cullingDescriptor;
             }
         }
 
+
         for (int i = 0; i < PASS_COUNT; i++)
         {
-            var descriptor = WorldShader.Shader.GetDescriptorSet();  
-            var wireframeDescriptor = VoxelRenderer.WireframeWorldShader.GetDescriptorSet();  
-            var blankDescriptor = VoxelRenderer.BlankWorldShader.GetDescriptorSet();  
-            var prePassDescriptor = VoxelRenderer.TestPrePassShader.GetDescriptorSet();  
-            
-            _descriptors[i] = descriptor;
+            var descriptor = WorldShader.Shader.GetDescriptorSet();
+            var wireframeDescriptor = VoxelRenderer.WireframeWorldShader.GetDescriptorSet();
+            var blankDescriptor = VoxelRenderer.BlankWorldShader.GetDescriptorSet();
+            var prePassDescriptor = VoxelRenderer.TestPrePassShader.GetDescriptorSet();
+
+            _descriptors[i]          = descriptor;
             _wireframeDescriptors[i] = wireframeDescriptor;
-            _blankDescriptors[i] = blankDescriptor;
-            _prePassDescriptors[i] = prePassDescriptor;
+            _blankDescriptors[i]     = blankDescriptor;
+            _prePassDescriptors[i]   = prePassDescriptor;
 
             descriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             descriptor.BindSSBO(MeshSSBO, 1);
@@ -368,18 +413,18 @@ public unsafe class GPUChunkDataPool : IDisposable
             wireframeDescriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             wireframeDescriptor.BindSSBO(MeshSSBO, 1);
             wireframeDescriptor.BindSSBO(_matrixSSBO, 2);
-            
+
             blankDescriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             blankDescriptor.BindSSBO(MeshSSBO, 1);
             blankDescriptor.BindSSBO(_matrixSSBO, 2);
             blankDescriptor.BindTextureArray(BlockData.BlockTextureArray, 4);
-            
+
             prePassDescriptor.BindSSBO(BlockData.FaceGeometrySSBO, 0);
             prePassDescriptor.BindSSBO(MeshSSBO, 1);
             prePassDescriptor.BindSSBO(_matrixSSBO, 2);
-        }   
+        }
 
-        _emptyTime = GameTime.TotalTime; 
+        _emptyTime = GameTime.TotalTime;
     }
 
     public bool TryAllocate(VoxelChunk chunk, uint size, out Allocation alloc)
@@ -444,6 +489,8 @@ public unsafe class GPUChunkDataPool : IDisposable
 
             AllocationCount++;
         }
+
+        //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "index: " + index + " value: " + AllocationArray.GetInt(index)));
         
         Empty = false;
 
@@ -475,9 +522,9 @@ public unsafe class GPUChunkDataPool : IDisposable
             long index = chunk.Allocation.Offset + i;
 
             _matrices[index] = chunk.ModelMatrix;
-            _chunkInfo[index] = new() {
+            ChunkInfo[index] = new() {
                 Center      = chunk.Center,
-                Radius      = 28.0f,
+                Radius      = 28.0f * chunk.LodMult,
                 VertexCount = thisPageVerts,
                 SlotIndex   = (int)index,
                 Active      = thisPageVerts > 0 ? 1u : 0u
@@ -504,26 +551,34 @@ public unsafe class GPUChunkDataPool : IDisposable
 
         while (uploadQueue.TryDequeue(out var uploadData))
         {
-            //Console.WriteLine(uploadData);
             WorldNodeEditor.UploadCount++;
 
             var chunk = uploadData.Chunk;
             var gen = uploadData.Gen;
             var index = uploadData.Index;
             var vertexCount = uploadData.VertexCount;
+            var offsetInBytes = index * NewChunkDataPool.SLOT_SIZE * Vector2u.ByteSize;
+            var sizeInBytes = vertexCount * Vector2u.ByteSize;
 
             if (gen != chunk.Gen)
             {
+                //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "upload free index: " + index + " value: " + AllocationArray.GetInt((int)index)));
                 RemoveAllocation(index);
                 continue;
             }
 
-            MeshSSBO.MarkDirty(uploadData.OffsetInBytes, uploadData.SizeInBytes);
+            MeshSSBO.MarkDirty(offsetInBytes, sizeInBytes);
+
+            //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "uploaded"));
+
+            var oldInfo = ChunkInfo[index];
+            if (oldInfo.Active == 1)
+                DebugLog.Warning($"Chunk: {(oldInfo.Center - 16)} was already there");
 
             _matrices[index] = chunk.ModelMatrix;
-            _chunkInfo[index] = new() {
+            ChunkInfo[index] = new() {
                 Center      = chunk.Center,
-                Radius      = 28.0f,
+                Radius      = 28.0f * chunk.LodMult,
                 VertexCount = vertexCount,
                 SlotIndex   = (int)index,
                 Active      = vertexCount > 0 ? 1u : 0u
@@ -568,35 +623,6 @@ public unsafe class GPUChunkDataPool : IDisposable
         }
     }
 
-    public void Free(VoxelChunk chunk)
-    {
-        _chunkMap.Remove(chunk);
-
-        _chunkDataPool.Updated = true;
-        var alloc = chunk.Allocation;
-
-        lock (_allocationLock)
-        {
-            AllocationArray.RemoveMap((int)alloc.Offset, (int)alloc.Size);
-
-            for (int i = 0; i < chunk.Allocation.Size; i++)
-            {
-                long index = chunk.Allocation.Offset + i;
-                _chunkInfo[index].Active = 0;
-            }
-
-            Empty = AllocationArray.IsEmpty;
-            if (Empty)
-            {
-                _emptyTime = GameTime.TotalTime;
-            }
-        }
-
-        _updateChunkData = true;
-        if (chunk.Allocation.Start < _updateStart) _updateStart = chunk.Allocation.Start;
-        if (chunk.Allocation.End > _updateEnd) _updateEnd = chunk.Allocation.End;
-    }
-
     public void Free(ref Allocation allocation)
     {
         _chunkMap.Remove(allocation.Chunk);
@@ -605,12 +631,12 @@ public unsafe class GPUChunkDataPool : IDisposable
 
         lock (_allocationLock)
         {
-            AllocationArray.RemoveMap((int)allocation.Offset, (int)allocation.Size);
+            //AllocationArray.RemoveMap((int)allocation.Offset, (int)allocation.Size);
 
             for (int i = 0; i < allocation.Size; i++)
             {
                 long index = allocation.Offset + i;
-                _chunkInfo[index].Active = 0;
+                ChunkInfo[index].Active = 0;
             }
 
             Empty = AllocationArray.IsEmpty;
@@ -653,7 +679,7 @@ public unsafe class GPUChunkDataPool : IDisposable
             for (int j = 0; j < chunk.Allocation.Size; j++)
             {
                 long index = chunk.Allocation.Offset + j;
-                newChunkInfo[newIndex] = _chunkInfo[index];
+                newChunkInfo[newIndex] = ChunkInfo[index];
                 _matrices[newIndex] = Matrix4.CreateTranslation(chunk.WorldPosition);
                 newIndex++;
             }
@@ -661,7 +687,7 @@ public unsafe class GPUChunkDataPool : IDisposable
             chunk.Allocation.Offset = newOffset;
         }
 
-        _chunkInfo = newChunkInfo;
+        ChunkInfo = newChunkInfo;
 
         _updateChunkData = true;
         _updateStart = 0;
@@ -670,36 +696,10 @@ public unsafe class GPUChunkDataPool : IDisposable
 
     public void Reset()
     {
-        /*
-        for (int i = 0; i < PASS_COUNT; i++)
-        {
-            _visibleChunks[i] = 0;
-        }
-        */
-
         for (int j = 0; j < PASS_COUNT; j++)
         {
             _indirectCountSSBOs[GFX.CurrentFrame][j].Update([0]);
         }
-    }
-
-
-    public static ComputeShader FrustumCullingCompute;
-    public static int PlanesLocation = -1;
-    public static int MaxSlotsLocation = -1;
-
-
-    public static void Init()
-    {
-        FrustumCullingCompute = new(new()
-        {
-            ComputeShaderPath = Game.ShaderPath / "computeShaders" / "world_vulkan" / "renderLoop.comp"
-        });
-
-        FrustumCullingCompute.Compile();
-
-        PlanesLocation = FrustumCullingCompute.GetLocation("ubo.planes");
-        MaxSlotsLocation = FrustumCullingCompute.GetLocation("ubo.uMaxSlots");
     }
 
     public unsafe void FrustumPass(Camera camera, int passIndex)
@@ -708,13 +708,15 @@ public unsafe class GPUChunkDataPool : IDisposable
 
         var cmd = GFX.CommandBuffer;
 
-        FrustumCullingCompute.Bind(cmd);
+        NewChunkDataPool.FrustumCullingCompute.Bind(cmd);
         descriptor.Bind(cmd, Silk.NET.Vulkan.PipelineBindPoint.Compute);
 
-        descriptor.UniformArray(PlanesLocation, camera.GpuPlanes);
-        descriptor.Uniform(MaxSlotsLocation, NewChunkDataPool.CHUNK_COUNT_PER_POOL);
+        descriptor.UniformArray(NewChunkDataPool.PlanesLocation, camera.GpuPlanes);
+        descriptor.Uniform(NewChunkDataPool.MaxSlotsLocation, NewChunkDataPool.CHUNK_COUNT_PER_POOL);
+        descriptor.Uniform(NewChunkDataPool.PlayerPositionLocation, camera.Position);
+        descriptor.Uniform(NewChunkDataPool.MaxDistanceLocation, camera.SCREEN_FAR);
         
-        FrustumCullingCompute.DispatchBarrier(cmd, descriptor, (uint)((NewChunkDataPool.CHUNK_COUNT_PER_POOL + 255) / 256), 1, 1);
+        NewChunkDataPool.FrustumCullingCompute.DispatchBarrier(cmd, descriptor, (uint)((NewChunkDataPool.CHUNK_COUNT_PER_POOL + 255) / 256), 1, 1);
 
         MemoryBarrier barrier = new()
         {
@@ -733,59 +735,19 @@ public unsafe class GPUChunkDataPool : IDisposable
             0, null);
     }
 
-    public void UpdateDrawCommand(VoxelChunk chunk, Allocation alloc, int passIndex = 0)
+    public void UpdateBuffers(int passIndex = 0)
     {
-        int vertexCount = (int)alloc.VertexCount;
-        for (int i = 0; i < alloc.Size; i++)
-        {
-            if (vertexCount <= 0)
-                return;
-
-            var newVertexCount = Mathf.Max(vertexCount - _chunkSize, 0);
-            
-            var visibleChunks = _visibleChunks[passIndex];
-            var drawCommand = _drawCommands[GFX.CurrentFrame][passIndex][visibleChunks];
-            drawCommand.InstanceCount = 1;
-            drawCommand.Count = ((uint)vertexCount - (uint)newVertexCount) * 6;
-            drawCommand.First = (uint)(alloc.Offset + i) * _chunkSize * 6;
-            drawCommand.BaseInstance = alloc.Offset + (uint)i;
-            _drawCommands[GFX.CurrentFrame][passIndex][visibleChunks] = drawCommand;
-
-            vertexCount = (int)newVertexCount;
-            _visibleChunks[passIndex]++;
-        }
-    }
-
-    public void UpdateDrawCommands(int passIndex = 0)
-    {
-        /* 
-        var visibleChunks = _visibleChunks[passIndex];
-        if (visibleChunks == 0)
-        {
-            _chunkCounts[GFX.CurrentFrame][passIndex] = 0;
-            return;
-        }
-        
-        _indirectSSBOs[GFX.CurrentFrame][passIndex].Update(_drawCommands[GFX.CurrentFrame][passIndex], 0, (uint)visibleChunks * (uint)Marshal.SizeOf<DrawCommand>());
-        */
-
         if (_updateChunkData && _updateEnd > _updateStart)
         {
             MeshSSBO.FlushStaging();
 
-            //Console.WriteLine("update arrays: " + _updateStart + " " + _updateEnd);
             _matrixSSBO.UpdateSlice(_matrices, _updateStart * Matrix4.ByteSize, (_updateEnd - _updateStart) * Matrix4.ByteSize);
-            _chunkInfoSSBO.UpdateSlice(_chunkInfo, _updateStart * ChunkInfo.ByteSize, (_updateEnd - _updateStart) * ChunkInfo.ByteSize);
+            _chunkInfoSSBO.UpdateSlice(ChunkInfo, _updateStart * NewVoxel.ChunkInfo.ByteSize, (_updateEnd - _updateStart) * NewVoxel.ChunkInfo.ByteSize);
 
             _updateChunkData = false;
             _updateStart = NewChunkDataPool.CHUNK_COUNT_PER_POOL;
             _updateEnd = 0;
         }
-
-        /*
-        _chunkCounts[GFX.CurrentFrame][passIndex] = visibleChunks;
-        _visibleChunks[passIndex] = 0;
-        */
     }
 
     public void RenderPrePass(VoxelRenderer renderer, int passIndex = 0)
@@ -866,87 +828,8 @@ public unsafe class GPUChunkDataPool : IDisposable
         _prePassDescriptors = [];
         _chunkMap = [];
 
+        AllocationArray.Dispose();
+
         GC.SuppressFinalize(this);
     }
 }
-
-public unsafe struct Allocation(VoxelChunk chunk)
-{
-    public VoxelChunk Chunk = chunk;
-    public GPUChunkDataPool DataPool;
-    public uint VertexCount;
-    public uint Offset;
-    public uint Size;
-    public Vector2u* Memory = null;
-    public uint FrameIndex;
-
-    public readonly uint Start => Offset;
-    public readonly uint End => Offset + Size;
-
-    public void Set(Allocation allocation)
-    {
-        VoxelRenderer.TotalVertexCount -= VertexCount;
-
-        DataPool = allocation.DataPool;
-        VertexCount = allocation.VertexCount;
-        Offset = allocation.Offset;
-        Size = allocation.Size;
-
-        VoxelRenderer.TotalVertexCount += VertexCount;
-    }
-
-    public void RemoveAllocation()
-    {
-        if (Size == 0)
-            return;
-
-        VoxelRenderer.TotalVertexCount -= VertexCount;
-
-        DataPool.RemoveAllocation(this);
-        Memory = null;
-        Size = 0;
-        Offset = 0;
-        VertexCount = 0;
-    }
-
-    public void Free()
-    {
-        if (Size == 0)
-            return;
-
-        VoxelRenderer.TotalVertexCount -= VertexCount;
-        
-        DataPool.RemoveAllocation(this);
-        DataPool?.Free(ref this);
-        Memory = null;
-        Size = 0;
-        Offset = 0;
-        VertexCount = 0;
-    }
-
-    public override string ToString()
-    {
-        return $"[Allocation] : Chunk: {Chunk.WorldPosition}, Count: {VertexCount}, Offset: {Offset}, Size: {Size}";
-    }
-}
-
-[StructLayout(LayoutKind.Sequential)]
-public struct DrawCommand
-{
-    public uint Count;
-    public uint InstanceCount;
-    public uint First;
-    public uint BaseInstance;
-}
-
-public struct ChunkInfo 
-{
-    public static readonly uint ByteSize = (uint)Marshal.SizeOf<ChunkInfo>();
-
-    public Vector3 Center;
-    public float Radius;
-    public uint DataOffset;
-    public uint VertexCount;
-    public uint Active;
-    public int SlotIndex;
-};

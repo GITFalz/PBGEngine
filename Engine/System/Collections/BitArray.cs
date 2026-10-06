@@ -1,21 +1,23 @@
 using System.Collections;
+using PBG.Core;
 using PBG.MathLibrary;
 
 namespace PBG.Collections;
 
-public class BitArray : IEnumerable<ulong>
+public unsafe class BitArray : IEnumerable<ulong>, IDisposable
 {
-    private ulong[] _bits;
+    private ulong* _bits;
     private int _count;
     private int _knownSingleSlotIndex = 0;
 
     public int Length => _count;
-    public int Slots => _bits.Length;
+    public readonly int Slots;
     public bool IsEmpty => OneCount() == 0;
 
     public BitArray(int count)
     {
-        _bits = new ulong[(count + 63) >> 6];
+        Slots = (count + 63) >> 6;
+        _bits = MemoryHelper.Alloc<ulong>(Slots);
         _count = count;
     }
 
@@ -37,7 +39,7 @@ public class BitArray : IEnumerable<ulong>
         int total = _knownSingleSlotIndex * 64;
         int remaining = _count - total;
 
-        for (int i = _knownSingleSlotIndex; i < _bits.Length && remaining > 0; i++)
+        for (int i = _knownSingleSlotIndex; i < Slots && remaining > 0; i++)
         {
             ulong bits = _bits[i];
             int bitsInThisWord = Math.Min(64, remaining);
@@ -84,6 +86,9 @@ public class BitArray : IEnumerable<ulong>
         ulong v = _bits[outer];
         ulong old = (v >> inner) & 1ul;
         _bits[outer] = (v & ~(1ul << inner)) | (state << inner);
+
+        if (state == 0 && outer < _knownSingleSlotIndex)
+            _knownSingleSlotIndex = outer;
 
         return old != state;
     }
@@ -169,7 +174,7 @@ public class BitArray : IEnumerable<ulong>
     public int OneCount()
     {
         int count = 0;
-        for (int i = 0; i < _bits.Length; i++)
+        for (int i = 0; i < Slots; i++)
             count += System.Numerics.BitOperations.PopCount(_bits[i]);
         return count;
     }
@@ -186,19 +191,27 @@ public class BitArray : IEnumerable<ulong>
             throw new IndexOutOfRangeException($"trying to index outside of bounds of bit array ({index} and size {size} out of bounds of {_count})");
     }
 
-    public void Clear() 
-    { 
-        Array.Clear(_bits, 0, _bits.Length); 
-    }
-
     IEnumerator<ulong> IEnumerable<ulong>.GetEnumerator() => GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public Enumerator GetEnumerator() => new(this);
 
+    public void Clear()
+    {
+        MemoryHelper.Clear(_bits, Slots);
+        _knownSingleSlotIndex =  0;
+    }
+
+    public void Dispose()
+    {
+        MemoryHelper.Free(_bits);
+        _knownSingleSlotIndex =  0;
+        GC.SuppressFinalize(this);
+    }
+
     public struct Enumerator : IEnumerator<ulong>
     {
-        private readonly ulong[] _bits;
+        private readonly ulong* _bits;
         private readonly int _count;
         private int _index;
 

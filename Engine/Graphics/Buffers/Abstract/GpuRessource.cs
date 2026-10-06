@@ -8,7 +8,7 @@ public abstract class GpuRessource : BufferBase
     private static bool _queue = true;
     protected static Queue<GpuRessource> _creationQueue = [];
 
-    public GpuRessource()
+    protected void CreateBase()
     {
         if (_queue) 
             _creationQueue.Enqueue(this);

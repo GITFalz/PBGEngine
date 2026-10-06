@@ -130,4 +130,8 @@ public static class V256I
     public static uint GetExtractedMSB(this V256i value) => Bit.Extract((uint)Avx2.MoveMask(value.AsByte()), 0x11111111u);
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static V256f ToFloat(this V256i vector) => Avx.ConvertToVector256Single(vector);
+
+
 }

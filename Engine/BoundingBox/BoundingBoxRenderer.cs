@@ -5,10 +5,10 @@ using Silk.NET.Vulkan;
 
 namespace PBG.Graphics;
 
+[InternalSystemInit(InitPriority.Shader)]
 public class BoundingBoxRenderer : ScriptingNode
 {
     public static Shader Shader;
-    public static bool _started = false;
 
     private static int _modelLocation;
     private static int _viewLocation;
@@ -18,43 +18,39 @@ public class BoundingBoxRenderer : ScriptingNode
     public SSBO<BoundingBoxData> SSBO;
     public uint ElementCount = 0;
 
-    void Start()
+    public BoundingBoxRenderer()
     {
-        if (!_started)
-        {
-            ShaderInfo bbinfo = new() { 
-                VertexShaderFile = "StructureEditor_vulkan/structure/boundingBox.vert",
-                FragmentShaderFile = "StructureEditor_vulkan/structure/boundingBox.frag" 
-            };
-            //bbinfo.DepthStencil.DepthTestEnable = false;
-            bbinfo.DepthStencil.DepthWriteEnable = false;
-            
-            bbinfo.ColorBlendAttachment.BlendEnable = true;
-
-            bbinfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
-            bbinfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
-            bbinfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
-
-            bbinfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
-            bbinfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
-            bbinfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
-
-            Shader = new Shader(bbinfo);
-            Shader.Compile();    
-
-            _modelLocation = Shader.GetLocation("ubo.model");
-            _viewLocation = Shader.GetLocation("ubo.view");
-            _projectionLocation = Shader.GetLocation("ubo.projection");
-
-            _started = true;
-        }
-
         SSBO = new(0);
 
         Descriptor = Shader.GetDescriptorSet();
         Descriptor.BindSSBO(SSBO, 0);
-        Descriptor.Uniform(_modelLocation, Matrix4.Identity);
-        Descriptor.Uniform(_projectionLocation, Camera.ProjectionMatrix);
+    }
+
+    public static void Init()
+    {
+        ShaderInfo bbinfo = new() { 
+            VertexShaderFile = "StructureEditor_vulkan/structure/boundingBox.vert",
+            FragmentShaderFile = "StructureEditor_vulkan/structure/boundingBox.frag" 
+        };
+        //bbinfo.DepthStencil.DepthTestEnable = false;
+        bbinfo.DepthStencil.DepthWriteEnable = true;
+        
+        bbinfo.ColorBlendAttachment.BlendEnable = true;
+
+        bbinfo.ColorBlendAttachment.SrcColorBlendFactor = BlendFactor.SrcAlpha;
+        bbinfo.ColorBlendAttachment.DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha;
+        bbinfo.ColorBlendAttachment.ColorBlendOp = BlendOp.Add;
+
+        bbinfo.ColorBlendAttachment.SrcAlphaBlendFactor = BlendFactor.One;
+        bbinfo.ColorBlendAttachment.DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha;
+        bbinfo.ColorBlendAttachment.AlphaBlendOp = BlendOp.Add;
+
+        Shader = new Shader(bbinfo);
+        Shader.Compile();    
+
+        _modelLocation = Shader.GetLocation("ubo.model");
+        _viewLocation = Shader.GetLocation("ubo.view");
+        _projectionLocation = Shader.GetLocation("ubo.projection");
     }
 
     public void UpdateBoundingBoxes(BoundingBoxData[] boundingBoxes)
@@ -85,7 +81,7 @@ public class BoundingBoxRenderer : ScriptingNode
             
         Shader.Bind();
         Descriptor.Bind();
-        Descriptor.UniformMatrix4(_modelLocation, Matrix4.CreateTranslation(Transform.Position));
+        Descriptor.UniformMatrix4(_modelLocation, Matrix4.Identity);
         Descriptor.UniformMatrix4(_projectionLocation, Camera.ProjectionMatrix);
         Descriptor.UniformMatrix4(_viewLocation, Camera.ViewMatrix);
         

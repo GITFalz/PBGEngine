@@ -102,7 +102,7 @@ public unsafe class VulkanInstance
 
         _vulkanQuery = new VulkanQuery(VulkanDevice);
 
-        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
+        GFX.Set(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
     }
 
     private void OnLoad()
@@ -180,16 +180,21 @@ public unsafe class VulkanInstance
 
     private void OnResize(Vector2D<int> vector2D)
     {
+        
         Game.Width = vector2D.X;
         Game.Height = vector2D.Y;
 
         if (Game.Width == 0 || Game.Height == 0) 
             return;
-            
-        RecreateSwapChain();
-        
-        gameWindow.OnResize(Game.Width, Game.Height);
-        BufferBase.ResizeAll((uint)Game.Width, (uint)Game.Height);
+
+        using (GFX.ResizeLock)
+        {
+            RecreateSwapChain();
+    
+            gameWindow.OnResize(Game.Width, Game.Height);
+
+            BufferBase.ResizeAll((uint)Game.Width, (uint)Game.Height);
+        }
     }
 
     private void OnUpdate(double deltaSeconds)
@@ -223,7 +228,7 @@ public unsafe class VulkanInstance
         _vulkanImageViews = new VulkanImageViews(VulkanDevice, VulkanImage, VulkanSwapchain);
         _vulkanFramebuffer = new VulkanFramebuffer(VulkanDevice, VulkanSwapchain, _vulkanImageViews, VulkanDepthBuffer, LoadRenderPass);
 
-        _ = new GFX(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
+        GFX.Set(this, VulkanDevice, _window, VulkanSwapchain, VulkanImage, VulkanBuffer, _vulkanImageViews, _vulkanCommandBuffers, VulkanDepthBuffer, _vulkanFramebuffer, _vulkanSyncObject, _vulkanQuery);  
     }
 
     private void OnRender(double deltaSeconds)

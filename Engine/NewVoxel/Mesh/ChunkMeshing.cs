@@ -14,7 +14,8 @@ public static class ChunkMesher
         DebugDump.ToFile(_times, "times");
     }
 
-    static List<double> _times = [];
+    static ConcurrentBag<double> _times = [];
+    static volatile int count = 0;
 
     public static ChunkMeshingStatus MeshChunk(VoxelChunk chunk, int workerID, out VoxelChunkData? chunkData)
     {
@@ -50,22 +51,18 @@ public static class ChunkMesher
     {
         try
         {
-            Stopwatch sw = Stopwatch.StartNew();
+            //count++;
+            //Stopwatch sw = Stopwatch.StartNew();
             if (chunk.Status != ChunkStatus.Meshing)
                 return ChunkMeshingStatus.Failed;
 
-            var gen = chunk.NewGen();
-
-            WorldNodeEditor.GlobalCount++;
-
-            MeshMapping mapping = new(chunk, gen);
-            bool result = VoxelChunkGenerator.GenerateGreedyMesh7YByte(chunk, ref mapping, workerID);
-            mapping.Upload();
+            bool result = VoxelChunkGenerator.GenerateGreedyMesh8YByte(chunk, workerID);
             
             if (!result || chunk.Status != ChunkStatus.Meshing)
                 return ChunkMeshingStatus.Failed;
 
-            _times.Add(sw.Elapsed.TotalMilliseconds);
+            //if (count > 16000)
+                //_times.Add(sw.Elapsed.TotalMilliseconds);
         }
         catch (Exception ex)
         {
@@ -88,7 +85,7 @@ public static class ChunkMesher
 
         try
         {   
-            chunk.FreeAllocation();
+            chunk.FreeAllocation(1);
 
             if (VertexCount == 0)
             {

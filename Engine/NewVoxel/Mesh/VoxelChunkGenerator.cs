@@ -89,24 +89,55 @@ public unsafe static partial class VoxelChunkGenerator
         return GreedyMesher5.GenerateMesh(chunk, vertexData, worldPosition, workerId, out vertexCount);
     }
 
-    public static bool GenerateGreedyMesh6(VoxelChunk chunk, ref MeshMapping mapping, int workerId)
+    public static bool GenerateGreedyMesh6(VoxelChunk chunk, int workerId)
     {
-        return GreedyMesher6.GenerateMesh(chunk, ref mapping, workerId);
+        var gen = chunk.NewGen();
+        WorldNodeEditor.GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher6.GenerateMesh(chunk, ref mapping, workerId);
+        mapping.Upload();
+        return true;
+
     }
 
-    public static bool GenerateGreedyMesh7(VoxelChunk chunk, ref MeshMapping mapping, int workerId)
+    public static bool GenerateGreedyMesh7(VoxelChunk chunk, int workerId)
     {
-        return GreedyMesher7.GenerateMesh(chunk, ref mapping, workerId);
+        var gen = chunk.NewGen();
+        WorldNodeEditor.GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher7.GenerateMesh(chunk, ref mapping, workerId);
+        mapping.Upload();
+        return true;
     }
 
-    public static bool GenerateGreedyMesh7Y(VoxelChunk chunk, ref MeshMapping mapping, int workerId)
+    public static bool GenerateGreedyMesh7Y(VoxelChunk chunk, int workerId)
     {
-        return GreedyMesher7Y.GenerateMesh(chunk, ref mapping, workerId);
+        var gen = chunk.NewGen();
+        WorldNodeEditor.GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher7Y.GenerateMesh(chunk, ref mapping, workerId);
+        mapping.Upload();
+        return true;
     }
 
-    public static bool GenerateGreedyMesh7YByte(VoxelChunk chunk, ref MeshMapping mapping, int workerId)
+    public static bool GenerateGreedyMesh7YByte(VoxelChunk chunk, int workerId)
     {
-        return GreedyMesher7YByte.GenerateMesh(chunk, ref mapping, workerId);
+        var gen = chunk.NewGen();
+        WorldNodeEditor.GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher7YByte.GenerateMesh(chunk, ref mapping, workerId);
+        mapping.Upload();
+        return true;
+    }
+
+    public static bool GenerateGreedyMesh8YByte(VoxelChunk chunk, int workerId)
+    {
+        var gen = chunk.NewGen();
+        WorldNodeEditor.GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher8YByte.GenerateMesh(chunk, ref mapping, workerId);
+        mapping.Upload();
+        return true;
     }
 }
 

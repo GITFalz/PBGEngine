@@ -11,11 +11,13 @@ using VH = VoxelHelper;
 
 [InternalSystemInit(InitPriority.Data)]
 [InternalSystemCleanup]
-public unsafe static class GreedyMesher7YByte
+public unsafe static class GreedyMesher8YByte
 {
     private static int THREAD_COUNT => VoxelRenderer.RenderingThreads;
 
     public static NewMeshData[] MeshDatas = [];
+
+
 
     public static void Init()
     {
@@ -57,6 +59,9 @@ public unsafe static class GreedyMesher7YByte
         uint* topMask = meshData.RightMask;
         uint* bottomMask = meshData.LeftMask;
 
+        var yrows = meshData.YRows;
+        var ztypes = meshData.ZTypes;
+
         //uint* blockPtr = (uint*)chunk.Blocks;
 
         int maxYlayerIndex = 31744;
@@ -84,20 +89,22 @@ public unsafe static class GreedyMesher7YByte
             */
             V256b mem = V256B.Zero;
 
-            V256u yRow1 = V256U.Zero;
-            V256u yRow2 = V256U.Zero;
-            V256u yRow3 = V256U.Zero;
-            V256u yRow4 = V256U.Zero;
+
+            yrows[0] = V256B.Zero;
+            yrows[1] = V256B.Zero;
+            yrows[2] = V256B.Zero;
+            yrows[3] = V256B.Zero;
+
+            ztypes[0] = V256B.Zero;
+            ztypes[1] = V256B.Zero;
+            ztypes[2] = V256B.Zero;
+            ztypes[3] = V256B.Zero;
+
 
             uint rowBottom = 0;
             uint rowTop = 0;
 
-            V256u zTypeRow1 = V256U.Zero;
-            V256u zTypeRow2 = V256U.Zero;
-            V256u zTypeRow3 = V256U.Zero;
-            V256u zTypeRow4 = V256U.Zero;
-
-            uint* typePtr     = typeMap;
+            uint* typePtr     = typeMap + z * 32;
             ulong* bitPtr     = bitMap + mapIndex;
             uint* aoPtr       = aoTypeMap + mapIndex;
 
@@ -105,53 +112,14 @@ public unsafe static class GreedyMesher7YByte
 
             for (int x = 0; x < 32; x++)
             {
+                int shiftIndex = x >> 3;
+                byte shift = (byte)(x & 7);
+
                 V256b blockRow = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024);
-
-                /*
-                V256u row1 = V256U.Load(blockPtrLocal);
-                V256u row2 = V256U.Load(blockPtrLocal + 8);
-                V256u row3 = V256U.Load(blockPtrLocal + 16);
-                V256u row4 = V256U.Load(blockPtrLocal + 24);
-                */
-
-                //var (row1, row2, row3, row4) = VH.WidenToV256u(blockRow);
-
-                /*
-                var state1 = row1 & StateMaskV256;
-                var state2 = row2 & StateMaskV256;
-                var state3 = row3 & StateMaskV256;
-                var state4 = row4 & StateMaskV256;
-
-                var isSolid1 = state1.CompareEqual(SolidMaskV256);
-                var isSolid2 = state2.CompareEqual(SolidMaskV256);
-                var isSolid3 = state3.CompareEqual(SolidMaskV256);
-                var isSolid4 = state4.CompareEqual(SolidMaskV256);
-
-                var solidRow1 = row1 & isSolid1;
-                var solidRow2 = row2 & isSolid2;
-                var solidRow3 = row3 & isSolid3;
-                var solidRow4 = row4 & isSolid4;
-                */
-
-                /*
-                var isAir1 = row1.CompareEqual(V256U.Zero);
-                var isAir2 = row2.CompareEqual(V256U.Zero);
-                var isAir3 = row3.CompareEqual(V256U.Zero);
-                var isAir4 = row4.CompareEqual(V256U.Zero);
-
-                var isSolid1 = isAir1 ^ V256U.MaxValue;
-                var isSolid2 = isAir2 ^ V256U.MaxValue;
-                var isSolid3 = isAir3 ^ V256U.MaxValue;
-                var isSolid4 = isAir4 ^ V256U.MaxValue;
-                */
 
                 var isAir = blockRow.CompareEqual(V256B.Zero);
                 var isSolid = isAir ^ V256B.MaxValue;
 
-                
-                //ulong row = VH.GetV256usNonAirBitRowX64(solidRow1, solidRow2, solidRow3, solidRow4); //VH.GetRowSolidBitsV256X64(solidRow1, solidRow2, solidRow3, solidRow4);
-
-                //ulong row = VH.GetRowSolidBitsV256X64(isSolid1, isSolid2, isSolid3, isSolid4);
                 ulong row = VH.GetRowSolidBitsV256X64(isSolid);
                 uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
                 uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
@@ -160,80 +128,17 @@ public unsafe static class GreedyMesher7YByte
                 row |= (ulong)bitTop << 33;
                 row |= (ulong)bitBottom;
                 
-
                 *bitPtr = row;
                 *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
 
-
                 V256b rowOffset = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024 - 1);
-
-                /*
-                // get the rows but shifted by one block
-                V256u rowOffset1 = V256U.Load(blockPtrLocal - 1);
-                V256u rowOffset2 = V256U.Load(blockPtrLocal + 7);
-                V256u rowOffset3 = V256U.Load(blockPtrLocal + 15);
-                V256u rowOffset4 = V256U.Load(blockPtrLocal + 23);
-                */
-
-                //var (rowOffset1, rowOffset2, rowOffset3, rowOffset4) = VH.WidenToV256u(rowOffset);
-
-                // compare the normal rows with the shifted rows
-                // if a block and a shifted block are the same, the result will be equal to true else false, now we know when a block changes
-                //V256u equal1 = row1.CompareEqual(rowOffset1);
-                //V256u equal2 = row2.CompareEqual(rowOffset2);
-                //V256u equal3 = row3.CompareEqual(rowOffset3);
-                //V256u equal4 = row4.CompareEqual(rowOffset4);   
-
                 V256b offsetEqual = blockRow.CompareEqual(rowOffset);
 
-                /*
-                uint mask1 = (uint)~Avx2.MoveMask(equal1.AsByte()) & 0x11111111u;
-                uint mask2 = (uint)~Avx2.MoveMask(equal2.AsByte()) & 0x11111111u;
-                uint mask3 = (uint)~Avx2.MoveMask(equal3.AsByte()) & 0x11111111u;
-                uint mask4 = (uint)~Avx2.MoveMask(equal4.AsByte()) & 0x11111111u;
-
-                ulong compact1 = Bmi2.X64.ParallelBitExtract(mask1 | ((ulong)(mask2) << 32), 0x1111111111111111ul);
-                ulong compact2 = Bmi2.X64.ParallelBitExtract(mask3 | ((ulong)(mask4) << 32), 0x1111111111111111ul);
-
-                // v1
-                uint typeCheck = (uint)(compact1 | (compact2 << 16)) & 0xFFFFFFFEu;
-                */
-                
-
-                // v2
-                //uint typeCheck = (~VH.GetRowSolidBitsV256X64(equal1, equal2, equal3, equal4)) & 0xFFFFFFFEu;
-                uint typeCheck = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
-                
-                *typePtr = typeCheck;
-
-
-                /*
-                V256u ybit1 = isSolid1 & V256U.One;
-                V256u ybit2 = isSolid2 & V256U.One;
-                V256u ybit3 = isSolid3 & V256U.One;
-                V256u ybit4 = isSolid4 & V256U.One;
-
-                // shift the bits to their place in the map
-                V256u yshift1 = ybit1 << (byte)x;
-                V256u yshift2 = ybit2 << (byte)x;
-                V256u yshift3 = ybit3 << (byte)x;
-                V256u yshift4 = ybit4 << (byte)x;
-                */
+                *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
 
                 V256b ybit = isSolid & V256B.One;
 
-                var (ybit1, ybit2, ybit3, ybit4) = VH.WidenToV256u(ybit);
-
-                // shift the bits to their place in the map
-                V256u yshift1 = ybit1 << (byte)x;
-                V256u yshift2 = ybit2 << (byte)x;
-                V256u yshift3 = ybit3 << (byte)x;
-                V256u yshift4 = ybit4 << (byte)x;
-
-                yRow1 |= yshift1;
-                yRow2 |= yshift2;
-                yRow3 |= yshift3;
-                yRow4 |= yshift4;
+                yrows[shiftIndex] |= ybit.ShiftOneLeft(shift);
 
 
                 rowTop    |= bitTop    << x;
@@ -243,26 +148,6 @@ public unsafe static class GreedyMesher7YByte
                 // handle the type checking for the y axis
                 if (x > 0)
                 {   
-                    /*
-                    // check if block are unequal
-                    V256u zequal1 = row1.CompareEqual(mem1);
-                    V256u zequal2 = row2.CompareEqual(mem2);
-                    V256u zequal3 = row3.CompareEqual(mem3);
-                    V256u zequal4 = row4.CompareEqual(mem4);
-
-                    // invert the equality
-                    V256u znot1 = zequal1 ^ V256U.MaxValue;
-                    V256u znot2 = zequal2 ^ V256U.MaxValue;
-                    V256u znot3 = zequal3 ^ V256U.MaxValue;
-                    V256u znot4 = zequal4 ^ V256U.MaxValue;
-
-                    // make it so the values are either 0 or 1
-                    V256u zbit1 = znot1 & V256U.One;
-                    V256u zbit2 = znot2 & V256U.One;
-                    V256u zbit3 = znot3 & V256U.One;
-                    V256u zbit4 = znot4 & V256U.One;
-                    */
-
                     // check if block are unequal
                     V256b zequal = blockRow.CompareEqual(mem);
 
@@ -272,9 +157,10 @@ public unsafe static class GreedyMesher7YByte
                     // make it so the values are either 0 or 1
                     V256b zbit = znot & V256B.One;
 
-                    var (zbit1, zbit2, zbit3, zbit4) = VH.WidenToV256u(zbit);
+                    //var (zbit1, zbit2, zbit3, zbit4) = VH.WidenToV256u(zbit);
 
                     // shift the bits to their place in the map
+                    /*
                     V256u zshift1 = zbit1 << (byte)x;
                     V256u zshift2 = zbit2 << (byte)x;
                     V256u zshift3 = zbit3 << (byte)x;
@@ -284,36 +170,12 @@ public unsafe static class GreedyMesher7YByte
                     zTypeRow2 |= zshift2;
                     zTypeRow3 |= zshift3;
                     zTypeRow4 |= zshift4;
+                    */
+
+                    ztypes[shiftIndex] |= zbit.ShiftOneLeft(shift);
                 }
 
-                /*
-                mem1 = row1;
-                mem2 = row2;
-                mem3 = row3;
-                mem4 = row4;
-                */
-
                 mem = blockRow;
-
-                /*
-                // get the non solid blocks
-                var isNotSolid1 = isSolid1 ^ V256U.MaxValue;
-                var isNotSolid2 = isSolid2 ^ V256U.MaxValue;
-                var isNotSolid3 = isSolid3 ^ V256U.MaxValue;
-                var isNotSolid4 = isSolid4 ^ V256U.MaxValue;
-
-                var nonSolidRow1 = row1 & isNotSolid1;
-                var nonSolidRow2 = row2 & isNotSolid2;
-                var nonSolidRow3 = row3 & isNotSolid3;
-                var nonSolidRow4 = row4 & isNotSolid4;
-
-                uint nonSolidRow = (uint)VH.GetV256usNonAirBitRowX64(nonSolidRow1, nonSolidRow2, nonSolidRow3, nonSolidRow4);
-
-                nonSolidMap[index] = nonSolidRow;
-
-
-                
-                */
 
                 mapIndex++;
                 blockIndex += 32;
@@ -321,21 +183,34 @@ public unsafe static class GreedyMesher7YByte
                 bitPtr++;
                 aoPtr++;
                 typePtr++;  
-                //blockPtrLocal += 32;
             }
-
 
             int yIndex = z * 1024;
             int zIndexY = z * 32;
 
             int rowZindex = (z + 1) * 34;
-            
 
+            
+            V256u zTypeRow1 = V256U.Zero;
+            V256u zTypeRow2 = V256U.Zero;
+            V256u zTypeRow3 = V256U.Zero;
+            V256u zTypeRow4 = V256U.Zero;
+
+            var (zTypes11, zTypes12, zTypes13, zTypes14) = VH.WidenToV256u(ztypes[0]);
+            var (zTypes21, zTypes22, zTypes23, zTypes24) = VH.WidenToV256u(ztypes[1]);
+            var (zTypes31, zTypes32, zTypes33, zTypes34) = VH.WidenToV256u(ztypes[2]);
+            var (zTypes41, zTypes42, zTypes43, zTypes44) = VH.WidenToV256u(ztypes[3]);
+
+            zTypeRow1 = zTypes11 | (zTypes21 << 8) | (zTypes31 << 16) | (zTypes41 << 24);
+            zTypeRow2 = zTypes12 | (zTypes22 << 8) | (zTypes32 << 16) | (zTypes42 << 24);
+            zTypeRow3 = zTypes13 | (zTypes23 << 8) | (zTypes33 << 16) | (zTypes43 << 24);
+            zTypeRow4 = zTypes14 | (zTypes24 << 8) | (zTypes34 << 16) | (zTypes44 << 24);
 
             Avx.Store(zTypeMap + zIndexY,      zTypeRow1);
             Avx.Store(zTypeMap + zIndexY + 8,  zTypeRow2);
             Avx.Store(zTypeMap + zIndexY + 16, zTypeRow3);
             Avx.Store(zTypeMap + zIndexY + 24, zTypeRow4);
+
 
 
 
@@ -350,6 +225,22 @@ public unsafe static class GreedyMesher7YByte
 
             yaoTypeMap[rowZindex] = (uint)VH.GetAOTypeMap(rowBottom);//uint.MaxValue;
             yaoTypeMap[rowZindex + 33] = (uint)VH.GetAOTypeMap(rowTop);//uint.MaxValue;
+
+
+            V256u yRow1 = V256U.Zero;
+            V256u yRow2 = V256U.Zero;
+            V256u yRow3 = V256U.Zero;
+            V256u yRow4 = V256U.Zero;
+
+            var (yRows11, yRows12, yRows13, yRows14) = VH.WidenToV256u(yrows[0]);
+            var (yRows21, yRows22, yRows23, yRows24) = VH.WidenToV256u(yrows[1]);
+            var (yRows31, yRows32, yRows33, yRows34) = VH.WidenToV256u(yrows[2]);
+            var (yRows41, yRows42, yRows43, yRows44) = VH.WidenToV256u(yrows[3]);
+
+            yRow1 = yRows11 | (yRows21 << 8) | (yRows31 << 16) | (yRows41 << 24);
+            yRow2 = yRows12 | (yRows22 << 8) | (yRows32 << 16) | (yRows42 << 24);
+            yRow3 = yRows13 | (yRows23 << 8) | (yRows33 << 16) | (yRows43 << 24);
+            yRow4 = yRows14 | (yRows24 << 8) | (yRows34 << 16) | (yRows44 << 24);
 
             Avx.Store(yBitMap + rowZindex + 1, yRow1);
             Avx.Store(yBitMap + rowZindex + 9, yRow2);
@@ -425,37 +316,845 @@ public unsafe static class GreedyMesher7YByte
         Avx.Store(yaoTypeMap + 1147, VH.GetAOTypeMap(pzRow4));
     }
 
+    
+
+    public static void GetBitRowX0(
+        VoxelChunk chunk, ref NeighbourChunks neighbours, 
+        ref int blockIndex, int x, int z, 
+        ref ulong* bitPtr, ref uint* aoPtr, ref uint* typePtr, 
+        ref V256b yrow, ref V256b ztype, ref V256b mem,
+        ref uint rowTop, ref uint rowBottom
+    ){
+        byte shift = (byte)(x & 7);
+
+        V256b blockRow = V256B.Load(chunk.ByteBlocks + blockIndex);
+
+        var isAir = blockRow.CompareEqual(V256B.Zero);
+        var isSolid = isAir ^ V256B.MaxValue;
+
+        ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+        uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+        uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+        row <<= 1;
+        row |= (ulong)bitTop << 33;
+        row |= (ulong)bitBottom;
+        
+        *bitPtr = row;
+        *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+        // type
+        V256b rowOffset = V256B.Load(chunk.ByteBlocks + blockIndex - 1);
+        V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+        *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+        // transposed
+        V256b ybit = isSolid & V256B.One;
+
+        yrow |= ybit.ShiftOneLeft(shift);
+
+        rowTop    |= bitTop    << x;
+        rowBottom |= bitBottom << x;
+
+        mem = blockRow;
+
+        blockIndex += 32;
+
+        bitPtr++;
+        aoPtr++;
+        typePtr++;  
+    }
+
+    public static void GetBitRowX1(
+        VoxelChunk chunk, ref NeighbourChunks neighbours, 
+        ref int blockIndex, int x, int z, 
+        ref ulong* bitPtr, ref uint* aoPtr, ref uint* typePtr, 
+        ref V256b yrow, ref V256b ztype, ref V256b mem,
+        ref uint rowTop, ref uint rowBottom
+    ){
+        byte shift = (byte)(x & 7);
+
+        V256b blockRow = V256B.Load(chunk.ByteBlocks + blockIndex);
+
+        var isAir = blockRow.CompareEqual(V256B.Zero);
+        var isSolid = isAir ^ V256B.MaxValue;
+
+        ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+
+        uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+        uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+        row <<= 1;
+        row |= (ulong)bitTop << 33;
+        row |= (ulong)bitBottom;
+        
+        *bitPtr = row;
+        *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+        // type
+        V256b rowOffset = V256B.Load(chunk.ByteBlocks + blockIndex - 1);
+        V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+        *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+        // transposed
+        V256b ybit = isSolid & V256B.One;
+
+        yrow |= ybit.ShiftOneLeft(shift);
+
+
+        rowTop    |= bitTop    << x;
+        rowBottom |= bitBottom << x;
+
+
+        // handle the type checking for the y axis
+        if (x > 0)
+        {   
+            // 1. check if block are unequal
+            // 2. invert the equality
+            // 3. make it so the values are either 0 or 1
+            V256b zequal = blockRow.CompareEqual(mem);
+            V256b znot = zequal ^ V256B.MaxValue;
+            V256b zbit = znot & V256B.One;
+
+            ztype |= zbit.ShiftOneLeft(shift);
+        }
+
+        mem = blockRow;
+
+        blockIndex += 32;
+
+        bitPtr++;
+        aoPtr++;
+        typePtr++;  
+    }
+
+    public static void GetBitMaps2(VoxelChunk chunk, ref NeighbourChunks neighbours, int workerId)
+    {
+        var meshData =  MeshDatas[workerId];
+
+        ulong* bitMap = meshData.BitMap;
+        
+        uint* aoTypeMap = meshData.AOTypeMap;
+        uint* yaoTypeMap = meshData.YAOTypeMap;
+        uint* yBitMap = meshData.YBitMap;
+
+        uint* typeMap = meshData.TypeMap;
+        uint* zTypeMap = meshData.ZTypeMap;
+        uint* nonSolidMap = meshData.NonSolidMap;
+
+        ulong* topBits = meshData.TopBits;
+        ulong* bottomBits = meshData.BottomBits;
+
+
+        uint* topMask = meshData.RightMask;
+        uint* bottomMask = meshData.LeftMask;
+
+        //uint* blockPtr = (uint*)chunk.Blocks;
+
+        int maxYlayerIndex = 31744;
+
+        V256u nzRow1 = V256U.Zero;
+        V256u nzRow2 = V256U.Zero;
+        V256u nzRow3 = V256U.Zero;
+        V256u nzRow4 = V256U.Zero;
+
+        V256u pzRow1 = V256U.Zero;
+        V256u pzRow2 = V256U.Zero;
+        V256u pzRow3 = V256U.Zero;
+        V256u pzRow4 = V256U.Zero;
+
+        for (int z = 0; z < 32; z++)
+        {
+            int blockIndex = z * 1024;
+            int mapIndex = (z + 1) * 34 + 1;
+
+            /*
+            V256u mem1 = V256U.Zero;
+            V256u mem2 = V256U.Zero;
+            V256u mem3 = V256U.Zero;
+            V256u mem4 = V256U.Zero;
+            */
+            V256b mem = V256B.Zero;
+
+
+            V256b yrow1 = V256B.Zero;
+            V256b yrow2 = V256B.Zero;
+            V256b yrow3 = V256B.Zero;
+            V256b yrow4 = V256B.Zero;
+
+            V256b ztype1 = V256B.Zero;
+            V256b ztype2 = V256B.Zero;
+            V256b ztype3 = V256B.Zero;
+            V256b ztype4 = V256B.Zero;
+
+
+            uint rowBottom = 0;
+            uint rowTop = 0;
+
+            uint* typePtr     = typeMap;
+            ulong* bitPtr     = bitMap + mapIndex;
+            uint* aoPtr       = aoTypeMap + mapIndex;
+
+            //uint* blockPtrLocal = blockPtr + z * 1024;
+
+            for (int x = 0; x < 8; x++)
+            {
+                int shiftIndex = x >> 3;
+                byte shift = (byte)(x & 7);
+
+                V256b blockRow = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024);
+
+                var isAir = blockRow.CompareEqual(V256B.Zero);
+                var isSolid = isAir ^ V256B.MaxValue;
+
+                ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+                uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+                uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+                row <<= 1;
+                row |= (ulong)bitTop << 33;
+                row |= (ulong)bitBottom;
+                
+                *bitPtr = row;
+                *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+                // type
+                V256b rowOffset = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024 - 1);
+                V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+                *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+                // transposed
+                V256b ybit = isSolid & V256B.One;
+
+                yrow1 |= ybit.ShiftOneLeft(shift);
+
+
+                rowTop    |= bitTop    << x;
+                rowBottom |= bitBottom << x;
+
+
+                // handle the type checking for the y axis
+                if (x > 0)
+                {   
+                    // 1. check if block are unequal
+                    // 2. invert the equality
+                    // 3. make it so the values are either 0 or 1
+                    V256b zequal = blockRow.CompareEqual(mem);
+                    V256b znot = zequal ^ V256B.MaxValue;
+                    V256b zbit = znot & V256B.One;
+
+                    ztype1 |= zbit.ShiftOneLeft(shift);
+                }
+
+                mem = blockRow;
+
+                mapIndex++;
+                blockIndex += 32;
+
+                bitPtr++;
+                aoPtr++;
+                typePtr++;  
+            }
+
+            for (int x = 8; x < 16; x++)
+            {
+                int shiftIndex = x >> 3;
+                byte shift = (byte)(x & 7);
+
+                V256b blockRow = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024);
+
+                var isAir = blockRow.CompareEqual(V256B.Zero);
+                var isSolid = isAir ^ V256B.MaxValue;
+
+                ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+                uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+                uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+                row <<= 1;
+                row |= (ulong)bitTop << 33;
+                row |= (ulong)bitBottom;
+                
+                *bitPtr = row;
+                *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+                V256b rowOffset = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024 - 1);
+                V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+                *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+                V256b ybit = isSolid & V256B.One;
+
+                //var (ybit1, ybit2, ybit3, ybit4) = VH.WidenToV256u(ybit);
+
+                // shift the bits to their place in the map
+                /*
+                V256u yshift1 = ybit1 << (byte)x;
+                V256u yshift2 = ybit2 << (byte)x;
+                V256u yshift3 = ybit3 << (byte)x;
+                V256u yshift4 = ybit4 << (byte)x;
+
+                yRow1 |= yshift1;
+                yRow2 |= yshift2;
+                yRow3 |= yshift3;
+                yRow4 |= yshift4;
+                */
+
+                yrow2 |= ybit.ShiftOneLeft(shift);
+
+
+                rowTop    |= bitTop    << x;
+                rowBottom |= bitBottom << x;
+
+
+                // handle the type checking for the y axis
+                if (x > 0)
+                {   
+                    // 1. check if block are unequal
+                    // 2. invert the equality
+                    // 3. make it so the values are either 0 or 1
+                    V256b zequal = blockRow.CompareEqual(mem);
+                    V256b znot = zequal ^ V256B.MaxValue;
+                    V256b zbit = znot & V256B.One;
+
+                    ztype1 |= zbit.ShiftOneLeft(shift);
+                }
+
+                mem = blockRow;
+
+                mapIndex++;
+                blockIndex += 32;
+
+                bitPtr++;
+                aoPtr++;
+                typePtr++;  
+            }
+
+            for (int x = 16; x < 24; x++)
+            {
+                int shiftIndex = x >> 3;
+                byte shift = (byte)(x & 7);
+
+                V256b blockRow = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024);
+
+                var isAir = blockRow.CompareEqual(V256B.Zero);
+                var isSolid = isAir ^ V256B.MaxValue;
+
+                ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+                uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+                uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+                row <<= 1;
+                row |= (ulong)bitTop << 33;
+                row |= (ulong)bitBottom;
+                
+                *bitPtr = row;
+                *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+                V256b rowOffset = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024 - 1);
+                V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+                *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+                V256b ybit = isSolid & V256B.One;
+
+                //var (ybit1, ybit2, ybit3, ybit4) = VH.WidenToV256u(ybit);
+
+                // shift the bits to their place in the map
+                /*
+                V256u yshift1 = ybit1 << (byte)x;
+                V256u yshift2 = ybit2 << (byte)x;
+                V256u yshift3 = ybit3 << (byte)x;
+                V256u yshift4 = ybit4 << (byte)x;
+
+                yRow1 |= yshift1;
+                yRow2 |= yshift2;
+                yRow3 |= yshift3;
+                yRow4 |= yshift4;
+                */
+
+                yrow3 |= ybit.ShiftOneLeft(shift);
+
+
+                rowTop    |= bitTop    << x;
+                rowBottom |= bitBottom << x;
+
+
+                // handle the type checking for the y axis
+                if (x > 0)
+                {   
+                    // check if block are unequal
+                    V256b zequal = blockRow.CompareEqual(mem);
+
+                    // invert the equality
+                    V256b znot = zequal ^ V256B.MaxValue;
+
+                    // make it so the values are either 0 or 1
+                    V256b zbit = znot & V256B.One;
+
+                    //var (zbit1, zbit2, zbit3, zbit4) = VH.WidenToV256u(zbit);
+
+                    // shift the bits to their place in the map
+                    /*
+                    V256u zshift1 = zbit1 << (byte)x;
+                    V256u zshift2 = zbit2 << (byte)x;
+                    V256u zshift3 = zbit3 << (byte)x;
+                    V256u zshift4 = zbit4 << (byte)x;
+
+                    zTypeRow1 |= zshift1;
+                    zTypeRow2 |= zshift2;
+                    zTypeRow3 |= zshift3;
+                    zTypeRow4 |= zshift4;
+                    */
+
+                    ztype3 |= zbit.ShiftOneLeft(shift);
+                }
+
+                mem = blockRow;
+
+                mapIndex++;
+                blockIndex += 32;
+
+                bitPtr++;
+                aoPtr++;
+                typePtr++;  
+            }
+
+            for (int x = 24; x < 32; x++)
+            {
+                int shiftIndex = x >> 3;
+                byte shift = (byte)(x & 7);
+
+                V256b blockRow = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024);
+
+                var isAir = blockRow.CompareEqual(V256B.Zero);
+                var isSolid = isAir ^ V256B.MaxValue;
+
+                ulong row = VH.GetRowSolidBitsV256X64(isSolid);
+                uint bitTop    = neighbours.Blocks22[blockIndex] != 0 ?     1U : 0;
+                uint bitBottom = neighbours.Blocks4[blockIndex + 31] != 0 ? 1U : 0;
+
+                row <<= 1;
+                row |= (ulong)bitTop << 33;
+                row |= (ulong)bitBottom;
+                
+                *bitPtr = row;
+                *aoPtr = (uint)(VH.GetAOTypeMap(row) >> 1);
+
+                V256b rowOffset = V256B.Load(chunk.ByteBlocks + x * 32 + z * 1024 - 1);
+                V256b offsetEqual = blockRow.CompareEqual(rowOffset);
+
+                *typePtr = (~VH.GetRowSolidBitsV256X64(offsetEqual)) & 0xFFFFFFFEu;
+
+                V256b ybit = isSolid & V256B.One;
+
+                //var (ybit1, ybit2, ybit3, ybit4) = VH.WidenToV256u(ybit);
+
+                // shift the bits to their place in the map
+                /*
+                V256u yshift1 = ybit1 << (byte)x;
+                V256u yshift2 = ybit2 << (byte)x;
+                V256u yshift3 = ybit3 << (byte)x;
+                V256u yshift4 = ybit4 << (byte)x;
+
+                yRow1 |= yshift1;
+                yRow2 |= yshift2;
+                yRow3 |= yshift3;
+                yRow4 |= yshift4;
+                */
+
+                yrow4 |= ybit.ShiftOneLeft(shift);
+
+
+                rowTop    |= bitTop    << x;
+                rowBottom |= bitBottom << x;
+
+
+                // handle the type checking for the y axis
+                if (x > 0)
+                {   
+                    // check if block are unequal
+                    V256b zequal = blockRow.CompareEqual(mem);
+
+                    // invert the equality
+                    V256b znot = zequal ^ V256B.MaxValue;
+
+                    // make it so the values are either 0 or 1
+                    V256b zbit = znot & V256B.One;
+
+                    //var (zbit1, zbit2, zbit3, zbit4) = VH.WidenToV256u(zbit);
+
+                    // shift the bits to their place in the map
+                    /*
+                    V256u zshift1 = zbit1 << (byte)x;
+                    V256u zshift2 = zbit2 << (byte)x;
+                    V256u zshift3 = zbit3 << (byte)x;
+                    V256u zshift4 = zbit4 << (byte)x;
+
+                    zTypeRow1 |= zshift1;
+                    zTypeRow2 |= zshift2;
+                    zTypeRow3 |= zshift3;
+                    zTypeRow4 |= zshift4;
+                    */
+
+                    ztype4 |= zbit.ShiftOneLeft(shift);
+                }
+
+                mem = blockRow;
+
+                mapIndex++;
+                blockIndex += 32;
+
+                bitPtr++;
+                aoPtr++;
+                typePtr++;  
+            }
+
+
+            int yIndex = z * 1024;
+            int zIndexY = z * 32;
+
+            int rowZindex = (z + 1) * 34;
+
+            
+            V256u zTypeRow1 = V256U.Zero;
+            V256u zTypeRow2 = V256U.Zero;
+            V256u zTypeRow3 = V256U.Zero;
+            V256u zTypeRow4 = V256U.Zero;
+
+            var (zTypes11, zTypes12, zTypes13, zTypes14) = VH.WidenToV256u(ztype1);
+            var (zTypes21, zTypes22, zTypes23, zTypes24) = VH.WidenToV256u(ztype2);
+            var (zTypes31, zTypes32, zTypes33, zTypes34) = VH.WidenToV256u(ztype3);
+            var (zTypes41, zTypes42, zTypes43, zTypes44) = VH.WidenToV256u(ztype4);
+
+            zTypeRow1 = zTypes11 | (zTypes21 << 8) | (zTypes31 << 16) | (zTypes41 << 24);
+            zTypeRow2 = zTypes12 | (zTypes22 << 8) | (zTypes32 << 16) | (zTypes42 << 24);
+            zTypeRow3 = zTypes13 | (zTypes23 << 8) | (zTypes33 << 16) | (zTypes43 << 24);
+            zTypeRow4 = zTypes14 | (zTypes24 << 8) | (zTypes34 << 16) | (zTypes44 << 24);
+
+            Avx.Store(zTypeMap + zIndexY,      zTypeRow1);
+            Avx.Store(zTypeMap + zIndexY + 8,  zTypeRow2);
+            Avx.Store(zTypeMap + zIndexY + 16, zTypeRow3);
+            Avx.Store(zTypeMap + zIndexY + 24, zTypeRow4);
+
+
+
+
+            yBitMap[z + 1123]  = 0;//rowTop;
+            yBitMap[z + 1]     = 0;//rowBottom;
+
+            yBitMap[rowZindex] = rowBottom;//uint.MaxValue;
+            yBitMap[rowZindex + 33] = rowTop;//uint.MaxValue;
+
+            yaoTypeMap[z + 1123]  = 0;//VH.GetAOTypeMap(rowTop);
+            yaoTypeMap[z + 1]     = 0;//VH.GetAOTypeMap(rowBottom);
+
+            yaoTypeMap[rowZindex] = (uint)VH.GetAOTypeMap(rowBottom);//uint.MaxValue;
+            yaoTypeMap[rowZindex + 33] = (uint)VH.GetAOTypeMap(rowTop);//uint.MaxValue;
+
+
+            V256u yRow1 = V256U.Zero;
+            V256u yRow2 = V256U.Zero;
+            V256u yRow3 = V256U.Zero;
+            V256u yRow4 = V256U.Zero;
+
+            var (yRows11, yRows12, yRows13, yRows14) = VH.WidenToV256u(yrow1);
+            var (yRows21, yRows22, yRows23, yRows24) = VH.WidenToV256u(yrow2);
+            var (yRows31, yRows32, yRows33, yRows34) = VH.WidenToV256u(yrow3);
+            var (yRows41, yRows42, yRows43, yRows44) = VH.WidenToV256u(yrow4);
+
+            yRow1 = yRows11 | (yRows21 << 8) | (yRows31 << 16) | (yRows41 << 24);
+            yRow2 = yRows12 | (yRows22 << 8) | (yRows32 << 16) | (yRows42 << 24);
+            yRow3 = yRows13 | (yRows23 << 8) | (yRows33 << 16) | (yRows43 << 24);
+            yRow4 = yRows14 | (yRows24 << 8) | (yRows34 << 16) | (yRows44 << 24);
+
+            Avx.Store(yBitMap + rowZindex + 1, yRow1);
+            Avx.Store(yBitMap + rowZindex + 9, yRow2);
+            Avx.Store(yBitMap + rowZindex + 17, yRow3);
+            Avx.Store(yBitMap + rowZindex + 25, yRow4);
+
+            Avx.Store(yaoTypeMap + rowZindex + 1, VH.GetAOTypeMap(yRow1));
+            Avx.Store(yaoTypeMap + rowZindex + 9, VH.GetAOTypeMap(yRow2));
+            Avx.Store(yaoTypeMap + rowZindex + 17, VH.GetAOTypeMap(yRow3));
+            Avx.Store(yaoTypeMap + rowZindex + 25, VH.GetAOTypeMap(yRow4));
+            
+
+
+            int indexNx = 992 + yIndex;
+            int indexPx = yIndex;
+
+            int indexNz = zIndexY + maxYlayerIndex;
+            int indexPz = zIndexY;
+
+            byte* ptr12 = neighbours.Blocks12 + indexNx;
+            byte* ptr14 = neighbours.Blocks14 + indexPx;
+            byte* ptr10 = neighbours.Blocks10 + indexNz;
+            byte* ptr16 = neighbours.Blocks16 + indexPz;
+
+            // rows in the direction of y, on the plane P (+) / N (-), on the axis x / z
+
+            // handle chunk that is in -x at index 12 and i need the last block
+            ulong rowNx = GetSolidRow(ptr12);
+
+            // handle chunk that is in +x at index 14 and i need the first block
+            ulong rowPx = GetSolidRow(ptr14);
+
+            // handle chunk that is in -z at index 10 and i need the last block
+            ulong rowNz = GetSolidRow(ptr10, z, ref nzRow1, ref nzRow2, ref nzRow3, ref nzRow4);
+
+            // handle chunk that is in +z at index 16 and i need the first block
+            ulong rowPz = GetSolidRow(ptr16, z, ref pzRow1, ref pzRow2, ref pzRow3, ref pzRow4);
+
+            bitMap[rowZindex] = rowNx;
+            bitMap[33 + rowZindex] = rowPx;
+
+            bitMap[z + 1] = rowNz;
+            bitMap[1123 + z] = rowPz;
+
+
+            aoTypeMap[rowZindex] = (uint)(VH.GetAOTypeMap(rowNx) >> 1);
+            aoTypeMap[33 + rowZindex] = (uint)(VH.GetAOTypeMap(rowPx) >> 1);
+
+            aoTypeMap[z + 1] = (uint)(VH.GetAOTypeMap(rowNz) >> 1);
+            aoTypeMap[1123 + z] = (uint)(VH.GetAOTypeMap(rowPz) >> 1);
+        }
+
+        // store the shifted rows for the z axis
+        Avx.Store(yBitMap + 1, nzRow1);
+        Avx.Store(yBitMap + 9, nzRow2);
+        Avx.Store(yBitMap + 17, nzRow3);
+        Avx.Store(yBitMap + 25, nzRow4);
+
+        Avx.Store(yBitMap + 1123, pzRow1);
+        Avx.Store(yBitMap + 1131, pzRow2);
+        Avx.Store(yBitMap + 1139, pzRow3);
+        Avx.Store(yBitMap + 1147, pzRow4);
+
+        // store the ao types
+        Avx.Store(yaoTypeMap + 1, VH.GetAOTypeMap(nzRow1));
+        Avx.Store(yaoTypeMap + 9, VH.GetAOTypeMap(nzRow2));
+        Avx.Store(yaoTypeMap + 17, VH.GetAOTypeMap(nzRow3));
+        Avx.Store(yaoTypeMap + 25, VH.GetAOTypeMap(nzRow4));
+
+        Avx.Store(yaoTypeMap + 1123, VH.GetAOTypeMap(pzRow1));
+        Avx.Store(yaoTypeMap + 1131, VH.GetAOTypeMap(pzRow2));
+        Avx.Store(yaoTypeMap + 1139, VH.GetAOTypeMap(pzRow3));
+        Avx.Store(yaoTypeMap + 1147, VH.GetAOTypeMap(pzRow4));
+    }
+
+
+    public static void GetBitMaps3(VoxelChunk chunk, ref NeighbourChunks neighbours, int workerId)
+    {
+        var meshData =  MeshDatas[workerId];
+
+        ulong* bitMap = meshData.BitMap;
+        
+        uint* aoTypeMap = meshData.AOTypeMap;
+        uint* yaoTypeMap = meshData.YAOTypeMap;
+        uint* yBitMap = meshData.YBitMap;
+
+        uint* typeMap = meshData.TypeMap;
+        uint* zTypeMap = meshData.ZTypeMap;
+        uint* nonSolidMap = meshData.NonSolidMap;
+
+        ulong* topBits = meshData.TopBits;
+        ulong* bottomBits = meshData.BottomBits;
+
+
+        uint* topMask = meshData.RightMask;
+        uint* bottomMask = meshData.LeftMask;
+
+        //uint* blockPtr = (uint*)chunk.Blocks;
+
+        int maxYlayerIndex = 31744;
+
+        var nzRows = stackalloc V256b[4];
+        var pzRows = stackalloc V256b[4];
+
+        for (int z = 0; z < 32; z++)
+        {
+            int shiftIndex = z >> 3;
+            byte shift = (byte)(z & 7);
+
+            int blockIndex = z * 1024;
+            int mapIndex = (z + 1) * 34 + 1;
+
+            /*
+            V256u mem1 = V256U.Zero;
+            V256u mem2 = V256U.Zero;
+            V256u mem3 = V256U.Zero;
+            V256u mem4 = V256U.Zero;
+            */
+            V256b mem = V256B.Zero;
+
+
+            V256b yrow1 = V256B.Zero;
+            V256b yrow2 = V256B.Zero;
+            V256b yrow3 = V256B.Zero;
+            V256b yrow4 = V256B.Zero;
+
+            V256b ztype1 = V256B.Zero;
+            V256b ztype2 = V256B.Zero;
+            V256b ztype3 = V256B.Zero;
+            V256b ztype4 = V256B.Zero;
+
+
+            uint rowBottom = 0;
+            uint rowTop = 0;
+
+            uint* typePtr     = typeMap;
+            ulong* bitPtr     = bitMap + mapIndex;
+            uint* aoPtr       = aoTypeMap + mapIndex;
+
+            GetBitRowX0(chunk, ref neighbours, ref blockIndex, 0, z, ref bitPtr, ref aoPtr, ref typePtr, ref yrow1, ref ztype1, ref mem, ref rowTop, ref rowBottom);
+            
+            for (int x = 1; x < 8; x++)
+                GetBitRowX1(chunk, ref neighbours, ref blockIndex, x, z, ref bitPtr, ref aoPtr, ref typePtr, ref yrow1, ref ztype1, ref mem, ref rowTop, ref rowBottom);
+            
+            for (int x = 8; x < 16; x++)
+                GetBitRowX1(chunk, ref neighbours, ref blockIndex, x, z, ref bitPtr, ref aoPtr, ref typePtr, ref yrow2, ref ztype2, ref mem, ref rowTop, ref rowBottom);
+
+            for (int x = 16; x < 24; x++)
+                GetBitRowX1(chunk, ref neighbours, ref blockIndex, x, z, ref bitPtr, ref aoPtr, ref typePtr, ref yrow3, ref ztype3, ref mem, ref rowTop, ref rowBottom);
+
+            for (int x = 24; x < 32; x++)
+                GetBitRowX1(chunk, ref neighbours, ref blockIndex, x, z, ref bitPtr, ref aoPtr, ref typePtr, ref yrow4, ref ztype4, ref mem, ref rowTop, ref rowBottom);
+
+            int yIndex = z * 1024;
+            int zIndexY = z * 32;
+
+            int rowZindex = (z + 1) * 34;
+
+            
+            var (zTypeRow1, zTypeRow2, zTypeRow3, zTypeRow4) = VH.InterleaveToV256u(ztype1, ztype2, ztype3, ztype4);
+
+            Avx.Store(zTypeMap + zIndexY,      zTypeRow1);
+            Avx.Store(zTypeMap + zIndexY + 8,  zTypeRow2);
+            Avx.Store(zTypeMap + zIndexY + 16, zTypeRow3);
+            Avx.Store(zTypeMap + zIndexY + 24, zTypeRow4);
+
+
+
+
+            yBitMap[z + 1123]  = 0;//rowTop;
+            yBitMap[z + 1]     = 0;//rowBottom;
+
+            yBitMap[rowZindex] = rowBottom;//uint.MaxValue;
+            yBitMap[rowZindex + 33] = rowTop;//uint.MaxValue;
+
+            yaoTypeMap[z + 1123]  = 0;//VH.GetAOTypeMap(rowTop);
+            yaoTypeMap[z + 1]     = 0;//VH.GetAOTypeMap(rowBottom);
+
+            yaoTypeMap[rowZindex] = (uint)VH.GetAOTypeMap(rowBottom);//uint.MaxValue;
+            yaoTypeMap[rowZindex + 33] = (uint)VH.GetAOTypeMap(rowTop);//uint.MaxValue;
+
+
+            var (yRow1, yRow2, yRow3, yRow4) = VH.InterleaveToV256u(yrow1, yrow2, yrow3, yrow4);
+
+            Avx.Store(yBitMap + rowZindex + 1, yRow1);
+            Avx.Store(yBitMap + rowZindex + 9, yRow2);
+            Avx.Store(yBitMap + rowZindex + 17, yRow3);
+            Avx.Store(yBitMap + rowZindex + 25, yRow4);
+
+            Avx.Store(yaoTypeMap + rowZindex + 1, VH.GetAOTypeMap(yRow1));
+            Avx.Store(yaoTypeMap + rowZindex + 9, VH.GetAOTypeMap(yRow2));
+            Avx.Store(yaoTypeMap + rowZindex + 17, VH.GetAOTypeMap(yRow3));
+            Avx.Store(yaoTypeMap + rowZindex + 25, VH.GetAOTypeMap(yRow4));
+            
+
+
+            int indexNx = 992 + yIndex;
+            int indexPx = yIndex;
+
+            int indexNz = zIndexY + maxYlayerIndex;
+            int indexPz = zIndexY;
+
+            byte* ptr12 = neighbours.Blocks12 + indexNx;
+            byte* ptr14 = neighbours.Blocks14 + indexPx;
+            byte* ptr10 = neighbours.Blocks10 + indexNz;
+            byte* ptr16 = neighbours.Blocks16 + indexPz;
+
+            // rows in the direction of y, on the plane P (+) / N (-), on the axis x / z
+
+            // handle chunk that is in -x at index 12 and i need the last block
+            ulong rowNx = GetSolidRow(ptr12);
+
+            // handle chunk that is in +x at index 14 and i need the first block
+            ulong rowPx = GetSolidRow(ptr14);
+
+            // handle chunk that is in -z at index 10 and i need the last block
+            ulong rowNz = GetSolidRow(ptr10, z, shift, ref nzRows[shiftIndex]);
+
+            // handle chunk that is in +z at index 16 and i need the first block
+            ulong rowPz = GetSolidRow(ptr16, z, shift, ref pzRows[shiftIndex]);
+
+            bitMap[rowZindex] = rowNx;
+            bitMap[33 + rowZindex] = rowPx;
+
+            bitMap[z + 1] = rowNz;
+            bitMap[1123 + z] = rowPz;
+
+
+            aoTypeMap[rowZindex] = (uint)(VH.GetAOTypeMap(rowNx) >> 1);
+            aoTypeMap[33 + rowZindex] = (uint)(VH.GetAOTypeMap(rowPx) >> 1);
+
+            aoTypeMap[z + 1] = (uint)(VH.GetAOTypeMap(rowNz) >> 1);
+            aoTypeMap[1123 + z] = (uint)(VH.GetAOTypeMap(rowPz) >> 1);
+        }
+
+        var (nzRow1, nzRow2, nzRow3, nzRow4) = VH.InterleaveToV256u(nzRows[0], nzRows[1], nzRows[2], nzRows[3]);
+        var (pzRow1, pzRow2, pzRow3, pzRow4) = VH.InterleaveToV256u(pzRows[0], pzRows[1], pzRows[2], pzRows[3]);
+
+        // store the shifted rows for the z axis
+        Avx.Store(yBitMap + 1, nzRow1);
+        Avx.Store(yBitMap + 9, nzRow2);
+        Avx.Store(yBitMap + 17, nzRow3);
+        Avx.Store(yBitMap + 25, nzRow4);
+
+        Avx.Store(yBitMap + 1123, pzRow1);
+        Avx.Store(yBitMap + 1131, pzRow2);
+        Avx.Store(yBitMap + 1139, pzRow3);
+        Avx.Store(yBitMap + 1147, pzRow4);
+
+        // store the ao types
+        Avx.Store(yaoTypeMap + 1, VH.GetAOTypeMap(nzRow1));
+        Avx.Store(yaoTypeMap + 9, VH.GetAOTypeMap(nzRow2));
+        Avx.Store(yaoTypeMap + 17, VH.GetAOTypeMap(nzRow3));
+        Avx.Store(yaoTypeMap + 25, VH.GetAOTypeMap(nzRow4));
+
+        Avx.Store(yaoTypeMap + 1123, VH.GetAOTypeMap(pzRow1));
+        Avx.Store(yaoTypeMap + 1131, VH.GetAOTypeMap(pzRow2));
+        Avx.Store(yaoTypeMap + 1139, VH.GetAOTypeMap(pzRow3));
+        Avx.Store(yaoTypeMap + 1147, VH.GetAOTypeMap(pzRow4));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ulong GetSolidRow(byte* ptr)
     {
         V256b blockRow = V256B.Load(ptr);
 
-        var (row1, row2, row3, row4) = VH.WidenToV256u(blockRow);
+        var isAir = blockRow.CompareEqual(V256B.Zero);
+        var isSolid = isAir ^ V256B.MaxValue;
 
-        /*
-        var state1 = row1 & StateMaskV256;
-        var state2 = row2 & StateMaskV256;
-        var state3 = row3 & StateMaskV256;
-        var state4 = row4 & StateMaskV256;
-
-        var isSolid1 = state1.CompareEqual(SolidMaskV256);
-        var isSolid2 = state2.CompareEqual(SolidMaskV256);
-        var isSolid3 = state3.CompareEqual(SolidMaskV256);
-        var isSolid4 = state4.CompareEqual(SolidMaskV256);
-        */
-
-        var isAir1 = row1.CompareEqual(V256U.Zero);
-        var isAir2 = row2.CompareEqual(V256U.Zero);
-        var isAir3 = row3.CompareEqual(V256U.Zero);
-        var isAir4 = row4.CompareEqual(V256U.Zero);
-
-        var isSolid1 = isAir1 ^ V256U.MaxValue;
-        var isSolid2 = isAir2 ^ V256U.MaxValue;
-        var isSolid3 = isAir3 ^ V256U.MaxValue;
-        var isSolid4 = isAir4 ^ V256U.MaxValue;
+        return (ulong)VH.GetRowSolidBitsV256X64(isSolid) << 1;
+    }
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong GetSolidRow(byte* ptr, int z, byte shift, ref V256b sRow)
+    {
+        V256b blockRow = V256B.Load(ptr);
 
-        return (ulong)VH.GetRowSolidBitsV256X64(isSolid1, isSolid2, isSolid3, isSolid4) << 1;
+        var isAir = blockRow.CompareEqual(V256B.Zero);
+        var isSolid = isAir ^ V256B.MaxValue;
+
+        V256b ybit = isSolid & V256B.One;
+
+        sRow |= ybit.ShiftOneLeft(shift);
+
+        return (ulong)VH.GetRowSolidBitsV256X64(isSolid) << 1;
     }
 
     private static ulong GetSolidRow(byte* ptr, int z, ref V256u sRow1, ref V256u sRow2, ref V256u sRow3, ref V256u sRow4)
@@ -562,13 +1261,9 @@ public unsafe static class GreedyMesher7YByte
     
     public static bool GenerateMesh(VoxelChunk chunk, ref MeshMapping mapping, int workerId)
     {
-        NeighbourChunks neighbours = new(chunk.Renderer, chunk.RelativePosition);
-
-        Stopwatch sw = Stopwatch.StartNew();
+        NeighbourChunks neighbours = new(chunk, chunk.RelativePosition);
         GetBitMaps(chunk, ref neighbours, workerId);
-        Console.WriteLine(sw.Elapsed.TotalMilliseconds);
         BuildMesh(chunk, ref mapping, workerId);   
-
         return true;
     }
 
@@ -589,7 +1284,7 @@ public unsafe static class GreedyMesher7YByte
 
         ulong* backBitMapPtr = bitMap + backZindex;
         uint* backAoTypeMapPtr = aoTypeMap + backZindex;
-        uint* backTypeMapPtr = typeMap + z * 32 + 2;
+        uint* backTypeMapPtr = typeMap + z * 32;
 
         uint backAoType1 = backAoTypeMapPtr[0];
         uint backAoType2 = backAoTypeMapPtr[1];
@@ -1209,51 +1904,51 @@ public unsafe static class GreedyMesher7YByte
         public byte* Blocks25; // ( 0,  1,  1)
         public byte* Blocks26; // ( 1,  1,  1)
 
-        public NeighbourChunks(VoxelRenderer renderer, Vector3i relativePosition)
+        public NeighbourChunks(VoxelChunk chunk, Vector3i relativePosition)
         {
-            Blocks0  = GetBlocks(renderer, relativePosition, -1, -1, -1);
-            Blocks1  = GetBlocks(renderer, relativePosition,  0, -1, -1);
-            Blocks2  = GetBlocks(renderer, relativePosition,  1, -1, -1);
+            Blocks0  = GetBlocks(chunk, relativePosition, -1, -1, -1);
+            Blocks1  = GetBlocks(chunk, relativePosition,  0, -1, -1);
+            Blocks2  = GetBlocks(chunk, relativePosition,  1, -1, -1);
 
-            Blocks3  = GetBlocks(renderer, relativePosition, -1, -1,  0);
-            Blocks4  = GetBlocks(renderer, relativePosition,  0, -1,  0);
-            Blocks5  = GetBlocks(renderer, relativePosition,  1, -1,  0);
+            Blocks3  = GetBlocks(chunk, relativePosition, -1, -1,  0);
+            Blocks4  = GetBlocks(chunk, relativePosition,  0, -1,  0);
+            Blocks5  = GetBlocks(chunk, relativePosition,  1, -1,  0);
 
-            Blocks6  = GetBlocks(renderer, relativePosition, -1, -1,  1);
-            Blocks7  = GetBlocks(renderer, relativePosition,  0, -1,  1);
-            Blocks8  = GetBlocks(renderer, relativePosition,  1, -1,  1);
+            Blocks6  = GetBlocks(chunk, relativePosition, -1, -1,  1);
+            Blocks7  = GetBlocks(chunk, relativePosition,  0, -1,  1);
+            Blocks8  = GetBlocks(chunk, relativePosition,  1, -1,  1);
 
-            Blocks9  = GetBlocks(renderer, relativePosition, -1,  0, -1);
-            Blocks10 = GetBlocks(renderer, relativePosition,  0,  0, -1);
-            Blocks11 = GetBlocks(renderer, relativePosition,  1,  0, -1);
+            Blocks9  = GetBlocks(chunk, relativePosition, -1,  0, -1);
+            Blocks10 = GetBlocks(chunk, relativePosition,  0,  0, -1);
+            Blocks11 = GetBlocks(chunk, relativePosition,  1,  0, -1);
 
-            Blocks12 = GetBlocks(renderer, relativePosition, -1,  0,  0);
-            Blocks14 = GetBlocks(renderer, relativePosition,  1,  0,  0);
+            Blocks12 = GetBlocks(chunk, relativePosition, -1,  0,  0);
+            Blocks14 = GetBlocks(chunk, relativePosition,  1,  0,  0);
 
-            Blocks15 = GetBlocks(renderer, relativePosition, -1,  0,  1);
-            Blocks16 = GetBlocks(renderer, relativePosition,  0,  0,  1);
-            Blocks17 = GetBlocks(renderer, relativePosition,  1,  0,  1);
+            Blocks15 = GetBlocks(chunk, relativePosition, -1,  0,  1);
+            Blocks16 = GetBlocks(chunk, relativePosition,  0,  0,  1);
+            Blocks17 = GetBlocks(chunk, relativePosition,  1,  0,  1);
 
-            Blocks18 = GetBlocks(renderer, relativePosition, -1,  1, -1);
-            Blocks19 = GetBlocks(renderer, relativePosition,  0,  1, -1);
-            Blocks20 = GetBlocks(renderer, relativePosition,  1,  1, -1);
+            Blocks18 = GetBlocks(chunk, relativePosition, -1,  1, -1);
+            Blocks19 = GetBlocks(chunk, relativePosition,  0,  1, -1);
+            Blocks20 = GetBlocks(chunk, relativePosition,  1,  1, -1);
 
-            Blocks21 = GetBlocks(renderer, relativePosition, -1,  1,  0);
-            Blocks22 = GetBlocks(renderer, relativePosition,  0,  1,  0);
-            Blocks23 = GetBlocks(renderer, relativePosition,  1,  1,  0);
+            Blocks21 = GetBlocks(chunk, relativePosition, -1,  1,  0);
+            Blocks22 = GetBlocks(chunk, relativePosition,  0,  1,  0);
+            Blocks23 = GetBlocks(chunk, relativePosition,  1,  1,  0);
 
-            Blocks24 = GetBlocks(renderer, relativePosition, -1,  1,  1);
-            Blocks25 = GetBlocks(renderer, relativePosition,  0,  1,  1);
-            Blocks26 = GetBlocks(renderer, relativePosition,  1,  1,  1);
+            Blocks24 = GetBlocks(chunk, relativePosition, -1,  1,  1);
+            Blocks25 = GetBlocks(chunk, relativePosition,  0,  1,  1);
+            Blocks26 = GetBlocks(chunk, relativePosition,  1,  1,  1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte* GetBlocks(VoxelRenderer renderer, Vector3i relativePosition, int ox, int oy, int oz)
+        private static byte* GetBlocks(VoxelChunk chunk, Vector3i relativePosition, int ox, int oy, int oz)
         {
-            relativePosition.X += ox;
-            relativePosition.Y += oy;
-            relativePosition.Z += oz;
-            return renderer.GetChunk(relativePosition, out var chunk) ? chunk.ByteBlocks : VoxelChunk.Empty.ByteBlocks;
+            relativePosition.X += ox * chunk.LodMult;
+            relativePosition.Y += oy * chunk.LodMult;
+            relativePosition.Z += oz * chunk.LodMult;
+            return chunk.Renderer.GetChunk(relativePosition, out var sideChunk) ? sideChunk.ByteBlocks : VoxelChunk.Empty.ByteBlocks;
         }
     }
 
@@ -1294,6 +1989,9 @@ public unsafe static class GreedyMesher7YByte
         public uint* XSlice;
         public uint* LeftMask;
 
+        public V256b* YRows;
+        public V256b* ZTypes;
+
 
         // base pointers
         private Allocator<ulong> _ulongMaps34_34;
@@ -1301,6 +1999,7 @@ public unsafe static class GreedyMesher7YByte
         private Allocator<uint> _uintMaps32_32;
         private Allocator<ulong> _ulong32;
         private Allocator<uint> _uints32;
+        private Allocator<V256b> _v256b4;
 
         public NewMeshData()
         {
@@ -1345,6 +2044,12 @@ public unsafe static class GreedyMesher7YByte
             RightMask       = _uints32.Next();
             XSlice          = _uints32.Next();
             LeftMask        = _uints32.Next();
+
+            
+            _v256b4         = new(4, 2); 
+
+            YRows           = _v256b4.Next();
+            ZTypes          = _v256b4.Next();
         }
 
         public void Dispose()
@@ -1354,6 +2059,7 @@ public unsafe static class GreedyMesher7YByte
             _uintMaps32_32.Free();
             _ulong32.Free();
             _uints32.Free();    
+            _v256b4.Free();
         }
 
         private struct Allocator<T>(int size, int count) where T : unmanaged

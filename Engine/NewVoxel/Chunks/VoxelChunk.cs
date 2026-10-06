@@ -19,7 +19,6 @@ public unsafe class VoxelChunk : IDisposable
     
     public const int BLOCK_COUNT = 32768;
     public const int SOLID_COUNT = 1024;
-    public const int MAP_ELEMENTS_COUNT = 32 * 2 * 6; // 12x 32 uint arrays, 2 for every side, 1 for occlusion, 1 for ao
 
     public static VoxelChunk Empty = null!;
     public VoxelRenderer Renderer;
@@ -31,6 +30,8 @@ public unsafe class VoxelChunk : IDisposable
     public Vector3i WorldPosition;
     public Vector3i Center;
     public Matrix4 ModelMatrix; 
+    public readonly int LodLevel;
+    public int LodMult => 1 << LodLevel;
 
     public Block* Blocks { get; private set; } = null;
     public byte* ByteBlocks { get; private set; } = null;
@@ -48,13 +49,6 @@ public unsafe class VoxelChunk : IDisposable
     public uint* LeftOcclusion { get; private set; }
     public uint* BottomOcclusion { get; private set; }
     public uint* BackOcclusion { get; private set; }
-
-    public uint* FrontAoType { get; private set; }
-    public uint* RightAoType { get; private set; }
-    public uint* TopAoType { get; private set; }
-    public uint* LeftAoType { get; private set; }
-    public uint* BottomAoType { get; private set; }
-    public uint* BackAoType { get; private set; }
 
     private int _status;
 
@@ -90,7 +84,7 @@ public unsafe class VoxelChunk : IDisposable
 
     public void AddStatusChange((double, string) v)
     {
-        //StatusChanges.Add(v);
+        StatusChanges.Add(v); 
     }
 
     public bool HasBlocks = false;
@@ -101,8 +95,10 @@ public unsafe class VoxelChunk : IDisposable
         ClearMemory();
     }
 
-    public VoxelChunk(VoxelRenderer renderer, Vector3i relativePosition)
+    public VoxelChunk(VoxelRenderer renderer, Vector3i relativePosition, int lodLevel)
     {
+        LodLevel = lodLevel;
+
         Allocation = new() { Chunk = this };
 
         Renderer = renderer;
@@ -118,25 +114,26 @@ public unsafe class VoxelChunk : IDisposable
 
     public static void Init()
     {  
-        Console.WriteLine("Start");
         EmptyMap = MemoryHelper.AllocPtr<Block>(1024);
         for (int i = 0; i < 1024; i++)
         {
             EmptyMap[i] = MemoryHelper.Alloc<Block>(32);
             MemoryHelper.Clear(EmptyMap[i], 32);
         }   
-        Console.WriteLine("Middle");
 
         Empty = new();
-        Console.WriteLine("End");
     }
 
     public void SetPosition(Vector3i relativePosition)
     {
+        int halfSize = 16 * LodMult;
+        int fullSize = 32;
+
         RelativePosition = relativePosition;
-        WorldPosition = relativePosition * 32;
-        Center = WorldPosition + (16, 16, 16);
-        ModelMatrix = Matrix4.CreateTranslation(WorldPosition);
+        WorldPosition = relativePosition * fullSize;
+        Center = WorldPosition + new Vector3i(halfSize);
+
+        ModelMatrix = Matrix4.CreateTranslation(WorldPosition) * Matrix4.CreateScale(LodMult);
     }
 
 
@@ -248,6 +245,8 @@ public unsafe class VoxelChunk : IDisposable
     public Block Get(int index) => BlockMap[index >> 5][index & 31];
     */
 
+    private int GetYEnd() => ((RelativePosition.Y >= Renderer.ChunkManager.LodMult - LodMult) || (LodMult >= Renderer.ChunkManager.LodMult)) ? 0 : LodMult;
+
 
     public bool InBounds(Vector3i pos) => InBounds(pos.X, pos.Y, pos.Z);
     public bool InBounds(int x, int y, int z)
@@ -261,15 +260,14 @@ public unsafe class VoxelChunk : IDisposable
 
     public bool HasAllNeighbours()
     {
-        AddStatusChange((sw.Elapsed.TotalMilliseconds, $"check all neighbours"));
-        int yStart = RelativePosition.Y <= 0 ? 0 : -1;
-        int yEnd = RelativePosition.Y >= Renderer.WorldHeight - 1 ? 0 : 1;
+        int yStart = RelativePosition.Y <= 0 ? 0 : -LodMult;
+        int yEnd = GetYEnd();
 
         int i = 0;
         
-        for (int x = -1; x <= 1; x++)
-        for (int y = yStart; y <= yEnd; y++)
-        for (int z = -1; z <= 1; z++)
+        for (int x = -LodMult; x <= LodMult; x+=LodMult)
+        for (int y = yStart; y <= yEnd; y+=LodMult)
+        for (int z = -LodMult; z <= LodMult; z+=LodMult)
         {
             if (x == 0 && y == 0 && z == 0)
                 continue;
@@ -278,60 +276,85 @@ public unsafe class VoxelChunk : IDisposable
             {
                 if (neighborChunk.Status < ChunkStatus.Generated)
                 {
-                    AddStatusChange((sw.Elapsed.TotalMilliseconds, $"neighbour {i} not generated: {neighborChunk.RelativePosition}"));
                     return false;
                 }
             }
             else
             {
-                AddStatusChange((sw.Elapsed.TotalMilliseconds, $"neighbour {i} not exist: {RelativePosition + (x, y, z)}"));
                 return false;
             }
             i++;
         }
 
-        AddStatusChange((sw.Elapsed.TotalMilliseconds, $"success"));
         return true;
     }
 
+    private bool CheckRenderStatus(VoxelChunk? neighborChunk)
+    {
+        if (neighborChunk == null)
+            return false;
+
+        if (neighborChunk.Status < ChunkStatus.Generated)
+        {
+            Status = ChunkStatus.FailedToMesh;
+            return false;
+        }
+        else if (neighborChunk.Status < ChunkStatus.QueuedToMesh)
+        {
+            if (neighborChunk.HasAllNeighbours())
+                neighborChunk.EnqueueRendering();
+        }
+        return true;
+    }
 
     public bool HasAllAndRenderNeighbours()
     {
         bool hasAllNeighbours = true;
 
-        int yStart = RelativePosition.Y <= 0 ? 0 : -1;
-        int yEnd = RelativePosition.Y >= Renderer.WorldHeight - 1 ? 0 : 1;
+        int yStart = RelativePosition.Y <= 0 ? 0 : -LodMult;
+        int yEnd = GetYEnd();
 
         int i = 0;
-        
-        for (int x = -1; x <= 1; x++)
-        for (int y = yStart; y <= yEnd; y++)
-        for (int z = -1; z <= 1; z++)
-        {
-            if (x == 0 && y == 0 && z == 0)
-                continue;
 
-            if (Renderer.GetChunk(RelativePosition + (x, y, z), out var neighborChunk))
+        Vector3i relative = RelativePosition;
+        
+        for (int x = -LodMult; x <= LodMult; x+=LodMult)
+        {
+            for (int y = yStart; y <= yEnd; y+=LodMult)
             {
-                if (neighborChunk.Status < ChunkStatus.Generated)
+                for (int z = -LodMult; z <= LodMult; z+=LodMult)
                 {
-                    AddStatusChange((sw.Elapsed.TotalMilliseconds, $"{neighborChunk.RelativePosition} not generated"));
-                    Status = ChunkStatus.FailedToMesh;
-                    hasAllNeighbours = false;
-                }
-                else if (neighborChunk.Status < ChunkStatus.QueuedToMesh)
-                {
-                    if (neighborChunk.HasAllNeighbours())
-                        neighborChunk.EnqueueRendering();
+                    if (x == 0 && y == 0 && z == 0)
+                        continue;
+
+                    relative.X = RelativePosition.X + x;
+                    relative.Y = RelativePosition.Y + y;
+                    relative.Z = RelativePosition.Z + z;
+
+                    if (Renderer.GetChunk(relative, out var neighborChunk))
+                    {
+                        hasAllNeighbours &= CheckRenderStatus(neighborChunk);
+
+                        if (neighborChunk.LodLevel < LodLevel)
+                        {
+                            int m = neighborChunk.LodMult;
+                            CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, 0)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (0, 0, m)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, m)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (0, m, 0)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (m, m, 0)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (0, m, m)));
+                            CheckRenderStatus(Renderer.GetChunk(relative + (m, m, m)));
+                        }
+                    }
+                    else
+                    {
+                        Status = ChunkStatus.FailedToMesh;
+                        hasAllNeighbours = false;
+                    }
+                    i++;
                 }
             }
-            else
-            {
-                AddStatusChange((sw.Elapsed.TotalMilliseconds, $"{RelativePosition + (x, y, z)} doesn't exist"));
-                Status = ChunkStatus.FailedToMesh;
-                hasAllNeighbours = false;
-            }
-            i++;
         }
 
         return hasAllNeighbours;
@@ -372,12 +395,12 @@ public unsafe class VoxelChunk : IDisposable
     {
         bool hasAllNeighbours = true;
 
-        int yStart = RelativePosition.Y <= 0 ? 0 : -1;
-        int yEnd = RelativePosition.Y >= Renderer.WorldHeight - 1 ? 0 : 1;
+        int yStart = RelativePosition.Y <= 0 ? 0 : -LodMult;
+        int yEnd = GetYEnd();
 
-        for (int x = -1; x <= 1; x++)
-        for (int y = yStart; y <= yEnd; y++)
-        for (int z = -1; z <= 1; z++)
+        for (int x = -LodMult; x <= LodMult; x+=LodMult)
+        for (int y = yStart; y <= yEnd; y+=LodMult)
+        for (int z = -LodMult; z <= LodMult; z+=LodMult)
         {
             if (x == 0 && y == 0 && z == 0)
                 continue;
@@ -392,7 +415,6 @@ public unsafe class VoxelChunk : IDisposable
             }
             else
             {
-                AddStatusChange((sw.Elapsed.TotalMilliseconds, $"{RelativePosition + (x, y, z)} doesn't exist try enqueue"));
                 Status = ChunkStatus.FailedToMesh;
                 hasAllNeighbours = false;
             }
@@ -423,7 +445,7 @@ public unsafe class VoxelChunk : IDisposable
         if (ByteBlocks == null)
             ByteBlocks = MemoryHelper.AllocClear<byte>(BLOCK_COUNT);
 
-        if (BlockMap == null)
+        if (BlockMap == null && false)
         {
             BlockMap = MemoryHelper.AllocPtr<Block>(1024);
 
@@ -433,28 +455,21 @@ public unsafe class VoxelChunk : IDisposable
             }
         }
 
-        if (CountMap == null)
+        if (CountMap == null && false)
             CountMap = MemoryHelper.Alloc<byte>(1024);
 
-        if (SolidMap == null)
+        if (SolidMap == null && false)
             SolidMap = MemoryHelper.Alloc<uint>(SOLID_COUNT);
 
         if (_mapPtr == null)
-            _mapPtr = MemoryHelper.Alloc<uint>(MAP_ELEMENTS_COUNT); 
+            _mapPtr = MemoryHelper.Alloc<uint>(1024 * 6); 
 
-        FrontOcclusion =    _mapPtr + 32 * 0;
-        RightOcclusion =    _mapPtr + 32 * 1;
-        TopOcclusion =      _mapPtr + 32 * 2;
-        LeftOcclusion =     _mapPtr + 32 * 3;
-        BottomOcclusion =   _mapPtr + 32 * 4;
-        BackOcclusion =     _mapPtr + 32 * 5;
-
-        FrontAoType =       _mapPtr + 32 * 6;
-        RightAoType =       _mapPtr + 32 * 7;
-        TopAoType =         _mapPtr + 32 * 8;
-        LeftAoType =        _mapPtr + 32 * 9;
-        BottomAoType =      _mapPtr + 32 * 10;
-        BackAoType =        _mapPtr + 32 * 11;
+        FrontOcclusion =    _mapPtr + 1024 * 0;
+        RightOcclusion =    _mapPtr + 1024 * 1;
+        TopOcclusion =      _mapPtr + 1024 * 2;
+        LeftOcclusion =     _mapPtr + 1024 * 3;
+        BottomOcclusion =   _mapPtr + 1024 * 4;
+        BackOcclusion =     _mapPtr + 1024 * 5;
     }
 
     public void ClearMemory()
@@ -482,10 +497,25 @@ public unsafe class VoxelChunk : IDisposable
     public void ClearBlockMap()
     {
         
-    }    
-    public void ClearCountMap() => MemoryHelper.Clear(CountMap, 1024);
-    public void ClearSolidMap() => MemoryHelper.Clear(SolidMap, SOLID_COUNT);
-    public void ClearMaps() => MemoryHelper.Clear(_mapPtr, MAP_ELEMENTS_COUNT);
+    }  
+
+    public void ClearCountMap()
+    {
+        if (CountMap != null)
+            MemoryHelper.Clear(CountMap, 1024);
+    }
+
+    public void ClearSolidMap()
+    {
+        if (CountMap != null)
+            MemoryHelper.Clear(SolidMap, SOLID_COUNT);
+    }
+
+    public void ClearMaps()
+    {
+        if (CountMap != null)
+            MemoryHelper.Clear(_mapPtr, 1024 * 6);
+    }
 
     public void EnqueueRendering()
     {
@@ -495,8 +525,10 @@ public unsafe class VoxelChunk : IDisposable
 
     public float DistanceSquaredTo(Vector3 position) => Vector3.DistanceSquared(WorldPosition, position);
 
-    public void FreeAllocation()
+    public void FreeAllocation(int id)
     {
+        //AddStatusChange((sw.Elapsed.TotalMilliseconds, $"free: {id}"));
+
         Allocation.Free();
         for (int i = 0; i < Allocations.Count; i++)
         {
@@ -507,7 +539,7 @@ public unsafe class VoxelChunk : IDisposable
 
     public void Dispose()
     {
-        FreeAllocation();
+        FreeAllocation(0);
 
         AliveChunks.Remove(this);
 
@@ -545,13 +577,6 @@ public unsafe class VoxelChunk : IDisposable
             LeftOcclusion = null;
             BottomOcclusion = null;
             BackOcclusion = null;
-
-            FrontAoType = null;
-            RightAoType = null;
-            TopAoType = null;
-            LeftAoType = null;
-            BottomAoType = null;
-            BackAoType = null;
         }
 
         GC.SuppressFinalize(this);

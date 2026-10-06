@@ -45,9 +45,17 @@ public unsafe static class HelperFunctions
     public static void CheckAlignment<T>() where T : unmanaged
     {
         int size = Marshal.SizeOf<T>();
-        if (size % 16 != 0)
-            Console.WriteLine($"[Warning] {typeof(T).Name} is {size} bytes which is not 16 byte aligned. " +
-                            $"This will cause padding issues in SSBO. " +
-                            $"Add {16 - (size % 16)} bytes of padding to your struct.");
+
+        if (size <= 8 || size % 16 == 0) return;
+
+        int paddedSize = (size + 15) & ~15;
+
+        Console.WriteLine(
+            $"[Warning] {typeof(T).Name} is {size} bytes, which is not a multiple of 16. " +
+            $"If it contains a vec3 or vec4, GLSL will align the struct to 16 bytes " +
+            $"(stride becomes {paddedSize}), and each vec3 also starts on a 16-byte boundary. " +
+            $"A tightly packed C# layout like {{ vec3; vec2; }} will not match the shader. " +
+            $"Fix: add explicit padding after each vec3 (e.g. a float, or use Vector4), " +
+            $"not just at the end of the struct.");
     }
 }

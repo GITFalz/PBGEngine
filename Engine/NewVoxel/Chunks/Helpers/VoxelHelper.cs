@@ -136,6 +136,29 @@ public unsafe static class VoxelHelper
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static (V256u, V256u, V256u, V256u) InterleaveToV256u(V256b a, V256b b, V256b c, V256b d)
+    {
+        // bytes -> pairs (a0 b0 a1 b1 ...)
+        var abLo = Avx2.UnpackLow(a, b).AsUInt16();
+        var abHi = Avx2.UnpackHigh(a, b).AsUInt16();
+        var cdLo = Avx2.UnpackLow(c, d).AsUInt16();
+        var cdHi = Avx2.UnpackHigh(c, d).AsUInt16();
+
+        // pairs -> quads (a b c d) = one uint per element, little-endian
+        var r0 = Avx2.UnpackLow(abLo, cdLo).AsUInt32();   // [u0..3   | u16..19]
+        var r1 = Avx2.UnpackHigh(abLo, cdLo).AsUInt32();  // [u4..7   | u20..23]
+        var r2 = Avx2.UnpackLow(abHi, cdHi).AsUInt32();   // [u8..11  | u24..27]
+        var r3 = Avx2.UnpackHigh(abHi, cdHi).AsUInt32();  // [u12..15 | u28..31]
+
+        // AVX2 unpacks work per 128-bit lane, so fix the order
+        return (
+            Avx2.Permute2x128(r0, r1, 0x20),  // u0..7
+            Avx2.Permute2x128(r2, r3, 0x20),  // u8..15
+            Avx2.Permute2x128(r0, r1, 0x31),  // u16..23
+            Avx2.Permute2x128(r2, r3, 0x31)); // u24..31
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static (V256u, V256u, V256u, V256u) WidenToV256u(V256b vector)
     {
         var (ushortsLo, ushortsHi) = Vector256.Widen(vector);

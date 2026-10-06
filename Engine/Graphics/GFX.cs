@@ -1,4 +1,5 @@
 using PBG.Graphics.Vulkan;
+using PBG.ThreadSync;
 using Silk.NET.Vulkan;
 using Silk.NET.Windowing;
 using Buffer = Silk.NET.Vulkan.Buffer;
@@ -39,9 +40,11 @@ public unsafe class GFX
 
     private static VulkanQuery _vulkanQuery = null!;
 
+    private static ThreadLock _resizeLock = new();
+
     private static (int x, int y, uint width, uint height) _viewport;
 
-    public GFX(
+    public static void Set(
         VulkanInstance renderer,
         VulkanDevice vulkanDevice,
         IWindow window,
@@ -71,6 +74,10 @@ public unsafe class GFX
 
         _vulkanQuery = vulkanQuery;
     }
+
+    #region Thread
+    public static IDisposable ResizeLock => _resizeLock.Lock();
+    #endregion
 
     #region Device
     public static void DeviceWaitIdle() => Vk.DeviceWaitIdle(Device);

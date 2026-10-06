@@ -1,10 +1,20 @@
+using System.Runtime.CompilerServices;
 using PBG.MathLibrary;
 
 namespace PBG.Noise
 {
     public static class VoronoiLib
     {
-        private static Vector2i[] offsets = [(1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)];
+        private static Vector2i[] offsets = [
+            (1, 1),     // 0   0b000
+            (1, 0),     // 1   0b001
+            (1, -1),    // 2   0b010
+            (0, -1),    // 3   0b011
+            (-1, -1),   // 4   0b100
+            (-1, 0),    // 5   0b101
+             (-1, 1),   // 6   0b110
+             (0, 1)     // 7   0b111
+            ];
 
         private static uint HashUInt(Vector2i p)
         {
@@ -46,6 +56,16 @@ namespace PBG.Noise
                 (h2 & 0xFFFFFFU) / 16777215f,
                 (h3 & 0xFFFFFFU) / 16777215f
             );
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2i GetOffset(int index)
+        {
+            int ib0 = ~index & 1;
+            int b1 = (index >> 1) & 1;
+            int ib1 = ~b1 & 1;
+            int b2 = 1 - ((index >> 1) & 2);
+            return ((ib0 | ib1) * b2, (ib0 * ib1 | -b1) * b2);
         }
 
         private static Vector2i[] GetP(Vector2i p)
@@ -221,7 +241,7 @@ namespace PBG.Noise
                 }
             }
             Vector2 dir = (p - g).Normalized(); // flow from feature to pixel
-            return (float)((Math.Atan2(dir.Y, dir.X) + Math.PI) / (2.0f * Math.PI));
+            return (float)((Mathf.Atan2(dir.Y, dir.X) + Math.PI) / (2.0f * Math.PI));
         }
 
         public static Vector2 VoronoiPoint(Vector2 p)

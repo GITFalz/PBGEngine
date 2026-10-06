@@ -10,8 +10,8 @@ using VH = VoxelHelper;
 
 public unsafe static class GreedyMesher4
 {
-    public readonly static V256u StateMaskV256 = V256U.New(Block.STATE_MASK);
-    public readonly static V256u SolidMaskV256 = V256U.New(1 << Block.STATE_SHIFT);
+    public readonly static V256u StateMaskV256 = V256U.New(0xFu << 28);
+    public readonly static V256u SolidMaskV256 = V256U.New(1 << 28);
 
     public static void GetVector256BitMap4(Block* blocks, List<Vector4i> vertexData, ref NeighbourChunks neighbours, int workerId)
     {

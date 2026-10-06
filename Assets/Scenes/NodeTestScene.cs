@@ -4,6 +4,7 @@ using PBG.UI;
 using PBG.NewVoxel;
 using PBG.MathLibrary;
 using PBG.Physics;
+using PBG.Graphics;
 
 public class NodeTestScene : Scene
 {
@@ -30,6 +31,12 @@ public class NodeTestScene : Scene
         var uicontroller = new UIController();
 
         worldNode.AddComponent(uicontroller, skybox, renderer);
+
+        var debugNode = mainNode.AddChild("Debug");
+
+        var boundingBoxRenderer = new BoundingBoxRenderer();
+
+        debugNode.AddComponent(boundingBoxRenderer);
 
         // Player
         var playerNode = mainNode.AddChild("Player");

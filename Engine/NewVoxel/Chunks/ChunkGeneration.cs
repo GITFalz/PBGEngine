@@ -284,53 +284,56 @@ public unsafe static class ChunkGeneration
 
     const bool scalarCache = true;
 
-    public static void RemoveCache(Vector2i position)
+    public static void RemoveCache(VoxelChunk chunk)
     {
         if (scalarCache)
-            RemoveScalarCache(position);
+            RemoveScalarCache(chunk);
         else
-            RemoveV256Cache(position);
+            RemoveV256Cache(chunk);
     }
 
 
-    public static void TryAddCache(Vector2i position)
+    public static void TryAddCache(VoxelChunk chunk)
     {
         if (scalarCache)
-            TryAddScalarCache(position);
+            TryAddScalarCache(chunk);
         else
-            TryAddV256Cache(position);
+            TryAddV256Cache(chunk);
     }
 
 
 
-    public static void RemoveV256Cache(Vector2i position)
+    public static void RemoveV256Cache(VoxelChunk chunk)
     {
         lock (_cacheLock)
         {
-            _v256fCacheHandler.Remove(position, out var handler);
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            _v256fCacheHandler.Remove(key, out var handler);
             handler?.RequestDispose();
         }
     }
 
 
-    public static void TryAddV256Cache(Vector2i position)
+    public static void TryAddV256Cache(VoxelChunk chunk)
     {
         lock (_cacheLock)
         {
-            if (_v256fCacheHandler.ContainsKey(position))
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            if (_v256fCacheHandler.ContainsKey(key))
                 return;
 
             CacheHandler<V256f> handler = new(3, 4, 32);
-            _v256fCacheHandler.Add(position, handler);
+            _v256fCacheHandler.Add(key, handler);
         }
     }
 
-    private static bool TryGetV256Cache(Vector2i position, [NotNullWhen(true)] out CacheHandler<V256f>? handler)
+    private static bool TryGetV256Cache(VoxelChunk chunk, [NotNullWhen(true)] out CacheHandler<V256f>? handler)
     {
         lock (_cacheLock)
         {
             handler = null;
-            if (!_v256fCacheHandler.TryGetValue(position, out var h))
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            if (!_v256fCacheHandler.TryGetValue(key, out var h))
                 return false;
 
             handler = h;
@@ -340,33 +343,36 @@ public unsafe static class ChunkGeneration
 
 
 
-    public static void RemoveScalarCache(Vector2i position)
+    public static void RemoveScalarCache(VoxelChunk chunk)
     {
         lock (_cacheLock)
         {
-            _scalarCacheHandler.Remove(position, out var handler);
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            _scalarCacheHandler.Remove(key, out var handler);
             handler?.RequestDispose();
         }
     }
 
-    public static void TryAddScalarCache(Vector2i position)
+    public static void TryAddScalarCache(VoxelChunk chunk)
     {
         lock (_cacheLock)
-        {
-            if (_scalarCacheHandler.ContainsKey(position))
+        {   
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            if (_scalarCacheHandler.ContainsKey(key))
                 return;
 
             CacheHandler<float> handler = new(3, 32, 32);
-            _scalarCacheHandler.Add(position, handler);
+            _scalarCacheHandler.Add(key, handler);
         }
     }
 
-    private static bool TryGetScalarCache(Vector2i position, [NotNullWhen(true)] out CacheHandler<float>? handler)
+    private static bool TryGetScalarCache(VoxelChunk chunk, [NotNullWhen(true)] out CacheHandler<float>? handler)
     {
         lock (_cacheLock)
         {
             handler = null;
-            if (!_scalarCacheHandler.TryGetValue(position, out var h))
+            Vector3i key = new(chunk.RelativePosition.Xz, chunk.LodLevel);
+            if (!_scalarCacheHandler.TryGetValue(key, out var h))
                 return false;
 
             handler = h;
@@ -377,8 +383,8 @@ public unsafe static class ChunkGeneration
 
     private static object _cacheLock = new();
 
-    private static Dictionary<Vector2i, CacheHandler<float>> _scalarCacheHandler = [];
-    private static Dictionary<Vector2i, CacheHandler<V256f>> _v256fCacheHandler = [];
+    private static Dictionary<Vector3i, CacheHandler<float>> _scalarCacheHandler = [];
+    private static Dictionary<Vector3i, CacheHandler<V256f>> _v256fCacheHandler = [];
 
     public static int ScalarCacheCount => _scalarCacheHandler.Count;
     public static int V256FCacheCount => _v256fCacheHandler.Count;
@@ -547,11 +553,11 @@ public unsafe static class ChunkGeneration
         //ScalarHeight(baseX, baseZ, workerId);
         //ScalarPopulate(chunk, baseX, baseY, baseZ, workerId);
 
-        int type = 5;
+        int type = 6;
         switch (type) 
         {
             case 0:
-                if (TryGetV256Cache(chunk.RelativePosition.Xz, out var handler))
+                if (TryGetV256Cache(chunk, out var handler))
                 {
                     lock (handler.CacheLock)
                     {
@@ -561,20 +567,6 @@ public unsafe static class ChunkGeneration
                         handler.Generated = true;
                     }
                     ChunkGenerationAvx2.Vector256PopulateSimple(chunk, baseX, baseY, baseZ, handler);
-                }
-                break;
-
-            case 1:
-                if (TryGetV256Cache(chunk.RelativePosition.Xz, out handler))
-                {
-                    lock (handler.CacheLock)
-                    {
-                        if (!handler.Generated)
-                            ChunkGenerationAvx2.Vector256Height(baseX, baseZ, handler);
-
-                        handler.Generated = true;
-                    }
-                    ChunkGenerationAvx2.Vector256Populate(chunk, baseX, baseY, baseZ, handler);
                 }
                 break;
 
@@ -643,41 +635,18 @@ public unsafe static class ChunkGeneration
                         block = new Block((uint)BLOCK_STONE);
                     }
 
-                    chunk.Blocks[index] = block;
+                    chunk.Set(x, y, z, block);
                     index++;
                 }
                 break;
 
-            case 4:
-                if (TryGetV256Cache(chunk.RelativePosition.Xz, out handler))
-                {
-                    lock (handler.CacheLock)
-                    {
-                        if (!handler.Generated)
-                            ChunkGenerationAvx2.Vector256Height(baseX, baseZ, handler);
-
-                        handler.Generated = true;
-                    }
-
-                    if (!handler.TryEnter())
-                    {
-                        Console.WriteLine($"Chunk: {chunk.RelativePosition} failed");
-                        return false;
-                    }
-
-                    ChunkGenerationAvx2.Vector256Populate(chunk, baseX, baseY, baseZ, handler);
-
-                    handler.Exit();
-                }
-                break;
-
             case 5:
-                if (TryGetScalarCache(chunk.RelativePosition.Xz, out var scalarHandler))
+                if (TryGetScalarCache(chunk, out var scalarHandler))
                 {
                     lock (scalarHandler.CacheLock)
                     {
                         if (!scalarHandler.Generated)
-                            ChunkGenerationAvx2.Vector256Height(baseX, baseZ, scalarHandler);
+                            ChunkGenerationAvx2.Vector256Height(chunk, baseX, baseZ, scalarHandler);
 
                         scalarHandler.Generated = true;
                     }
@@ -688,10 +657,36 @@ public unsafe static class ChunkGeneration
                         return false;
                     }
 
-                    ChunkGenerationAvx2.Vector256PopulateOrderedYByte(chunk, baseX, baseY, baseZ, scalarHandler);
+                    chunk.HasBlocks = true;
+                    ChunkGenerationAvx2.Vector256PopulateOrderedYByte(chunk.ByteBlocks, chunk.LodMult, baseX, baseY, baseZ, scalarHandler);
 
                     scalarHandler.Exit();
                 }
+                break;
+            case 6:
+                if (TryGetScalarCache(chunk, out scalarHandler))
+                {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    lock (scalarHandler.CacheLock)
+                    {
+                        if (!scalarHandler.Generated)
+                            ChunkGenerationAvx2.HeightVoronoiTest(chunk, baseX, baseZ, scalarHandler);
+
+                        scalarHandler.Generated = true;
+                    }
+                    sw.Restart();
+                    if (!scalarHandler.TryEnter())
+                    {
+                        Console.WriteLine($"Chunk: {chunk.RelativePosition} failed");
+                        return false;
+                    }
+
+                    chunk.HasBlocks = true;
+                    ChunkGenerationAvx2.PopulateVoronoiTest(chunk.ByteBlocks, chunk.LodMult, baseX, baseY, baseZ, scalarHandler);
+
+                    scalarHandler.Exit();
+                }
+                
                 break;
         }
 

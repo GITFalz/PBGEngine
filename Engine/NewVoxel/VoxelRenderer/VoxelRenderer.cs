@@ -66,14 +66,18 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     public Vector3i CameraPreviousChunk = Vector3i.Zero;
 
 
-    public int RenderDistance = 32;
-    public int WorldHeight = 8;
+    public int RenderDistance = 16;
+    public int WorldHeight = 16;
+    public int lod = 4;
 
     private RelativeChunkInfo[] _relativeChunkPositions = [];
 
+    public HashSet<VoxelChunk> ChunkList = [];
     public ConcurrentDictionary<Vector3i, VoxelChunk> ChunkDictionnary = [];
     public ChunkLookupInfo[] ChunkLookupArray1 = [];
     public ChunkLookupInfo[] ChunkLookupArray2 = [];
+
+    public ChunkManager ChunkManager;
 
     public NewChunkDataPool DataPool;
     public static DebugModule? DebugModule;
@@ -92,7 +96,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
     public VoxelRenderer()
     {
-        
+        ChunkManager = new(this);
     }
 
 
@@ -101,16 +105,22 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         GenerationThreadTimes = new long[GenerationThreads];
         RenderingThreadTimes = new long[RenderingThreads];
 
-        skybox = Transform.GetComponent<Skybox>();
+        skybox = Scene.QueryComponent<Skybox>();
 
         CloseCamera.CameraProjection = CameraProjection.OrthographicOffCenter;
         MiddleCamera.CameraProjection = CameraProjection.OrthographicOffCenter;
         FarCamera.CameraProjection = CameraProjection.OrthographicOffCenter;
+
+        ChunkManager.BoundingBoxes = Scene.QueryComponent<BoundingBoxRenderer>();
+        
+        //ChunkManager.LoadChunks();  
+        //ChunkManager.CheckResolution(512);
+        //ChunkManager.GenerateBoundingBoxes();
     }
 
     void Awake()
     {
-        DataPool = new(this);
+        DataPool = new(this, lod);
 
         AwakeGeneration();
 
@@ -118,7 +128,18 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         Game.SetCursorState(CursorMode.Normal);
 
         GenerateRelativeChunkPositions();
-        CheckChunkPositions2();
+
+        Volatile.Write(ref _renderDistance, 1);
+
+        _renderDistanceTask = Task.Run(() =>
+        {
+            //CheckChunkPositions2();
+            //ChunkManager.GenerateChunks(this);
+        })
+        .ContinueWith(task =>
+        {
+            Volatile.Write(ref _renderDistance, 0);
+        }); 
 
         Volatile.Write(ref _renderDistance, 0);
 
@@ -184,7 +205,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
             skybox.Time = WorldSettings.Time;
         }
 
-        var currentPosition = VoxelData.BlockToChunkRelative(Transform.Position.Fti());
+        var currentPosition = VoxelData.BlockToChunkRelative(Transform.Position.Fti() + (16, 16, 16));
 
         if (Volatile.Read(ref _renderDistance) == 0)
         {
@@ -202,11 +223,20 @@ public unsafe partial class VoxelRenderer : ScriptingNode
                 _renderDistanceTask = Task.Run(() =>
                 {
                     //Stopwatch sw = Stopwatch.StartNew();
-                    CheckChunkPositions2();
+                    try
+                    {
+                        CheckChunkPositions2();
+                    }
+                    catch (Exception ex)
+                    {
+                        DebugLog.Error(ex.Message);
+                        Console.WriteLine(ex);
+                    }
                     //Console.WriteLine(sw.Elapsed.TotalMilliseconds + " ms");
                 })
                 .ContinueWith(task =>
                 {
+                    _renderDistanceTask = null;
                     Volatile.Write(ref _renderDistance, 0);
                 }); 
             }
@@ -464,6 +494,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
             chunk.Dispose();
         }
 
+        ChunkList.Clear();
         ChunkDictionnary.Clear();
         _relativeChunkPositions = [];
 
@@ -491,6 +522,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     {
         if (ChunkDictionnary.TryGetValue(position, out var chunk))
             return chunk;
+
+        
         return null;
     }
 
@@ -498,6 +531,27 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     {
         if (!ChunkDictionnary.TryGetValue(position, out chunk))
             return false;
+
+        return chunk != null;
+    }
+
+    public bool GetChunk(int lodLevel, Vector3i position, [NotNullWhen(true)] out VoxelChunk? chunk)
+    {
+        if (ChunkDictionnary.TryGetValue(position, out chunk))
+            return true;
+
+        for (int i = lodLevel + 1; i <= ChunkManager.Lod; i++)
+        {
+            int mult = 1 << i;
+            int mask = ~(mult - 1);
+
+            position.X &= mask;
+            position.Y &= mask;
+            position.Z &= mask;
+
+            if (ChunkDictionnary.TryGetValue(position, out chunk))
+                return true;
+        }
 
         return chunk != null;
     }
@@ -581,21 +635,17 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     }
 
 
-
-    private float GetPriority(VoxelChunk chunk) => VoxelUtils.GetPriority(chunk, _priorityPosition);
-        
-
     public void GenerateRelativeChunkPositions()
     {
         Vector3 half = new Vector3(0.5f);
         List<RelativeChunkInfo> positions = [];
 
-        int gridSize = RenderDistance * 2 + 1;
+        int gridSize = RenderDistance * 2;
         int gridSizeSquared = gridSize * gridSize;
 
-        for (int dx = -RenderDistance; dx <= RenderDistance; dx++)
+        for (int dx = -RenderDistance; dx < RenderDistance; dx++)
         {
-            for (int dz = -RenderDistance; dz <= RenderDistance; dz++)
+            for (int dz = -RenderDistance; dz < RenderDistance; dz++)
             {
                 for (int dy = 0; dy < WorldHeight; dy++)
                 {
@@ -628,81 +678,6 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         ChunkLookupArray2 = new ChunkLookupInfo[_relativeChunkPositions.Length];
     }
 
-    public void CheckChunkPositions1()
-    {
-        Stopwatch sw = Stopwatch.StartNew();
-
-        Vector3i currentChunk = CurrentChunk;
-        Vector3i previousChunk = PreviousChunk;
-
-        Vector3i currentPosition  = (0, 0, 0);
-        Vector3i offset = currentChunk - previousChunk;
-        Vector3i mirrored = (0, 0, 0);
-
-        _genQueue.Clear();
-
-        for (int i = 0; i < _relativeChunkPositions.Length; i++)
-        {
-            ref var data = ref _relativeChunkPositions[i];
-
-            ref var position = ref data.Position;
-            ref var index = ref data.Index;
-
-            currentPosition.X = position.X + currentChunk.X;
-            currentPosition.Y = position.Y;
-            currentPosition.Z = position.Z + currentChunk.Z;
-
-            // If the chunk at the current position doesn't exist, we need to create a new one
-            if (!ChunkDictionnary.TryGetValue(currentPosition, out var existingChunk))
-            {
-                //double add = sw.Elapsed.TotalMilliseconds;
-                // we can try to get it from a old position that is now out of the bounds of the render distance
-                VoxelChunk chunk;
-
-                // Mirror each shifted axis through the origin, the region of new relative
-                // positions and the region of old relative positions are always symmetric
-                // around the center, so negating position on axes where we moved maps a new
-                // slot to its old counterpart from the previous grid for any offset size.
-
-                mirrored.X = position.X;
-                mirrored.Y = position.Y;
-                mirrored.Z = position.Z;
-                
-                if (offset.X != 0) mirrored.X = -position.X;
-                if (offset.Z != 0) mirrored.Z = -position.Z;
-
-                mirrored.X += previousChunk.X;
-                mirrored.Z += previousChunk.Z;
-
-                if (ChunkDictionnary.Remove(mirrored, out var outside))
-                {
-                    chunk = outside;
-                    chunk.Status = ChunkStatus.Empty;
-                    chunk.SetPosition(currentPosition); 
-                }
-                else
-                {
-                    chunk = new(this, currentPosition);
-                }
-                
-                ChunkDictionnary.TryAdd(currentPosition, chunk);
-
-                chunk.Status = ChunkStatus.QueuedToGenerate;
-                ReuseQueue.Enqueue(chunk);
-            }
-            else
-            {
-                if (existingChunk.Status == ChunkStatus.QueuedToGenerate)
-                {
-                    _genQueue.Enqueue(existingChunk);
-                    _generationSignal.Release();
-                }
-            }
-        }
-
-        Console.WriteLine(sw.Elapsed.TotalMilliseconds + " ms");
-    }
-
     public void CheckChunkPositions2()
     {
         Vector3i currentChunk = CurrentChunk;
@@ -711,8 +686,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         Vector3i currentPosition  = (0, 0, 0);
         Vector3i offset = currentChunk - previousChunk;
 
-        int RD2 = RenderDistance * 2; // render distance x2
-        int gridSize = RD2 + 1;
+        int RD2 = RenderDistance * 2;
+        int gridSize = RD2;
         int gridSizeSquared = gridSize * gridSize;
 
         for (int i = 0; i < _relativeChunkPositions.Length; i++)
@@ -730,12 +705,12 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
             if (oldX < 0 || oldX >= gridSize)
             {
-                oldX = RD2 - x;
+                oldX = RD2 - x - 1;
                 isValid = false;
             }
             if (oldZ < 0 || oldZ >= gridSize)
             {
-                oldZ = RD2 - z;
+                oldZ = RD2 - z - 1;
                 isValid = false;
             }
 
@@ -749,7 +724,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
         _genQueue.Clear();
         _renderingQueue.Clear();
-
+        
         for (int i = 0; i < _relativeChunkPositions.Length; i++)
         {
             ref var data = ref _relativeChunkPositions[i];
@@ -773,23 +748,23 @@ public unsafe partial class VoxelRenderer : ScriptingNode
                 if (existingChunk != null)
                 {
                     ChunkDictionnary.Remove(existingChunk.RelativePosition, out var _);
-                    ChunkGeneration.RemoveCache(existingChunk.RelativePosition.Xz);
+                    ChunkGeneration.RemoveCache(existingChunk);
 
                     chunk = existingChunk;
                     chunk.Status = ChunkStatus.Empty;
-                    chunk.FreeAllocation();
+                    chunk.FreeAllocation(2);
                     chunk.SetPosition(currentPosition); 
                 }
                 else
                 {
-                    chunk = new(this, currentPosition);
+                    chunk = new VoxelChunk(this, currentPosition, 0);
                     
                 }
 
                 chunkInfo.Chunk = chunk;
                 
                 ChunkDictionnary.TryAdd(currentPosition, chunk);
-                ChunkGeneration.TryAddCache(currentPosition.Xz);
+                ChunkGeneration.TryAddCache(chunk);
 
                 chunk.Status = ChunkStatus.QueuedToGenerate;
                 _genQueue.Enqueue(chunk);
@@ -832,7 +807,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     private ConcurrentQueue<VoxelChunk> _genQueue = new();
     private HashSet<VoxelChunk> _genSet = [];
     private readonly object _genLock = new();
-    private readonly SemaphoreSlim _generationSignal = new(0);
+    public readonly SemaphoreSlim _generationSignal = new(0);
 
 
     public int EnqueueGenerationUnsafeBase(VoxelChunk chunk)
@@ -849,6 +824,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     public void EnqueueGeneration(VoxelChunk chunk)
     {
         _genQueue.Enqueue(chunk);
+        _generationSignal.Release();
     }
 
     public bool TryDequeueGeneration([NotNullWhen(true)] out VoxelChunk? chunk)
@@ -912,18 +888,28 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
     private void GenerationWorkerLoop(int workerId)
     {
-        while (!_cts.Token.IsCancellationRequested)
+        try
         {
-            try
+            while (!_cts.Token.IsCancellationRequested)
             {
-                _generationSignal.Wait(_cts.Token);
+                try
+                {
+                    _generationSignal.Wait(_cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }  
+
+                HandleGeneration(workerId);
             }
-            catch (OperationCanceledException)
-            {
-                break;
-            }  
-            
-            HandleGeneration(workerId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Rendering thread {workerId} crashed");
+            RenderingThreadTimes[workerId] = -1;
+            Console.WriteLine(ex);
+            throw;
         }
     }
     
@@ -937,6 +923,21 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         Interlocked.Increment(ref WorldNodeEditor.GenerationCount);
         if (ChunkGeneration.GenerateChunk(chunk, workerId))
             chunk.EnqueueRendering();
+
+        long end = Stopwatch.GetTimestamp();
+        long elapsedTicks = end - start;
+        Interlocked.Add(ref GenerationThreadTimes[workerId], elapsedTicks);
+    }
+
+    private void HandleGeneration2(int workerId)
+    {
+        if (!TryDequeueGeneration(out var chunk))
+            return;
+
+        long start = Stopwatch.GetTimestamp();
+
+        Interlocked.Increment(ref WorldNodeEditor.GenerationCount);
+        //LodChunkGeneration.GenerateChunk(chunk, workerId);
 
         long end = Stopwatch.GetTimestamp();
         long elapsedTicks = end - start;
@@ -958,7 +959,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     */
 
     private readonly object _renderingLock = new();
-    private SemaphoreSlim _renderingSignal = new(0);
+    public SemaphoreSlim _renderingSignal = new(0);
 
     /*
     public void EnqueueRendering(NewVoxelChunk chunk)
@@ -978,12 +979,14 @@ public unsafe partial class VoxelRenderer : ScriptingNode
     {
         lock (_renderingLock)
         {
-            chunk.NewGen();
-            chunk.FreeAllocation();
-            _renderingQueue.Enqueue(chunk);
             chunk.Status = ChunkStatus.QueuedToMesh;
-        }
-        _renderingSignal.Release();
+            chunk.NewGen();
+            //foreach (var allocation in chunk.Allocations)
+                //DebugLog.Warning("already allocated: " + );
+            chunk.FreeAllocation(3);
+            _renderingQueue.Enqueue(chunk);
+            _renderingSignal.Release();
+        }   
     }
 
 
@@ -993,7 +996,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
         lock (_renderingLock)
         {
-            if (!_renderingQueue.TryDequeue(out chunk) || chunk.Status != ChunkStatus.QueuedToMesh  || chunk.Status == ChunkStatus.Meshing) 
+            if (!_renderingQueue.TryDequeue(out chunk) || chunk.Status != ChunkStatus.QueuedToMesh  || chunk.Status == ChunkStatus.Meshing)
                 return false;
 
             chunk.Status = ChunkStatus.Meshing;
@@ -1013,6 +1016,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
                 }
                 catch (OperationCanceledException)
                 {
+                    Console.WriteLine($"Rendering thread {workerId} signal crashed");
                     break;
                 }
 
@@ -1021,6 +1025,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Rendering thread {workerId} crashed");
+            RenderingThreadTimes[workerId] = -1;
             Console.WriteLine(ex);
             throw;
         }
@@ -1198,7 +1204,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
             while (ReuseQueue.TryDequeue(out var chunk))
             {
-                chunk.FreeAllocation();
+                chunk.FreeAllocation(4);
                 _genQueue.Enqueue(chunk);
                 _generationSignal.Release();
 
@@ -1224,7 +1230,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
             while (DeletionQueue.TryDequeue(out var chunk))
             {
-                chunk.FreeAllocation();
+                chunk.FreeAllocation(5);
                 
                 uploaded++;
 

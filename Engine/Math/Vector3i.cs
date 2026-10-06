@@ -103,6 +103,8 @@ public struct Vector3i : IVector<int>
 
     public override string ToString() => $"({X}, {Y}, {Z})";
 
+    public readonly Vector3i YTo0() => (X, 0, Z);
+
     public override bool Equals(object? obj)
     {
         if (obj is Vector3i v)

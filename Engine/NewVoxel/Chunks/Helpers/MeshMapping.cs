@@ -17,6 +17,7 @@ public unsafe struct MeshMapping
 
         if (DataPool.TryAllocate2(Chunk, out var alloc))
         {
+            //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "allocate base " + alloc.Value));
             CurrentAllocation = alloc.Value;
         }
         else
@@ -32,9 +33,11 @@ public unsafe struct MeshMapping
             // upload the current allocation
             Upload();
 
+            
             // the max size has been reached, we need to get a new allocation
             if (DataPool.TryAllocate2(Chunk, out var alloc))
             {
+                //Chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "allocate extra " + alloc.Value));
                 CurrentAllocation = alloc.Value;
             }
             else
@@ -57,16 +60,12 @@ public unsafe struct MeshMapping
             return;
         }
 
-        uint stride = Vector2u.ByteSize;
-
         var uploadData = new UploadData()
         {
             Chunk = Chunk,
             Gen = Gen,
             Index = CurrentAllocation.Offset,
-            VertexCount = CurrentAllocation.VertexCount,
-            OffsetInBytes = CurrentAllocation.Offset * NewChunkDataPool.SLOT_SIZE * stride,
-            SizeInBytes = CurrentAllocation.VertexCount * stride
+            VertexCount = CurrentAllocation.VertexCount
         };
 
         var uploadQueue = CurrentAllocation.DataPool.UploadQueues[CurrentAllocation.FrameIndex];

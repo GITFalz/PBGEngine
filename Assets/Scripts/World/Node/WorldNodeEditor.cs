@@ -7,6 +7,7 @@ using PBG.NewVoxel;
 using PBG.Nodes;
 using PBG.UI;
 using Newtonsoft.Json;
+using PBG.Graphics;
 
 public class WorldNodeEditor : ScriptingNode
 {
@@ -16,41 +17,15 @@ public class WorldNodeEditor : ScriptingNode
     
     private VoxelRenderer _renderer = null!;
 
-    private static UIText _fpsText = null!;
-    private static UIText _positionText = null!;
-    private static UIText _vertexCountText = null!;
+    private List<Action> _frameUpdates = [];
+    private List<Action> _200msUpdates = [];
+    private List<Action> _1000msUpdates = [];
+    private List<Action> _positionUpdates = [];
+    private List<Action> _chunkUpdates = [];
+    private List<Action<VoxelChunk>> _chunkSuccessUpdates = [];
+    private List<Action> _chunkFailUpdates = [];
 
-    private static UIText _chunkPositionText = null!;
-    private static UIText _chunkStatusText = null!;
-    private static UIText _allocationsCountText = null!;
-    
-    private static UIText _globalChunkSpeed = null!;
-    private static UIText _generationChunkSpeed = null!;
-    private static UIText _renderingChunkSpeed = null!;
-    private static UIText _uploadingChunkSpeed = null!;
-
-    private static UIText _generationQueueCountText = null!;
-    private static UIText _renderingQueueCountText = null!;
-    private static UIText _uploadingQueueCountText = null!;
-    private static UIText _dataPoolQueueCountText = null!;
-    private static UIText _dictionnaryCountText = null!;
-    private static UIText _cacheCountText = null!;
-
-    private static UIText _managedRamUsageText = null!;
-    private static UIText _ramUsageText = null!;
-    private static UIText _aliveChunksText = null!;
-
-    private static UIText VramTotalText = null!;
-    private static UIText VramFreeText = null!;
-    private static UIText VramUsedText = null!;
-    private static UIText VramPrecentText = null!;
-
-    private static UIText _averageChunkGenText = null!;
-    private static UIText _averageChunkReadText = null!;
-    private static UIText _averageFrameUploadTimeText = null!;
-
-    private static UIText[] _generationThreadUsages = null!;
-    private static UIText[] _renderingThreadUsages = null!;
+    private BoundingBoxRenderer _boxRenderer;
 
     private static UIGraph _frameTimeGraph = null!;
 
@@ -76,16 +51,14 @@ public class WorldNodeEditor : ScriptingNode
 
     private WorldEditorSettings _settings;
     
+    public VoxelChunk? _currentChunk = null;
 
     void Start()
     {
         _nodes = Transform.Scene.QueryComponent<PBGNodes>();
         _editorUI = Transform.GetComponent<UIController>();
         _renderer = Transform.Scene.QueryComponent<VoxelRenderer>();
-        
-        _generationThreadUsages = new UIText[VoxelRenderer.GenerationThreads];
-        _renderingThreadUsages = new UIText[VoxelRenderer.RenderingThreads];
-
+        _boxRenderer = Transform.Scene.QueryComponent<BoundingBoxRenderer>();
 
 
         string settingsPath = Game.SettingsPath / "world_editor_settings.json";
@@ -181,86 +154,73 @@ public class WorldNodeEditor : ScriptingNode
     private Vector3 _position = Vector3.Zero;
     private Vector3i _chunkPosition = Vector3i.Zero;
 
+    private static void RunUpdates(List<Action> updates)
+    {
+        for (int i = 0; i < updates.Count; i++)
+            updates[i].Invoke();
+    }
+
+    private static void RunUpdates<T>(List<Action<T>> updates, T value)
+    {
+        for (int i = 0; i < updates.Count; i++)
+            updates[i].Invoke(value);
+    }
+
     void Update()
     {
         if (GameTime.FpsUpdated)
         {
-            _fpsText.UpdateText("FPS: " + GameTime.Fps);
-            _managedRamUsageText.UpdateText("Managed Ram: " + GC.GetTotalMemory(false) / (1024 * 1024) + " Mb");
-            _ramUsageText.UpdateText("Ram: " + GameTime.Ram / (1024 * 1024) + " Mb");
-
-            _globalChunkSpeed.UpdateText("Chunks/s: " + GlobalCount);
-            _generationChunkSpeed.UpdateText("Generation/s: " + GenerationCount);
-            _renderingChunkSpeed.UpdateText("Rendering/s: " + RenderingCount);
-            _uploadingChunkSpeed.UpdateText("Upload/s: " + UploadCount);
-
-            GlobalCount = 0;
-            GenerationCount = 0;
-            RenderingCount = 0;
-            UploadCount = 0;
-
-            for (int i = 0; i < _generationThreadUsages.Length; i++)
-            {
-                long ticks = Interlocked.Exchange(ref VoxelRenderer.GenerationThreadTimes[i], 0);
-                double seconds = (double)ticks / Stopwatch.Frequency;
-                double percent = Math.Min(100.0, seconds * 100.0);
-                _generationThreadUsages[i].UpdateText($"Thread {i+1} {percent.Fti()}%");
-            }
-
-            for (int i = 0; i < _renderingThreadUsages.Length; i++)
-            {
-                long ticks = Interlocked.Exchange(ref VoxelRenderer.RenderingThreadTimes[i], 0);
-                double seconds = (double)ticks / Stopwatch.Frequency;
-                double percent = Math.Min(100.0, seconds * 100.0);
-                _renderingThreadUsages[i].UpdateText($"Thread {i+1} {percent.Fti()}%");
-            }
-
-
-            long total = VRAMInfo.GetTotalVRAM();
-            long free = VRAMInfo.GetFreeVRAM();
-            long used = VRAMInfo.GetUsedVRAM();
-            float percentage = VRAMInfo.GetVRAMUsagePercentage();
-            VramTotalText.SetText($"Total VRAM: {FormatBytes(total)}").UpdateCharacters();
-            VramFreeText.SetText($"Free VRAM: {FormatBytes(free)}").UpdateCharacters();
-            VramUsedText.SetText($"Used VRAM: {FormatBytes(used)}").UpdateCharacters();
-            VramPrecentText.SetText($"Usage: {percentage:F1}%").UpdateCharacters();
+            RunUpdates(_1000msUpdates);
         }
 
         if (_renderer.Camera.Position != _position)
         {
             _position = _renderer.Camera.Position;
-            _positionText.UpdateText($"X Y Z: {_renderer.Camera.Position.X} {_renderer.Camera.Position.Y} {_renderer.Camera.Position.Z}");
+            RunUpdates(_positionUpdates);
 
-            var relative = VoxelData.BlockToChunkRelative(Mathf.FloorToInt(_renderer.Camera.Position));
+            var relative = VoxelData.BlockToChunkRelative(Mathf.FloorToInt(_position));
             if (relative != _chunkPosition)
             {
                 _chunkPosition = relative;
-                _chunkPositionText.UpdateText($"Chunk X Y Z: {relative.X*32} {relative.Y*32} {relative.Z*32}");
+                RunUpdates(_chunkUpdates);
 
-                if (_renderer.GetChunk(relative, out var chunk))
+                if (_renderer.GetChunk(0, relative, out var chunk))
                 {
-                    _chunkStatusText.UpdateText($"Status: {chunk.Status}");
-                    _allocationsCountText.UpdateText($"Allocations: {chunk.Allocations.Count}");
+                    _currentChunk = chunk;
+                    RunUpdates(_chunkSuccessUpdates, chunk);
+                }
+                else
+                {
+                    _currentChunk = null;
+                    RunUpdates(_chunkFailUpdates);
                 }
             }
         }
 
-        _vertexCountText.UpdateText("Vertex Count: " + (VoxelRenderer.TotalVertexCount * 6));
-        _generationQueueCountText.UpdateText("Generating: " + _renderer.GenQueueCount);
-        _renderingQueueCountText.UpdateText("Rendering: " + _renderer.RenderingQueueCount);
-        _uploadingQueueCountText.UpdateText("Uploading: " + _renderer.UploadQueue.Count);
-        _dictionnaryCountText.UpdateText("Dictionnary: " + _renderer.ChunkDictionnary.Count);
-        _cacheCountText.UpdateText("Cache: " + ChunkGeneration.V256FCacheCount);
+        RunUpdates(_frameUpdates);
 
         if (_sw.Elapsed.TotalSeconds - _time > 0.2f)
         {
-            _dataPoolQueueCountText.UpdateText("Data Pools: " + _renderer.DataPool.DataPool.Count);
-            _aliveChunksText.UpdateText("Alive Chunks: " + VoxelChunk.AliveChunks.Count);
-            _time = _sw.Elapsed.TotalSeconds;
+            RunUpdates(_200msUpdates);
 
-            _averageChunkGenText.UpdateText("Generate: " + ChunkGenerationTimer.GetAverage().ToString("F4") + " ms");
-            _averageChunkReadText.UpdateText("Render: " + ChunkRenderingTimer.GetAverage().ToString("F4") + " ms");
-            _averageFrameUploadTimeText.UpdateText("Upload: " + TotalUploadTimer.GetAverage().ToString("F4") + " ms");
+            _time = _sw.Elapsed.TotalSeconds;
+        }
+
+        if (Input.IsKeyPressed(Key.Number1) && _currentChunk != null)
+        {
+            List<BoundingBoxData> boundingBoxDatas = [];
+            foreach (var allocation in _currentChunk.Allocations)
+            {
+                var datapool = allocation.DataPool;
+                var chunkInfo = datapool.ChunkInfo[allocation.Offset];
+                boundingBoxDatas.Add(new()
+                {
+                    Position = chunkInfo.Center - 16,
+                    Size = (32, 32, 32),
+                    Color = (1, 0, 0, 0.7f)
+                });
+            }
+            _boxRenderer.UpdateBoundingBoxes([..boundingBoxDatas]);
         }
 
         _frameTimeGraph.AdvancePoint(GameTime.DeltaTime + 0.1f);
@@ -315,46 +275,79 @@ public class WorldNodeEditor : ScriptingNode
         File.WriteAllLines(_finalWorldComputeShaderPath, newLines);
     }
 
+    private static UIText TextUpdate(UIText text, List<Action> updates, Func<string> updateText)
+    {
+        updates.Add(() => text.UpdateText(updateText()));
+        return text;
+    }
+
+    private static UIText TextUpdate<T>(UIText text, List<Action<T>> updates, Func<T, string> updateText)
+    {
+        updates.Add(value => text.UpdateText(updateText(value)));
+        return text;
+    }
+
+    private UIText UpdateFrame(UIText text, Func<string> updateText) => TextUpdate(text, _frameUpdates, updateText);
+    private UIText Update200Ms(UIText text, Func<string> updateText) => TextUpdate(text, _200msUpdates, updateText);
+    private UIText Update1000Ms(UIText text, Func<string> updateText) => TextUpdate(text, _1000msUpdates, updateText);
+    private UIText UpdatePosition(UIText text, Func<string> updateText) => TextUpdate(text, _positionUpdates, updateText);
+    private UIText UpdateChunk(UIText text, Func<string> updateText) => TextUpdate(text, _chunkUpdates, updateText);
+    private UIText UpdateChunk(UIText text, Func<VoxelChunk, string> successText, Func<string> failText)
+    {
+        TextUpdate(text, _chunkSuccessUpdates, successText);
+        TextUpdate(text, _chunkFailUpdates, failText);
+        return text;
+    }
+    private UIText UpdateChunkSuccess(UIText text, Func<VoxelChunk, string> successText) => TextUpdate(text, _chunkSuccessUpdates, successText);
+    private UIText UpdateChunkFail(UIText text, Func<string> failText) => TextUpdate(text, _chunkFailUpdates, failText);
+
     private UIElementBase _statUI => 
     new UICol(w_full, h_full)[
         new UIVCol(grow_children, top_left, spacing_[10])[
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("FPS: ", mc_[10], top_left, bg_white, fs_[1.2f]).Out(out _fpsText),
-                new UIText("X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]).Out(out _positionText),
-                new UIText("Vertex Count: ", mc_[50], top_left, bg_white, fs_[1.2f]).Out(out _vertexCountText)
+                Update1000Ms(new UIText("FPS: ", mc_[10], top_left, bg_white, fs_[1.2f]), () => "FPS: " + GameTime.Fps),
+                UpdatePosition(new UIText("X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => $"X Y Z: {_position.X} {_position.Y} {_position.Z}"),
+                UpdateFrame(new UIText("Vertex Count: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => "Vertex Count: " + (VoxelRenderer.TotalVertexCount * 6))
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("Chunk X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]).Out(out _chunkPositionText),
-                new UIText("Status: ", mc_[30], top_left, bg_white, fs_[1.2f]).Out(out _chunkStatusText),
-                new UIText("Allocations: ", mc_[30], top_left, bg_white, fs_[1.2f]).Out(out _allocationsCountText)
+                UpdateChunk(new UIText("Chunk X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => $"Chunk X Y Z: {_chunkPosition.X*32} {_chunkPosition.Y*32} {_chunkPosition.Z*32}"),
+                UpdateChunk(new UIText("Status: ", mc_[30], top_left, bg_white, fs_[1.2f]), chunk => $"Status: {chunk.Status}", () => $"Status: None"),
+                UpdateChunk(new UIText("Allocations: ", mc_[30], top_left, bg_white, fs_[1.2f]), chunk => $"Allocations: {chunk.Allocations.Count}", () => $"Allocations: None")
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _globalChunkSpeed),
-                new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _generationChunkSpeed),
-                new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _renderingChunkSpeed),
-                new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _uploadingChunkSpeed)
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Chunks/s: " + GlobalCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generation/s: " + GenerationCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Rendering/s: " + RenderingCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload/s: " + UploadCount.Take())
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("Generating: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _generationQueueCountText),
-                new UIText("Rendering: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _renderingQueueCountText),
-                new UIText("Uploading: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _uploadingQueueCountText),
-                new UIText("Data Pools: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _dataPoolQueueCountText),
-                new UIText("Dictionnary: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _dictionnaryCountText),
-                new UIText("Cache: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _cacheCountText)
+                UpdateFrame(new UIText("Generating: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Generating: " + _renderer.GenQueueCount),
+                UpdateFrame(new UIText("Rendering: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Rendering: " + _renderer.RenderingQueueCount),
+                UpdateFrame(new UIText("Uploading: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Uploading: " + _renderer.UploadQueue.Count),
+                Update200Ms(new UIText("Data Pools: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Data Pools: " + _renderer.DataPool.DataPool.Count),
+                Update200Ms(new UIText("Allocations: ", mc_[25], top_left, bg_white, fs_[1.2f]), () =>
+                {
+                    int allocations = 0;
+                    for (int i = 0; i < _renderer.DataPool.DataPool.Count; i++)
+                        allocations += _renderer.DataPool.DataPool[i].AllocationCount;
+                    return "Allocations: " + allocations;
+                }),
+                UpdateFrame(new UIText("Dictionnary: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Dictionnary: " + _renderer.ChunkDictionnary.Count),
+                UpdateFrame(new UIText("Cache: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Cache: " + ChunkGeneration.V256FCacheCount)
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("Generate: ", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _averageChunkGenText),
-                new UIText("Render: ", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _averageChunkReadText),
-                new UIText("Upload: ", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _averageFrameUploadTimeText)
+                Update200Ms(new UIText("Generate: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generate: " + ChunkGenerationTimer.GetAverage().ToString("F4") + " ms"),
+                Update200Ms(new UIText("Render: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Render: " + ChunkRenderingTimer.GetAverage().ToString("F4") + " ms"),
+                Update200Ms(new UIText("Upload: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload: " + TotalUploadTimer.GetAverage().ToString("F4") + " ms")
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIText("Alive Chunks: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _aliveChunksText),
-                new UIText("Managed Ram: ", mc_[25], top_left, bg_white, fs_[1.2f]).Out(out _managedRamUsageText),
-                new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out _ramUsageText),
-                new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out VramTotalText),
-                new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out VramFreeText),
-                new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out VramUsedText),
-                new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]).Out(out VramPrecentText)
+                Update200Ms(new UIText("Alive Chunks: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Alive Chunks: " + VoxelChunk.AliveChunks.Count),
+                Update1000Ms(new UIText("Managed Ram: ", mc_[25], top_left, bg_white, fs_[1.2f]),   () => "Managed Ram: " + GC.GetTotalMemory(false) / (1024 * 1024) + " Mb"),
+                Update1000Ms(new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]),           () => "Ram: " + GameTime.Ram / (1024 * 1024) + " Mb"),
+                Update1000Ms(new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]),           () => $"Total VRAM: {FormatBytes(VRAMInfo.GetTotalVRAM())}"),
+                Update1000Ms(new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]),           () => $"Free VRAM: {FormatBytes(VRAMInfo.GetFreeVRAM())}"),
+                Update1000Ms(new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]),           () => $"Used VRAM: {FormatBytes(VRAMInfo.GetUsedVRAM())}"),
+                Update1000Ms(new UIText("Ram: ", mc_[20], top_left, bg_white, fs_[1.2f]),           () => $"Usage: {VRAMInfo.GetVRAMUsagePercentage():F1}%")
             ],
             new UIVCol(grow_children, spacing_[5])[
                 new UIHCol(h_[11], spacing_[5])[
@@ -381,20 +374,36 @@ public class WorldNodeEditor : ScriptingNode
                 GetToggle("Render wireframe:", _renderer.RenderWireframe, b => _renderer.RenderWireframe = b)
             ],
             new UIVCol(grow_children, spacing_[5])[
-                new UIImg(w_[100], h_[100], bg_white, item_["grass_block"])
+                Update1000Ms(new UIText("0", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generation Count: " + _renderer._generationSignal.CurrentCount),
+                Update1000Ms(new UIText("0", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Rendering Count: " + _renderer._renderingSignal.CurrentCount)
             ],
             new UIVCol(grow_children, spacing_[5])[
                 new UIField("Generation thread usage", top_left, bg_white, fs_[1.2f]),
                 new Forloop(0, VoxelRenderer.GenerationThreads, i =>
                 {
-                    return new UIField($"Thread {i+1} 100%", mc_[13], top_left, bg_white, fs_[1.2f]).Out(out _generationThreadUsages[i]);
+                    return Update1000Ms(new UIField($"Thread {i+1} 100%", mc_[25], top_left, bg_white, fs_[1.2f]), () =>
+                    {
+                        long ticks = Interlocked.Exchange(ref VoxelRenderer.GenerationThreadTimes[i], 0);
+                        double seconds = (double)ticks / Stopwatch.Frequency;
+                        double percent = Math.Min(100.0, seconds * 100.0);
+                        return $"Thread {i+1} {percent.Fti()}%";
+                    });
                 })
             ],
             new UIVCol(grow_children, spacing_[5])[
                 new UIField("Rendering thread usage", top_left, bg_white, fs_[1.2f]),
                 new Forloop(0, VoxelRenderer.RenderingThreads, i =>
                 {
-                    return new UIField($"Thread {i+1} 100%", mc_[13], top_left, bg_white, fs_[1.2f]).Out(out _renderingThreadUsages[i]);
+                    return Update1000Ms(new UIField($"Thread {i+1} 100%", mc_[25], top_left, bg_white, fs_[1.2f]), () =>
+                    {
+                        if (VoxelRenderer.RenderingThreadTimes[i] == -1)
+                            return $"Thread {i+1} 0% crashed";
+
+                        long ticks = Interlocked.Exchange(ref VoxelRenderer.RenderingThreadTimes[i], 0);
+                        double seconds = (double)ticks / Stopwatch.Frequency;
+                        double percent = Math.Min(100.0, seconds * 100.0);
+                        return $"Thread {i+1} {percent.Fti()}%";
+                    });
                 })
             ]
         ],

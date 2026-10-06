@@ -4,6 +4,13 @@ namespace PBG.MathLibrary
 {
     public static partial class Mathf
     {
+        public static int Take(this ref int value, int replacement = 0)
+        {
+            int old = value;
+            value = replacement;
+            return old;
+        }
+
         #region MIN
         public static float Min(float a, float b) => a < b ? a : b;
         public static float Min(params float[] values)

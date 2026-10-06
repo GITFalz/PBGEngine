@@ -150,34 +150,33 @@ public unsafe class TextureArray : ImageBuffer
 
     public void CreateTextureSampler(TextureInfo info)
     {
+        PhysicalDeviceProperties properties = new();
+        GFX.GetPhysicalDeviceProperties(&properties);
+
         SamplerCreateInfo samplerInfo = new()
         {
             SType = StructureType.SamplerCreateInfo,
-            MagFilter = info.Filter,
-            MinFilter = info.Filter,
+            MagFilter = info.MagFilter,
+            MinFilter = info.MinFilter,
 
             AddressModeU = info.SamplerMode,
             AddressModeV = info.SamplerMode,
             AddressModeW = info.SamplerMode,
 
             AnisotropyEnable = true,
+            MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy,
+
+            BorderColor = BorderColor.FloatTransparentBlack,
+            UnnormalizedCoordinates = false,
+
+            CompareEnable = false,
+            CompareOp = CompareOp.Always,
+
+            MipmapMode = SamplerMipmapMode.Linear,
+            MipLodBias = 0.0f,
+            MinLod = 0.0f,
+            MaxLod = UseMipMaps ? (float)(MipLevels - 1) : 0.0f
         };
-
-        PhysicalDeviceProperties properties = new();
-        GFX.GetPhysicalDeviceProperties(&properties);
-
-        samplerInfo.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
-
-        samplerInfo.BorderColor = BorderColor.FloatTransparentBlack;
-        samplerInfo.UnnormalizedCoordinates = false;
-
-        samplerInfo.CompareEnable = false;
-        samplerInfo.CompareOp = CompareOp.Always;
-
-        samplerInfo.MipmapMode = SamplerMipmapMode.Linear;
-        samplerInfo.MipLodBias = 0.0f;
-        samplerInfo.MinLod = 0.0f;
-        samplerInfo.MaxLod = _mipLevels;
 
         if (GFX.CreateSampler(&samplerInfo, null, out Sampler) != Result.Success) {
             throw new InvalidOperationException("failed to create texture sampler!");

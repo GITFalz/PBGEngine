@@ -9,7 +9,7 @@ public class AsyncVoxelGenerationBatch : IDisposable
 {
     public ComputeShader WorldShader;
     public int ChunkPositionLocation;
-    public ChunkSlot[] slots = [];
+    public ChunkSlot1[] slots = [];
 
     private ulong _currentTimelineValue = 0;
     private Queue<ChunkJob> _pendingReadbacks = [];
@@ -19,10 +19,10 @@ public class AsyncVoxelGenerationBatch : IDisposable
         WorldShader = computeShader;
         ChunkPositionLocation = computeShader.GetLocation("ubo.uChunkWorldPosition");
 
-        slots = new ChunkSlot[slotCount];
+        slots = new ChunkSlot1[slotCount];
         for (int i = 0; i < slotCount; i++)
         {
-            ChunkSlot slot = new(computeShader);
+            ChunkSlot1 slot = new(computeShader);
             slots[i] = slot;
         }
     }
@@ -32,7 +32,7 @@ public class AsyncVoxelGenerationBatch : IDisposable
         _currentTimelineValue = GFX.GetTimelineValue();
     }
 
-    public ChunkSlot? TryGetAvailableSlot()
+    public ChunkSlot1? TryGetAvailableSlot()
     {
         for (int i = 0; i < slots.Length; i++)
         {
@@ -123,7 +123,7 @@ public class AsyncVoxelGenerationBatch : IDisposable
     }
 }
 
-public class ChunkSlot : IDisposable
+public class ChunkSlot1 : IDisposable
 {
     public SSBO<Block> Blocks;
     public SSBO<uint> Count;
@@ -131,7 +131,7 @@ public class ChunkSlot : IDisposable
     public ulong LastSubmittedValue;
     public bool ReadBack = true;
 
-    public ChunkSlot(ComputeShader computeShader)
+    public ChunkSlot1(ComputeShader computeShader)
     {
         Blocks = new(VoxelChunk.BLOCK_COUNT, true);
         Count = new(1, true);
@@ -154,5 +154,5 @@ public class ChunkSlot : IDisposable
 public struct ChunkJob
 {
     public VoxelChunk Chunk;
-    public ChunkSlot Slot;
+    public ChunkSlot1 Slot;
 }
