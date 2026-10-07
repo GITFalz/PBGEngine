@@ -6,27 +6,20 @@
     <RootNamespace>PBGEngine</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <OutputPath>bin/Debug</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
+  
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="StbImageResizeSharp" Version="0.97.1" />
-    <PackageReference Include="StbImageSharp" Version="2.30.15" />
-    <PackageReference Include="TextCopy" Version="6.2.1" />
-
-    <PackageReference Include="Silk.NET.Core" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.GLFW" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Vulkan.Extensions.EXT" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.SPIRV.Cross" Version="2.23.0" />
-    <PackageReference Include="Silk.NET.Shaderc" Version="2.23.0" />
+    <Compile Include="Program.cs" />
+    <ProjectReference Include="Engine.Core\Engine.Core.csproj" />
+    <ProjectReference Include="Assets\Assets.csproj" ReferenceOutputAssembly="false"/>
   </ItemGroup>
+
+  <Target Name="CopyAssetsAssembly" AfterTargets="Build">
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Assets\bin\$(Configuration)\$(TargetFramework)\Assets.dll"
+          DestinationFolder="$(TargetDir)" />
+  </Target>
 
 </Project>

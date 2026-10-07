@@ -1,5 +1,6 @@
 using PBG;
 using PBG.Data;
+using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.UI;
 using PBG.UI.Creator;
@@ -45,7 +46,7 @@ public class TimelineUI(
         new UICol(w_[30], h_[20], blank_sharp_g_[BASE_BORDER], bottom_[10], top_center)[
             new UICol(w_[26], h_[16], blank_sharp_g_[BASE_BACKGROUND], middle_center)
             .OnHold(ScaleTimeline)
-            .OnClick(_ => Element.Height.Value = Mathf.Clampy(Element.Height.Value, 100, Game.Height - 50))[
+            .OnClick(_ => Element.Height.Value = Mathf.Clampy(Element.Height.Value, 100, GameWindow.Height - 50))[
                 new UIText("=", mc_[1], fs_[1], middle_center)
             ]
         ],

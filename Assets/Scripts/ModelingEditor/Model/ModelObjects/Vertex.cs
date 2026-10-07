@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using PBG;
+using PBG.Graphics;
 using PBG.MathLibrary;
 
 public class Vertex
@@ -169,7 +170,7 @@ public class Vertex
         }
     }
 
-    public Vector2? GetScreenSpacePosition(Model model) => GetScreenSpacePosition(model, GeneralModelingEditor.GetProjectionMatrix(), GeneralModelingEditor.GetViewMatrix(), Game.Width - 400, Game.Height - 50, (200, 50));
+    public Vector2? GetScreenSpacePosition(Model model) => GetScreenSpacePosition(model, GeneralModelingEditor.GetProjectionMatrix(), GeneralModelingEditor.GetViewMatrix(), GameWindow.Width - 400, GameWindow.Height - 50, (200, 50));
     public Vector2? GetScreenSpacePosition(Model model, Matrix4 projectionMatrix, Matrix4 viewMatrix, float width, float height, Vector2 position)
     {
         System.Numerics.Matrix4x4 projection = projectionMatrix.num();

@@ -176,13 +176,13 @@ public class RiggingEditor : BaseEditor
 
             if (Editor.freeCamera)
             {
-                Game.Instance.CursorMode = CursorMode.Disabled;
+                Game.CursorMode = CursorMode.Disabled;
                 Camera.SetCameraMode(CameraMode.Free);
                 renderSelection = false;
             }
             else
             {
-                Game.Instance.CursorMode = CursorMode.Normal;
+                Game.CursorMode = CursorMode.Normal;
                 Camera.SetCameraMode(CameraMode.Fixed);
                 Model?.UpdateBonePosition(Model.Rig, Editor.ProjectionMatrix, Camera.ViewMatrix);
                 Model?.UpdateVertexPosition();

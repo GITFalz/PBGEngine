@@ -485,14 +485,3 @@ public abstract class NodeBase
 
     public override string ToString() => GetName();
 }
-
-public enum ValueType
-{
-    Float,
-    Int,
-    Vector2,
-    Vector2i,
-    Vector3,
-    Vector3i,
-    Block
-}

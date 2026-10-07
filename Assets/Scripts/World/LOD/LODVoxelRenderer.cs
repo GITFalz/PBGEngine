@@ -36,10 +36,10 @@ public class LODVoxelRenderer : ScriptingNode
 
     public LODVoxelRenderer()
     {
-        _camera = new Camera(Game.Width, Game.Height, (0, 0, 0));
+        _camera = new Camera(GameWindow.Width, GameWindow.Height, (0, 0, 0));
         _viewport = (0, 0, 0, 0);
-        _width = Game.Width;
-        _height = Game.Height;
+        _width = GameWindow.Width;
+        _height = GameWindow.Height;
 
         //DataPool = new(this);
     }
@@ -57,8 +57,8 @@ public class LODVoxelRenderer : ScriptingNode
 
     void Resize()
     {
-        _width = Game.Width - (_viewport.left + _viewport.right);
-        _height = Game.Height - (_viewport.bottom + _viewport.top);
+        _width = GameWindow.Width - (_viewport.left + _viewport.right);
+        _height = GameWindow.Height - (_viewport.bottom + _viewport.top);
         _camera = new Camera(_width, _height, (0, 0, 0));
         _camera.UpdateProjectionMatrix();
     }
@@ -208,7 +208,7 @@ public class LODVoxelRenderer : ScriptingNode
 
         DataPool.Render();
 
-        GFX.Viewport(0, 0, Game.Width, Game.Height);
+        GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
     }
 
     public void UpdateUniforms(Descriptor descriptor)

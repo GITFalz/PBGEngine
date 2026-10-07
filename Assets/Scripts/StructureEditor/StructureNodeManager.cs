@@ -13,8 +13,8 @@ public class StructureNodeManager : ScriptingNode
 {
     public static StructureNodeManager Instance = null!;
 
-    public static int NodePanelWidth = Game.Width - 500;
-    public static int NodePanelHeight = Game.Height - 60;
+    public static int NodePanelWidth = GameWindow.Width - 500;
+    public static int NodePanelHeight = GameWindow.Height - 60;
 
     public static Shader NoiseGridShader;
     private static Descriptor _gridDescriptor;
@@ -66,7 +66,7 @@ public class StructureNodeManager : ScriptingNode
 
     public static Vector2 DisplayPosition = new Vector2(100, 100);
 
-    public static Matrix4 DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -4, 0);
+    public static Matrix4 DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, GameWindow.Width, 0, GameWindow.Height, -4, 0);
 
     public StructureEngineManager Parent = null!;
 
@@ -351,12 +351,12 @@ public class StructureNodeManager : ScriptingNode
 
     public void ResizeNodeWindow()
     {
-        NodePanelWidth = Game.Width - 480;
-        NodePanelHeight = Game.Height - 60;
+        NodePanelWidth = GameWindow.Width - 480;
+        NodePanelHeight = GameWindow.Height - 60;
 
-        InternalNodeWindowPosition = new Vector2i(0, Game.Height - NodePanelHeight);
+        InternalNodeWindowPosition = new Vector2i(0, GameWindow.Height - NodePanelHeight);
 
-        DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -4, 0);
+        DisplayProjectionMatrix = Matrix4.CreateOrthographicOffCenter(0, GameWindow.Width, 0, GameWindow.Height, -4, 0);
     }
 
     public void Awake()
@@ -367,7 +367,7 @@ public class StructureNodeManager : ScriptingNode
     public void Resize()
     {
         ResizeNodeWindow();
-        DisplayPosition = new Vector2(Game.Width - 235, Game.Height - 235);
+        DisplayPosition = new Vector2(GameWindow.Width - 235, GameWindow.Height - 235);
     }
 
     public void RegenerateTree()
@@ -535,7 +535,7 @@ public class StructureNodeManager : ScriptingNode
 
             GFX.Draw(6, 1, 0, 0);
 
-            GFX.Viewport(0, 0, Game.Width, Game.Height);
+            GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
 
             UIController.BindFramebuffer();
 

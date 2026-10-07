@@ -48,12 +48,12 @@ public class ModelingEditor : BaseEditor
 
         if (Editor.freeCamera)
         {
-            Game.Instance.CursorMode = CursorMode.Disabled;
+            Game.CursorMode = CursorMode.Disabled;
             Camera.Unlock();
         }
         else
         {
-            Game.Instance.CursorMode = CursorMode.Normal;
+            Game.CursorMode = CursorMode.Normal;
             Camera.Lock();
         }
     }
@@ -128,12 +128,12 @@ public class ModelingEditor : BaseEditor
             if (Editor.freeCamera)
             {
                 HoldingTransform = false;
-                Game.Instance.CursorMode = CursorMode.Disabled;
+                Game.CursorMode = CursorMode.Disabled;
                 Camera.SetCameraMode(CameraMode.Free);
             }
             else
             {
-                Game.Instance.CursorMode = CursorMode.Normal;
+                Game.CursorMode = CursorMode.Normal;
                 Camera.SetCameraMode(CameraMode.Fixed);
                 TransformGizmo.GenerateWorldSpacePoints();
                 RotationGizmo.GenerateWorldSpacePoints();

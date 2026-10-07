@@ -203,7 +203,7 @@ public static class StructureHeightShader
 
         var model = Matrix4.CreateTranslation(offset);
         var view = camera.ViewMatrix;
-        Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(camera.FOV), (float)(Game.Width - 480) / (float)(Game.Height - 60), 0.1f, 10000f);
+        Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(camera.FOV), (float)(GameWindow.Width - 480) / (float)(GameWindow.Height - 60), 0.1f, 10000f);
 
         GL.UniformMatrix4(ModelLocation, true, ref model);
         GL.UniformMatrix4(ViewLocation, true, ref view);
@@ -232,7 +232,7 @@ public static class StructureHeightShader
  
         model = Matrix4.CreateTranslation(offset);
         view = camera.ViewMatrix;
-        projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(camera.FOV), (float)(Game.Width - 480) / (float)(Game.Height - 60), 0.1f, 10000f);
+        projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(camera.FOV), (float)(GameWindow.Width - 480) / (float)(GameWindow.Height - 60), 0.1f, 10000f);
 
         GL.UniformMatrix4(BorderModelLocation, true, ref model);
         GL.UniformMatrix4(BorderViewLocation, true, ref view);
