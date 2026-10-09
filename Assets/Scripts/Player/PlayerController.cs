@@ -8,8 +8,6 @@ using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
 using PBG.NewVoxel;
-using Silk.NET.SPIRV.Cross;
-using static PBG.UI.Styles;
 
 
 public class PlayerController : ScriptingNode
@@ -126,7 +124,7 @@ public class PlayerController : ScriptingNode
             Model.IsShown = false;
         }
 
-        WeaponData.TryGet("sword", out WeaponModel);
+        //WeaponData.TryGet("sword", out WeaponModel);
 
         WorldManager.SpawnEntity((10, 20, 10));
 

@@ -1,0 +1,521 @@
+﻿using System.Runtime.InteropServices;
+using PBG.Core;
+using PBG.Data;
+using PBG.Graphics;
+using PBG.MathLibrary;
+
+using Plane = System.Numerics.Plane;
+
+namespace PBG.Rendering
+{
+    [StructLayout(LayoutKind.Sequential)]
+    public struct GpuPlane
+    {
+        public Vector3 Normal;
+        public float Distance;
+    }
+
+    public class Camera : ScriptingNode
+    {
+        public float SPEED { get; private set; } = 75f;
+        public int SCREEN_WIDTH { get; set; }
+        public int SCREEN_HEIGHT { get; set; }
+        public float SCREEN_NEAR { get; set; } = 0.1f;
+        public float SCREEN_FAR { get; set; } = 10000f;
+        public float VERTICAL_SENSITIVITY { get; private set; } = 20f;
+        public float HORIZONTAL_SENSITIVITY { get; private set; } = 20f;
+        public float SCROLL_SENSITIVITY { get; private set; } = 0.4f;
+
+        //-- Viewport --
+        private int _left;
+        private int _right;
+        private int _bottom;
+        private int _top;
+
+        public float FOV
+        {
+            get => CameraData.FOV;
+            set => CameraData.FOV = value;
+        }
+
+        public Vector3 Position = (0, 0, 0);
+        public Vector3 Center = (0, 0, 0);
+
+        public float Pitch = 0;
+        public float Yaw = -90;
+        public float Distance = 32;
+
+        public string Cardinal { get => GetCardinal(); }
+
+        public Vector3 Up = Vector3.UnitY;
+        public Vector3 Front = -Vector3.UnitZ;
+        public Vector3 Right = Vector3.UnitX;
+
+        public Vector2 lastPos;
+
+        public Matrix4 ViewMatrix;
+        public Matrix4 ProjectionMatrix;
+
+        private float SMOOTH_FACTOR = 100f;
+
+        private Vector2 _targetMouseDelta;
+        private Vector2 _currentMouseDelta = Vector2.Zero;
+
+        public CameraMode _cameraMode = CameraMode.Fixed;
+        public CameraProjection CameraProjection
+        {
+            get => _cameraProjection;
+            set
+            {
+                _cameraProjection = value;
+                UpdateProjectionMatrix();
+            }
+        }
+        private CameraProjection _cameraProjection = CameraProjection.Perspective;
+
+        private Dictionary<CameraMode, Action> _cameraModes;
+        private Action _updateAction = () => { };
+
+        public Action FirstMove = () => { };
+
+        public Func<bool> CanZoom = () => true;
+
+        private Plane[] frustumPlanes = new Plane[6];
+        public GpuPlane[] GpuPlanes = new GpuPlane[6];
+        public Vector2 input => Input.MovementInput;
+
+        public SSBO<GpuPlane> FrustumSSBO;
+
+        private bool _freeze = false;
+
+        public Camera() : this(new()) {}
+        public Camera(int width, int height, Vector3 position)
+        {
+            SCREEN_WIDTH = width;
+            SCREEN_HEIGHT = height;
+            Position = position;
+
+            _cameraModes = new Dictionary<CameraMode, Action>
+            {
+                {CameraMode.Free, FreeCamera},
+                {CameraMode.Fixed, FixedCamera},
+                {CameraMode.Follow, FollowCamera},
+                {CameraMode.Centered, CenteredCamera},
+                {CameraMode.Orbit, OrbitCamera}
+            };
+
+            FirstMove = FirstMove1;
+
+            _updateAction = _cameraModes[_cameraMode];
+
+            FrustumSSBO = new(6);
+        }
+
+        public Camera(int width, int height, int near, int far, Vector3 position)
+        {
+            SCREEN_WIDTH = width;
+            SCREEN_HEIGHT = height;
+            SCREEN_NEAR = near;
+            SCREEN_FAR = far;
+            Position = position;
+
+            _cameraModes = new Dictionary<CameraMode, Action>
+            {
+                {CameraMode.Free, FreeCamera},
+                {CameraMode.Fixed, FixedCamera},
+                {CameraMode.Follow, FollowCamera},
+                {CameraMode.Centered, CenteredCamera},
+                {CameraMode.Orbit, OrbitCamera}
+            };
+
+            FirstMove = FirstMove1;
+
+            _updateAction = _cameraModes[_cameraMode];
+
+            FrustumSSBO = new(6);
+        }
+
+        public Camera(CameraSettings settings)
+        {
+            Viewport(settings.Viewport);
+            Position = settings.Position;
+
+            _cameraModes = new Dictionary<CameraMode, Action>
+            {
+                {CameraMode.Free, FreeCamera},
+                {CameraMode.Fixed, FixedCamera},
+                {CameraMode.Follow, FollowCamera},
+                {CameraMode.Centered, CenteredCamera},
+                {CameraMode.Orbit, OrbitCamera}
+            };
+
+            FirstMove = FirstMove1;
+
+            _updateAction = _cameraModes[_cameraMode];
+
+            FrustumSSBO = new(6);
+        }   
+
+        public void Freeze() => _freeze = true;
+        public void Unfreeze() => _freeze = false;
+
+        public void Viewport((int left, int right, int bottom, int top) data) => Viewport(data.left, data.right, data.bottom, data.top);
+        public void Viewport(int left, int right, int bottom, int top)
+        {
+            _left = left; _right = right; _bottom = bottom; _top = top;
+            Resize();
+        }
+
+        //public void ApplyViewport() => GL.Viewport(_left, _bottom, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        //public void SetAsActive() => Scene.SetCameraAsActive(this);
+
+        void Resize()
+        {
+            SCREEN_WIDTH = (GFX.Width - (_left + _right)).Max(1);
+            SCREEN_HEIGHT = (GFX.Height - (_top + _bottom)).Max(1);
+            UpdateProjectionMatrix();
+        }
+
+        public Matrix4 GetViewMatrix()
+        {
+            ViewMatrix = Matrix4.CreateLookAt(Position, Position + Front, Up);
+            return ViewMatrix;
+        }
+
+        public Matrix4 UpdateProjectionMatrix()
+        {
+            ProjectionMatrix = _cameraProjection switch
+            {
+                CameraProjection.Perspective => GetPerspectiveProjectionMatrix(),
+                CameraProjection.Orthographic => GetOrthograhpicProjectionMatrix(),
+                CameraProjection.OrthographicOffCenter => GetOrthograhpicOffCenterProjectionMatrix(),
+                _ => GetPerspectiveProjectionMatrix(),
+            };
+            return ProjectionMatrix;
+        }
+
+        public Matrix4 GetPerspectiveProjectionMatrix()
+        {
+            return Matrix4.CreatePerspective(Mathf.DegToRad(FOV), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, SCREEN_NEAR, SCREEN_FAR);
+        }
+
+        public Matrix4 GetOrthograhpicProjectionMatrix()
+        {
+            return Matrix4.CreateOrthographic(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_NEAR, SCREEN_FAR);
+        }
+
+        public Matrix4 GetOrthograhpicOffCenterProjectionMatrix()
+        {
+            return Matrix4.CreateOrthographicOffCenter(-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, -SCREEN_HEIGHT / 2, SCREEN_NEAR, SCREEN_FAR);
+        }
+        
+        public void CalculateFrustumPlanes()
+        {
+            Matrix4 viewProjectionMatrix = GetViewProjectionMatrix();
+            System.Numerics.Matrix4x4 viewProjectionMatrixNumerics = Mathf.Num(viewProjectionMatrix);
+
+            // Extract the frustum planes from the view-projection matrix
+            frustumPlanes[0] = new Plane( // Left
+                viewProjectionMatrixNumerics.M14 + viewProjectionMatrixNumerics.M11,
+                viewProjectionMatrixNumerics.M24 + viewProjectionMatrixNumerics.M21,
+                viewProjectionMatrixNumerics.M34 + viewProjectionMatrixNumerics.M31,
+                viewProjectionMatrixNumerics.M44 + viewProjectionMatrixNumerics.M41
+            );
+
+            frustumPlanes[1] = new Plane( // Right
+                viewProjectionMatrixNumerics.M14 - viewProjectionMatrixNumerics.M11,
+                viewProjectionMatrixNumerics.M24 - viewProjectionMatrixNumerics.M21,
+                viewProjectionMatrixNumerics.M34 - viewProjectionMatrixNumerics.M31,
+                viewProjectionMatrixNumerics.M44 - viewProjectionMatrixNumerics.M41
+            );
+
+            frustumPlanes[2] = new Plane( // Bottom
+                viewProjectionMatrixNumerics.M14 + viewProjectionMatrixNumerics.M12,
+                viewProjectionMatrixNumerics.M24 + viewProjectionMatrixNumerics.M22,
+                viewProjectionMatrixNumerics.M34 + viewProjectionMatrixNumerics.M32,
+                viewProjectionMatrixNumerics.M44 + viewProjectionMatrixNumerics.M42
+            );
+
+            frustumPlanes[3] = new Plane( // Top
+                viewProjectionMatrixNumerics.M14 - viewProjectionMatrixNumerics.M12,
+                viewProjectionMatrixNumerics.M24 - viewProjectionMatrixNumerics.M22,
+                viewProjectionMatrixNumerics.M34 - viewProjectionMatrixNumerics.M32,
+                viewProjectionMatrixNumerics.M44 - viewProjectionMatrixNumerics.M42
+            );
+
+            frustumPlanes[4] = new Plane( // Near
+                viewProjectionMatrixNumerics.M14 + viewProjectionMatrixNumerics.M13,
+                viewProjectionMatrixNumerics.M24 + viewProjectionMatrixNumerics.M23,
+                viewProjectionMatrixNumerics.M34 + viewProjectionMatrixNumerics.M33,
+                viewProjectionMatrixNumerics.M44 + viewProjectionMatrixNumerics.M43
+            );
+
+            frustumPlanes[5] = new Plane( // Far
+                viewProjectionMatrixNumerics.M14 - viewProjectionMatrixNumerics.M13,
+                viewProjectionMatrixNumerics.M24 - viewProjectionMatrixNumerics.M23,
+                viewProjectionMatrixNumerics.M34 - viewProjectionMatrixNumerics.M33,
+                viewProjectionMatrixNumerics.M44 - viewProjectionMatrixNumerics.M43
+            );
+
+            for (int i = 0; i < 6; i++)
+            {
+                var plane = frustumPlanes[i];
+                plane = Plane.Normalize(plane);
+                
+                GpuPlanes[i].Normal = new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z);
+                GpuPlanes[i].Distance = plane.D;
+
+                frustumPlanes[i] = plane;
+            }
+        }
+
+        public void BindPlanes(int bindingPoint)
+        {
+            //GL.BindBuffer(BufferTarget.UniformBuffer, FrustumUBO);
+            //GL.BindBufferBase(BufferRangeTarget.UniformBuffer, bindingPoint, FrustumUBO);
+        }
+
+        public bool FrustumIntersectsSphere(Vector3 center, float radius)
+        {
+            for (int i = 0; i < GpuPlanes.Length; i++)
+            {
+                float dist = Vector3.Dot(GpuPlanes[i].Normal, center) + GpuPlanes[i].Distance;
+                if (dist < -radius)
+                    return false;
+            }
+            return true;
+        }
+
+        public System.Numerics.Matrix4x4 GetNumericsViewMatrix()
+        {
+            return Mathf.Num(ViewMatrix);
+        }
+
+        public System.Numerics.Matrix4x4 GetNumericsProjectionMatrix()
+        {
+            return Mathf.Num(ProjectionMatrix);
+        }
+
+        public Matrix4 GetViewProjectionMatrix()
+        {
+            return ProjectionMatrix * ViewMatrix;
+        }
+
+        public void SetCameraMode(CameraMode mode)
+        {
+            _cameraMode = mode;
+            _updateAction = _cameraModes[mode];
+        }
+
+        public CameraMode GetCameraMode()
+        {
+            return _cameraMode;
+        }
+
+        public void UpdateVectors()
+        {
+            Front.X = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Cos(Mathf.DegToRad(Yaw));
+            Front.Y = MathF.Sin(Mathf.DegToRad(Pitch));
+            Front.Z = MathF.Cos(Mathf.DegToRad(Pitch)) * MathF.Sin(Mathf.DegToRad(Yaw));
+
+            Front = Vector3.Normalize(Front);
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
+        }
+
+        public void UpdateRightUpVectors()
+        {
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
+        }
+
+        public Vector3 Yto0(Vector3 v)
+        {
+            v.Y = 0;
+            return Vector3.Normalize(v);
+        }
+
+        public Vector3 FrontYto0()
+        {
+            Vector3 v = Front;
+            v.Y = 0;
+            return Vector3.Normalize(v);
+        }
+
+        public Vector3 RightYto0()
+        {
+            Vector3 v = Right;
+            v.Y = 0;
+            return Vector3.Normalize(v);
+        }
+
+        public string GetCardinal()
+        {
+            var dir = FrontYto0();
+            if (dir.LengthSquared == 0)
+                return "north";
+
+            dir.Y = 0;
+            dir.Normalize();
+
+            if (MathF.Abs(dir.X) > MathF.Abs(dir.Z))
+                return dir.X > 0 ? "east" : "west";
+            else
+                return dir.Z > 0 ? "south" : "north";
+        }
+
+        public void Lock()
+        {
+            _updateAction = () => { };
+        }
+
+        public void Unlock()
+        {
+            _updateAction = _cameraModes[_cameraMode];
+        }
+
+        public void Update()
+        {
+            if (!_freeze)
+                _updateAction.Invoke();
+            GetViewMatrix();
+            CalculateFrustumPlanes();
+        }
+
+        public void SetCameraSpeed(float speed) => SPEED = speed;
+
+        private void FreeCamera()
+        {
+            float speed = SPEED * GameTime.DeltaTime;
+
+            if (input != Vector2.Zero)
+            {
+                Position += Yto0(Front) * input.Y * speed;
+                Position -= Yto0(Right) * input.X * speed;
+            }
+
+            if (Input.IsKeyDown(Key.Space))
+            {
+                Position.Y += speed;
+            }
+
+            if (Input.IsKeyDown(Key.ShiftLeft))
+            {
+                Position.Y -= speed;
+            }
+
+            FirstMove.Invoke();
+
+            RotateCamera();
+            UpdateVectors();
+        }
+
+        private void FixedCamera()
+        {
+
+        }
+
+        private void FollowCamera()
+        {
+            RotateCamera();
+            UpdateVectors();
+        }
+
+        private void CenteredCamera()
+        {
+            Position = Center;
+            RotateCamera();
+            UpdateVectors();
+        }
+
+        public void OrbitCamera() => OrbitCamera(100f);
+
+        public void OrbitCamera(float maxDistance)
+        {
+            Vector2 mouseDelta = Input.GetMouseDelta();
+            Yaw += mouseDelta.X * 0.1f;
+            Pitch -= mouseDelta.Y * 0.1f;
+            Pitch = Math.Clamp(Pitch, -89f, 89f);
+
+            OrbitCamera(Yaw, Pitch, maxDistance);
+        }
+
+        public void OrbitCamera(float yaw, float pitch, float maxDistance)
+        {
+            Yaw = yaw;
+            Pitch = pitch;
+
+            if (CanZoom())
+            {
+                Distance -= Input.GetMouseScrollDelta().Y * SCROLL_SENSITIVITY * Distance * 0.1f;
+                Distance = Math.Clamp(Distance, 1f, maxDistance);
+            }
+
+            float yawRad = Mathf.DegToRad(Yaw);
+            float pitchRad = Mathf.DegToRad(Pitch);
+
+            Position.X = Center.X - Distance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad);
+            Position.Y = Center.Y - Distance * Mathf.Sin(pitchRad);
+            Position.Z = Center.Z - Distance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad);
+
+            Front = Vector3.Normalize(Center - Position);
+            Right = Vector3.Normalize(Vector3.Cross(Front, Vector3.UnitY));
+            Up = Vector3.Normalize(Vector3.Cross(Right, Front));
+        }
+
+        public void FirstMove1()
+        {
+            lastPos = Input.GetMousePosition();
+            FirstMove = FirstMove2;
+        }
+
+        public void FirstMove2()
+        {
+            lastPos = Input.GetMousePosition();
+            FirstMove = () => { };
+        }
+
+        private float _targetYaw, _targetPitch;
+        private void RotateCamera()
+        {
+            Vector2 mouseDelta = Input.GetMouseDelta();
+            Vector2 delta = mouseDelta * 0.003f;
+
+            _targetYaw   += delta.X * HORIZONTAL_SENSITIVITY;
+            _targetPitch -= delta.Y * VERTICAL_SENSITIVITY;
+            _targetPitch  = Mathf.Clampy(_targetPitch, -89.0f, 89.0f);
+
+            float t = 1f - MathF.Exp(-SMOOTH_FACTOR * (float)GameTime.DeltaTime);
+            Yaw   = Mathf.Lerp(Yaw,   _targetYaw,   t);
+            Pitch = Mathf.Lerp(Pitch, _targetPitch, t);
+        }
+    }
+
+    public enum CameraMode
+    {
+        Free,
+        Fixed,
+        Follow,
+        Centered,
+        Orbit
+    }
+
+    public enum CameraProjection
+    {
+        Perspective,
+        Orthographic,
+        OrthographicOffCenter
+    }
+}
+
+public struct CameraSettings
+{
+    public (int left, int right, int bottom, int top) Viewport;
+    public Vector3 Position = Vector3.Zero;
+
+    public CameraSettings()
+    {
+        Viewport = (0, 0, 0, 0);
+    }
+}

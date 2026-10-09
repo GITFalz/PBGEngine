@@ -36,19 +36,6 @@ public class WorldNodeEditor : ScriptingNode
     private string _baseWorldComputeShaderPath = Game.ShaderPath / "computeShaders" / "world_vulkan" / "newWorldBase.comp";
     private string _finalWorldComputeShaderPath = Game.ShaderPath / "computeShaders" / "world_vulkan" / "newWorldFinal.comp";
 
-
-
-    public static RollingAverageDoubleTimer ChunkGenerationTimer = new(2000);
-    public static RollingAverageDoubleTimer ChunkRenderingTimer = new(2000);
-    public static RollingAverageDoubleTimer TotalUploadTimer = new(2000);
-
-    public static int GlobalCount = 0;
-
-    public static int GenerationCount = 0;
-    public static int RenderingCount = 0;
-    public static int UploadCount = 0;
-
-
     private WorldEditorSettings _settings;
     
     public VoxelChunk? _currentChunk = null;
@@ -315,10 +302,10 @@ public class WorldNodeEditor : ScriptingNode
                 UpdateChunk(new UIText("Allocations: ", mc_[30], top_left, bg_white, fs_[1.2f]), chunk => $"Allocations: {chunk.Allocations.Count}", () => $"Allocations: None")
             ],
             new UIVCol(grow_children, spacing_[5])[
-                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Chunks/s: " + GlobalCount.Take()),
-                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generation/s: " + GenerationCount.Take()),
-                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Rendering/s: " + RenderingCount.Take()),
-                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload/s: " + UploadCount.Take())
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Chunks/s: " + VoxelChunkGenerator.GlobalCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generation/s: " + VoxelRenderer.GenerationCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Rendering/s: " + VoxelRenderer.RenderingCount.Take()),
+                Update1000Ms(new UIText("", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload/s: " + GPUChunkData.UploadCount.Take())
             ],
             new UIVCol(grow_children, spacing_[5])[
                 UpdateFrame(new UIText("Generating: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Generating: " + _renderer.GenQueueCount),
@@ -336,9 +323,9 @@ public class WorldNodeEditor : ScriptingNode
                 UpdateFrame(new UIText("Cache: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Cache: " + ChunkGeneration.V256FCacheCount)
             ],
             new UIVCol(grow_children, spacing_[5])[
-                Update200Ms(new UIText("Generate: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generate: " + ChunkGenerationTimer.GetAverage().ToString("F4") + " ms"),
-                Update200Ms(new UIText("Render: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Render: " + ChunkRenderingTimer.GetAverage().ToString("F4") + " ms"),
-                Update200Ms(new UIText("Upload: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload: " + TotalUploadTimer.GetAverage().ToString("F4") + " ms")
+                Update200Ms(new UIText("Generate: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generate: " + VoxelRenderer.ChunkGenerationTimer.GetAverage().ToString("F4") + " ms"),
+                Update200Ms(new UIText("Render: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Render: " + VoxelRenderer.ChunkRenderingTimer.GetAverage().ToString("F4") + " ms"),
+                Update200Ms(new UIText("Upload: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload: " + GPUChunkData.TotalUploadTimer.GetAverage().ToString("F4") + " ms")
             ],
             new UIVCol(grow_children, spacing_[5])[
                 Update200Ms(new UIText("Alive Chunks: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Alive Chunks: " + VoxelChunk.AliveChunks.Count),
@@ -405,6 +392,9 @@ public class WorldNodeEditor : ScriptingNode
                         return $"Thread {i+1} {percent.Fti()}%";
                     });
                 })
+            ],
+            new UICol(grow_children, blank_sharp, gray_[50]).OnClick(_ => GFX.HotReload())[
+                new UIText("Reload", fs_[1.2f])
             ]
         ],
         new UIGraph(bottom_right, w_full, h_[400], graph_points_[200], bg_red).Out(out _frameTimeGraph)

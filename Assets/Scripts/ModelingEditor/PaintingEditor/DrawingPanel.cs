@@ -146,7 +146,7 @@ public class DrawingPanel
 
         CanvasPosition = newPosition;
         DrawingCanvasSize = scale;
-        SetDrawingCanvasPosition(CanvasPosition.X + WindowPosition.X, CanvasPosition.Y + (Game.Height - WindowHeight));
+        SetDrawingCanvasPosition(CanvasPosition.X + WindowPosition.X, CanvasPosition.Y + (GameWindow.Height - WindowHeight));
     }
 
     public static void LoadTexture(string filePath)

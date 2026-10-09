@@ -76,8 +76,8 @@ public class TextureEditor : BaseEditor
     {
         _ = new DrawingPanel(1000, 1000);
 
-        _drawingCanvasSize = new Vector2i((int)((Game.Width - 400) * SeparationPercent), Game.Height - 50);
-        _modelDisplaySize = new Vector2i(Game.Width - 400 - _drawingCanvasSize.X, Game.Height - 50);
+        _drawingCanvasSize = new Vector2i((int)((GameWindow.Width - 400) * SeparationPercent), GameWindow.Height - 50);
+        _modelDisplaySize = new Vector2i(GameWindow.Width - 400 - _drawingCanvasSize.X, GameWindow.Height - 50);
         
         DrawingPanel.CanvasPosition = ((float)_drawingCanvasSize.X / 2f - 50, (float)_drawingCanvasSize.Y / 2f - 50);
     }
@@ -97,15 +97,15 @@ public class TextureEditor : BaseEditor
         float tX = ((float)DrawingPanel.CanvasPosition.X + ((float)DrawingPanel.Width / 2f)) / (float)_drawingCanvasSize.X;
         float tY = ((float)DrawingPanel.CanvasPosition.Y + ((float)DrawingPanel.Height / 2f)) / (float)_drawingCanvasSize.Y;
 
-        _drawingCanvasSize = new Vector2i((int)((Game.Width - 400) * SeparationPercent), Game.Height - 50);
-        _modelDisplaySize = new Vector2i(Game.Width - 400 - _drawingCanvasSize.X, Game.Height - 50);
+        _drawingCanvasSize = new Vector2i((int)((GameWindow.Width - 400) * SeparationPercent), GameWindow.Height - 50);
+        _modelDisplaySize = new Vector2i(GameWindow.Width - 400 - _drawingCanvasSize.X, GameWindow.Height - 50);
 
         DrawingPanel.CanvasPosition = (tX * _drawingCanvasSize.X - ((float)DrawingPanel.Width / 2f), tY * _drawingCanvasSize.Y - ((float)DrawingPanel.Height / 2f));
         DrawingPanel.WindowPosition = (_windowPosition.X, _windowPosition.Y);
         DrawingPanel.WindowWidth = _drawingCanvasSize.X;
         DrawingPanel.WindowHeight = _drawingCanvasSize.Y;
 
-        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (Game.Height - DrawingPanel.WindowHeight) - DrawingPanel.WindowPosition.Y);
+        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (GameWindow.Height - DrawingPanel.WindowHeight) - DrawingPanel.WindowPosition.Y);
         
         Editor.ModelsViewport.SetViewport(200 + _drawingCanvasSize.X, 200, 0, 50);
     }
@@ -115,13 +115,12 @@ public class TextureEditor : BaseEditor
         Editor.RenderingGrid = false;
 
         DrawingPanel.IsDrawing = true;
-        Game.ForceSyncedRendering = true;
 
         float tX = ((float)DrawingPanel.CanvasPosition.X + ((float)DrawingPanel.Width / 2f)) / (float)_drawingCanvasSize.X;
         float tY = ((float)DrawingPanel.CanvasPosition.Y + ((float)DrawingPanel.Height / 2f)) / (float)_drawingCanvasSize.Y;
 
-        _drawingCanvasSize = new Vector2i((int)((Game.Width - 400) * SeparationPercent), Game.Height - 50);
-        _modelDisplaySize = new Vector2i(Game.Width - 400 - _drawingCanvasSize.X, Game.Height - 50);
+        _drawingCanvasSize = new Vector2i((int)((GameWindow.Width - 400) * SeparationPercent), GameWindow.Height - 50);
+        _modelDisplaySize = new Vector2i(GameWindow.Width - 400 - _drawingCanvasSize.X, GameWindow.Height - 50);
 
         DrawingPanel.CanvasPosition = (tX * _drawingCanvasSize.X - ((float)DrawingPanel.Width / 2f), tY * _drawingCanvasSize.Y - ((float)DrawingPanel.Height / 2f));
 
@@ -129,7 +128,7 @@ public class TextureEditor : BaseEditor
         DrawingPanel.WindowWidth = _drawingCanvasSize.X;
         DrawingPanel.WindowHeight = _drawingCanvasSize.Y;
 
-        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (Game.Height - DrawingPanel.WindowHeight));
+        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (GameWindow.Height - DrawingPanel.WindowHeight));
 
         Editor.ModelsViewport.SetViewport(200 + _drawingCanvasSize.X, 200, 0, 50);
 
@@ -260,13 +259,13 @@ public class TextureEditor : BaseEditor
 
             if (Editor.freeCamera)
             {
-                Game.Instance.CursorMode = CursorMode.Disabled;
+                Game.CursorMode = CursorMode.Disabled;
                 Camera.SetCameraMode(CameraMode.Free);
                 renderSelection = false;
             }
             else
             {
-                Game.Instance.CursorMode = CursorMode.Normal;
+                Game.CursorMode = CursorMode.Normal;
                 Camera.SetCameraMode(CameraMode.Fixed);
                 TransformGizmo.GenerateWorldSpacePoints();
                 RotationGizmo.GenerateWorldSpacePoints();
@@ -372,7 +371,7 @@ public class TextureEditor : BaseEditor
                         DrawingPanel.CanvasPosition.X = (int)_canvasPosition.X;
                         DrawingPanel.CanvasPosition.Y = (int)_canvasPosition.Y;
 
-                        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (Game.Height - DrawingPanel.WindowHeight) - DrawingPanel.WindowPosition.Y);
+                        DrawingPanel.SetDrawingCanvasPosition(DrawingPanel.CanvasPosition.X + _windowPosition.X, DrawingPanel.CanvasPosition.Y + (GameWindow.Height - DrawingPanel.WindowHeight) - DrawingPanel.WindowPosition.Y);
                         _regenerateColors = true;
                     }
                 }
@@ -598,7 +597,6 @@ public class TextureEditor : BaseEditor
         Editor.RenderingGrid = true;
 
         DrawingPanel.IsDrawing = false;
-        Game.ForceSyncedRendering = false;
     }
 
     private bool TriangleHoverTest(out bool changeTriangle)
@@ -920,7 +918,7 @@ public class TextureEditor : BaseEditor
                 }
 
                 // Get the smallest possible bounding box of the selected region and rotate it if needed before moving it next to the last one
-                Mathf.GetSmallestBoundingBox(newVerts, out min, out max);
+                ModelingEditingMode.GetSmallestBoundingBox(newVerts, out min, out max);
 
                 minMax.Add((min, max, [.. newVerts]));
 

@@ -5,6 +5,7 @@ using PBG.NewVoxel;
 using PBG.MathLibrary;
 using PBG.Physics;
 using PBG.Graphics;
+using PBG.Rendering;
 
 public class NodeTestScene : Scene
 {
@@ -14,6 +15,12 @@ public class NodeTestScene : Scene
     {
         var mainNode = NewInternalNode("Root");
         PBGNodes.NewNodeWindow(mainNode, new(240, 240, 0, 0));
+
+        var viewportNode = mainNode.AddChild("Viewport");
+
+        var viewport = new Viewport(40, 40, 0, 40);
+
+        viewportNode.AddComponent(viewport);
 
         var editorNode = mainNode.AddChild("Editor");
 

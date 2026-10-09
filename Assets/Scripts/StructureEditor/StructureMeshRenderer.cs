@@ -83,7 +83,7 @@ public class StructureMeshRenderer
         if (!Rendering)
             return;
             
-        GL.Viewport(240, 0, Game.Width - 480, Game.Height - 60);
+        GL.Viewport(240, 0, GameWindow.Width - 480, GameWindow.Height - 60);
 
         GL.Enable(EnableCap.DepthTest);
         GL.Enable(EnableCap.Blend);
@@ -94,7 +94,7 @@ public class StructureMeshRenderer
         Vector2 gridSize = new Vector2(1000, 1000);
         Matrix4 gridModel = Matrix4.CreateTranslation(new Vector3(-gridSize.X * 0.5f, -0.02f, -gridSize.Y * 0.5f) + new Vector3(Camera.Position.X, 0, Camera.Position.Z));
         Matrix4 view = Camera.ViewMatrix;
-        Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(Camera.FOV), (float)(Game.Width - 480) / (Game.Height - 60), 0.1f, 1000f);
+        Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(Camera.FOV), (float)(GameWindow.Width - 480) / (GameWindow.Height - 60), 0.1f, 1000f);
 
         GL.UniformMatrix4(gridModelLocation, false, ref gridModel);
         GL.UniformMatrix4(gridViewLocation, false, ref view);
@@ -110,7 +110,7 @@ public class StructureMeshRenderer
         gridVao.Unbind();
         gridShader.Unbind();
 
-        GL.Viewport(0, 0, Game.Width, Game.Height);
+        GL.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
         */
     }
 

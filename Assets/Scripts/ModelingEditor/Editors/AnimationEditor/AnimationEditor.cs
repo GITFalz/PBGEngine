@@ -293,12 +293,12 @@ public class AnimationEditor : BaseEditor
     {
         Editor.RenderModel();
 
-        Vector2 size = (Game.Width - 800f, 28);
+        Vector2 size = (GameWindow.Width - 800f, 28);
 
         if (size.X > 0 && size.Y > 0)
         {
             /*
-            GL.Viewport(600, Game.Height - (int)UI.TimelineCollection.Origin.Y - 87, (int)size.X, (int)size.Y);
+            GL.Viewport(600, GameWindow.Height - (int)UI.TimelineCollection.Origin.Y - 87, (int)size.X, (int)size.Y);
 
             Matrix4 tickModel = Matrix4.CreateTranslation((0, 0, 0.3f));
             Matrix4 tickProjection = Matrix4.CreateOrthographicOffCenter(0, size.X, size.Y, 0, -1, 1);
@@ -331,7 +331,7 @@ public class AnimationEditor : BaseEditor
 
             TimelineShader.Unbind();
 
-            GL.Viewport(200, 0, Game.Width - 400, Game.Height - 50);
+            GL.Viewport(200, 0, GameWindow.Width - 400, GameWindow.Height - 50);
             */
         }
 
@@ -400,8 +400,8 @@ public class AnimationEditor : BaseEditor
 
         Vector2 mouseDelta = Input.MouseDelta;
 
-        Vector2 keyframeScreenPos = new Vector2(220, Game.Height - 223);
-        Vector2 timerScreenPos = new Vector2(220, Game.Height - 256);
+        Vector2 keyframeScreenPos = new Vector2(220, GameWindow.Height - 223);
+        Vector2 timerScreenPos = new Vector2(220, GameWindow.Height - 256);
 
         if (Input.IsMousePressed(MouseButton.Right) && Editor.UI.HoveringCenter)
         {
@@ -417,12 +417,12 @@ public class AnimationEditor : BaseEditor
             if (Editor.freeCamera)
             {
                 HoldingTransform = false;
-                Game.Instance.CursorMode = CursorMode.Disabled;
+                Game.CursorMode = CursorMode.Disabled;
                 Camera.SetCameraMode(CameraMode.Free);
             }
             else
             {
-                Game.Instance.CursorMode = CursorMode.Normal;
+                Game.CursorMode = CursorMode.Normal;
                 Camera.SetCameraMode(CameraMode.Fixed);
                 TransformGizmo.GenerateWorldSpacePoints();
                 RotationGizmo.GenerateWorldSpacePoints();

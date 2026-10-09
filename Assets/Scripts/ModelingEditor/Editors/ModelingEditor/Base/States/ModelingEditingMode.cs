@@ -691,7 +691,7 @@ public class ModelingEditingMode : ModelingBase
                 }
 
                 // Get the smallest possible bounding box of the selected region and rotate it if needed before moving it next to the last one
-                Mathf.GetSmallestBoundingBox(newVerts, out min, out max);
+                GetSmallestBoundingBox(newVerts, out min, out max);
 
                 minMax.Add((min, max, [.. newVerts]));
 
@@ -895,6 +895,108 @@ public class ModelingEditingMode : ModelingBase
         Model?.Mesh.CheckUselessVertices();
         Model?.Mesh.UpdateAndRegenerateAll();
     }
+
+    public static void GetSmallestBoundingBox(IEnumerable<Vertex> vertices, out Vector3 min, out Vector3 max)
+        {
+            if (!vertices.Any())
+            {
+                min = Vector3.Zero;
+                max = Vector3.Zero;
+                return;
+            }
+
+            List<Vector3> positions = [];
+            foreach (var vertex in vertices)
+            {
+                positions.Add(vertex.Position);
+            }
+
+            Vector3 center = Vector3.Zero;
+            Vector3 rotationAxis = (0, 1, 0);
+            foreach (var vertex in vertices)
+            {
+                center += vertex.Position;
+            }
+            center /= vertices.Count();
+
+            Vector3 axisX = (1, 0, 0);
+
+            List<Edge> edges = Edge.GetEdges(vertices);
+            List<Vector3> copy = [.. positions];
+
+            if (edges.Count == 0)
+            {
+                min = Vector3.Zero;
+                max = Vector3.Zero;
+                return;
+            }
+
+            Vector3 direction = edges[0].GetDirection();
+            float angle = Mathf.RadToDeg(Vector3.CalculateAngle(axisX, direction));
+
+            for (int i = 0; i < copy.Count; i++)
+            {
+                copy[i] = Mathf.RotateAround(copy[i], center, rotationAxis, angle);
+            }
+
+            Vector3 minC = copy[0];
+            Vector3 maxC = copy[0];
+
+            for (int i = 1; i < copy.Count; i++)
+            {
+                minC = Mathf.Min(minC, copy[i]);
+                maxC = Mathf.Max(maxC, copy[i]);
+            }
+
+            Vector3 size = maxC - minC;
+            min = minC;
+            max = maxC;
+
+            for (int i = 1; i < edges.Count; i++)
+            {
+                copy = [.. positions];
+
+                direction = edges[i].GetDirection();
+                float a = Mathf.RadToDeg(Vector3.CalculateAngle(axisX, direction));
+
+                for (int j = 0; j < copy.Count; j++)
+                {
+                    copy[j] = Mathf.RotateAround(copy[j], center, rotationAxis, a);
+                }
+
+                minC = copy[0];
+                maxC = copy[0];
+
+                for (int j = 1; j < copy.Count; j++)
+                {
+                    minC = Mathf.Min(minC, copy[j]);
+                    maxC = Mathf.Max(maxC, copy[j]);
+                }
+
+                Vector3 sizeC = maxC - minC;
+
+                //Console.WriteLine("Size original: " + size + " Volume: " + size.X * size.Y * size.Z);
+                //Console.WriteLine("Size rotated: " + sizeC + " Volume: " + sizeC.X * sizeC.Y * sizeC.Z);
+
+                if (sizeC.X * sizeC.Z < size.X * size.Z)
+                {
+                    min = minC;
+                    max = maxC;
+                    size = sizeC;
+                    angle = a;
+                }
+            }
+
+            foreach (var vertex in vertices)
+            {
+                Vector3 rotatedPoint = Mathf.RotateAround(vertex, center, rotationAxis, angle);
+                rotatedPoint.Y = 0;
+                vertex.SetPosition(rotatedPoint);
+            }
+
+            min.Y = 0;
+            max.Y = 0;
+        }
 
     /*
     public void Handle_Mapping()

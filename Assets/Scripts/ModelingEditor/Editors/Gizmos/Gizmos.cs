@@ -113,9 +113,9 @@ public abstract class Gizmo(Camera camera, Matrix4 projection)
             vertB = vertices[(int)b];
             vertC = vertices[(int)c];
             
-            var tvertA = Mathf.WorldToScreen((new Vector4(vertA.position, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
-            var tvertB = Mathf.WorldToScreen((new Vector4(vertB.position, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
-            var tvertC = Mathf.WorldToScreen((new Vector4(vertC.position, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
+            var tvertA = Mathf.WorldToScreen((new Vector4(vertA.position, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
+            var tvertB = Mathf.WorldToScreen((new Vector4(vertB.position, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
+            var tvertC = Mathf.WorldToScreen((new Vector4(vertC.position, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
 
             Triangles.Add(new(tvertA + (200, 50), tvertB + (200, 50), tvertC + (200, 50), vertA.info));
         }
@@ -220,8 +220,8 @@ public class TransformGizmo(Camera camera, Matrix4 projection) : Gizmo(camera, p
         var proj = Mathf.Num(Projection);
         var view = Mathf.Num(Camera.ViewMatrix);
 
-        var tvertA = Mathf.WorldToScreen((new Vector4(0f, 0f, 0f, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
-        var tvertB = Mathf.WorldToScreen((new Vector4(end, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
+        var tvertA = Mathf.WorldToScreen((new Vector4(0f, 0f, 0f, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
+        var tvertB = Mathf.WorldToScreen((new Vector4(end, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
 
         return tvertB - tvertA;
     }
@@ -358,8 +358,8 @@ public class RotationGizmo(Camera camera, Matrix4 projection) : Gizmo(camera, pr
         var proj = Mathf.Num(Projection);
         var view = Mathf.Num(Camera.ViewMatrix);
 
-        var tvertA = Mathf.WorldToScreen((new Vector4(start, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
-        var tvertB = Mathf.WorldToScreen((new Vector4(end, 1f) * model).Xyz, proj, view, Game.Width - 400, Game.Height - 50) ?? (0, 0);
+        var tvertA = Mathf.WorldToScreen((new Vector4(start, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
+        var tvertB = Mathf.WorldToScreen((new Vector4(end, 1f) * model).Xyz, proj, view, GameWindow.Width - 400, GameWindow.Height - 50) ?? (0, 0);
 
         return tvertB - tvertA;
     }

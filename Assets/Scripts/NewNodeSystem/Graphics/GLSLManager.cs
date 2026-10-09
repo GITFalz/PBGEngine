@@ -129,6 +129,9 @@ public class GLSLManager
             VertexShaderFile = "Utils_vulkan/Rectangle.vert", 
             FragmentShaderFile = "Noise_vulkan/WorldNoise.frag"
         };
+
+
+
         info.Rasterizer.CullMode = Silk.NET.Vulkan.CullModeFlags.None;
 
         DisplayShader = new Shader(info);
@@ -335,7 +338,7 @@ layout(location = 0) out vec4 FragColor;
         Descriptor.Bind();
 
         Descriptor.UniformMatrix4(modelLocation, model);
-        Descriptor.UniformMatrix4(projectionLocation, Matrix4.CreateOrthographicOffCenter(0, Game.Width, 0, Game.Height, -2, 2));
+        Descriptor.UniformMatrix4(projectionLocation, Matrix4.CreateOrthographicOffCenter(0, GameWindow.Width, 0, GameWindow.Height, -2, 2));
         Descriptor.Uniform2(sizeLocation, DisplaySize);
         Descriptor.Uniform2(ScreenSizeLocation, DisplaySize);
         Descriptor.Uniform1(noiseSizeLocation, NoiseSize);

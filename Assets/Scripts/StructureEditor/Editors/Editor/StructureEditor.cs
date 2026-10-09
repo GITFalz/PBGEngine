@@ -309,9 +309,9 @@ public partial class StructureEditor : BaseStructureEditor
 
     public void Render()
     {
-        GFX.Viewport(240, 60, Game.Width - 480, Game.Height - 60);
+        GFX.Viewport(240, 60, GameWindow.Width - 480, GameWindow.Height - 60);
 
-        Matrix4 orthoProjection = Matrix4.CreateOrthographicOffCenter(240, Game.Width - 240, Game.Height, 60, -2, 2);
+        Matrix4 orthoProjection = Matrix4.CreateOrthographicOffCenter(240, GameWindow.Width - 240, GameWindow.Height, 60, -2, 2);
 
         if (Editor.Parent.MeshRenderer.Rendering && !ShowScript && ShowBoundingBoxes)
         {
@@ -355,7 +355,7 @@ public partial class StructureEditor : BaseStructureEditor
             */
         }
 
-        GFX.Viewport(0, 0, Game.Width, Game.Height);
+        GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
     }
 
     public void Dispose()

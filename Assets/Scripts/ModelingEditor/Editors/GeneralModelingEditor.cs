@@ -101,11 +101,11 @@ public class GeneralModelingEditor : ScriptingNode
     {
         ProjectionMatrix = Matrix4.CreatePerspective(
             Mathf.DegreesToRadians(Scene.DefaultCamera.FOV),
-            (float)Game.Width / (float)Game.Height,
+            (float)GameWindow.Width / (float)GameWindow.Height,
             0.1f,
             1000f
         );
-        WindowProjection = Matrix4.CreateOrthographicOffCenter(0, Game.Width - 400, Game.Height - 50, 0, -2, 2);
+        WindowProjection = Matrix4.CreateOrthographicOffCenter(0, GameWindow.Width - 400, GameWindow.Height - 50, 0, -2, 2);
 
         CurrentEditor.Resize();
 
@@ -120,11 +120,11 @@ public class GeneralModelingEditor : ScriptingNode
         Console.WriteLine("Awake ljhsgbfksbfvkusbvgfsvefs");
         ProjectionMatrix = Matrix4.CreatePerspective(
             Mathf.DegreesToRadians(Scene.DefaultCamera.FOV),
-            (float)Game.Width / (float)Game.Height,
+            (float)GameWindow.Width / (float)GameWindow.Height,
             0.1f,
             1000f
         );
-        WindowProjection = Matrix4.CreateOrthographicOffCenter(0, Game.Width, Game.Height, 0, -2, 2);
+        WindowProjection = Matrix4.CreateOrthographicOffCenter(0, GameWindow.Width, GameWindow.Height, 0, -2, 2);
 
         Scene.DefaultCamera.SetCameraMode(CameraMode.Free);
 
