@@ -67,6 +67,10 @@ public unsafe class Descriptor : BufferBase, IResizeable
             var layout = uniformBindings[i];
             for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
             {
+                #if DEBUG
+                SetDebug(_uniformBuffers[i * GFX.MAX_FRAMES_IN_FLIGHT + j]);
+                #endif
+
                 DescriptorBufferInfo bufferInfo = new()
                 {
                     Buffer = _uniformBuffers[i * GFX.MAX_FRAMES_IN_FLIGHT + j],
@@ -191,6 +195,10 @@ public unsafe class Descriptor : BufferBase, IResizeable
 
         for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
         {
+            #if DEBUG
+            SetDebug(buffer.Buffer);
+            #endif
+
             DescriptorBufferInfo bufferInfo = new()
             {
                 Buffer = buffer.Buffer,
@@ -222,6 +230,11 @@ public unsafe class Descriptor : BufferBase, IResizeable
     {
         for (int j = 0; j < GFX.MAX_FRAMES_IN_FLIGHT; j++) 
         {
+            #if DEBUG
+            SetDebug(sampler);
+            SetDebug(imageView);
+            #endif
+
             DescriptorImageInfo imageInfo = new()
             {
                 ImageLayout = imageLayout,

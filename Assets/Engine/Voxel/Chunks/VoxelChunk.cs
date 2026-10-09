@@ -8,6 +8,7 @@ using PBG.Threads;
 
 namespace PBG.Voxel
 {
+    [InternalSystemCleanup]
     public class VoxelChunk
     {
         public static readonly VoxelChunk Empty = new();
@@ -211,6 +212,12 @@ namespace PBG.Voxel
         public void EnqueueRendering()
         {
             Renderer.EnqueueRendering(this);
+        }
+
+
+        public static void Cleanup()
+        {
+            Empty.Dispose();
         }
     }
 }

@@ -2,13 +2,11 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Runtime.Intrinsics.X86;
 using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.Rendering;
-using PBG.Voxel;
 using Silk.NET.Vulkan;
 
 namespace PBG.NewVoxel;
@@ -418,6 +416,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
         if (!Run)
             return;
 
+        var viewport = GFX.GetViewport();
+
         if (RealtimeShadows)
         {
             if (_closeLightTimer >= closeTimer)
@@ -457,7 +457,7 @@ public unsafe partial class VoxelRenderer : ScriptingNode
             }
         }
 
-        GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
+        GFX.Viewport(viewport);
 
         DebugModule?.Render(Camera, Vector3.Zero);
 

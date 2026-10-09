@@ -37,6 +37,8 @@ namespace PBG.Rendering.Meshes
 
         public UIMesh(UIController controller)
         {
+            // print everything to see where Object reference not set to an instance of an object. occurs
+
             _controller = controller;
             Descriptor = controller.UIData.GetUiDescriptor();
             Descriptor.BindSSBO(_uiSSBO, 1);

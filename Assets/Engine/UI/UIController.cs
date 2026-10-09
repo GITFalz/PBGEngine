@@ -701,9 +701,9 @@ namespace PBG.UI
         void Dispose()
         {
             Controllers.Remove(this);
-            UIMesh.Delete();
-            TextMesh.Delete();
-            MaskData.Delete();
+            UIMesh?.Delete();
+            TextMesh?.Delete();
+            MaskData?.Delete();
 
             AbsoluteElements = [];
             Elements = [];

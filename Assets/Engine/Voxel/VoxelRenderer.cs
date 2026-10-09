@@ -1030,7 +1030,7 @@ namespace PBG.Voxel
                 }
             }
 
-            GFX.Viewport(_viewport.left, _viewport.top, _width, _height);
+            //GFX.Viewport(_viewport.left, _viewport.top, _width, _height);
 
             /*
             _uiPlaneShader.Bind();
@@ -1080,7 +1080,7 @@ namespace PBG.Voxel
 
             DataPool.Render();
 
-            GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
+            //GFX.Viewport(0, 0, GameWindow.Width, GameWindow.Height);
         }
 
         public void UpdateUniforms(Descriptor descriptor)
@@ -1134,6 +1134,7 @@ namespace PBG.Voxel
         void Dispose()
         {
             Clear();
+            StopWorkers();
         }
 
         public void Clear()

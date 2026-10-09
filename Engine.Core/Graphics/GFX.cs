@@ -79,6 +79,11 @@ public unsafe class GFX
         _vulkanQuery = vulkanQuery;
     }
 
+    public static void HotReload()
+    {
+        _instance.HotReload();
+    }
+
     #region Thread
     public static IDisposable ResizeLock => _resizeLock.Lock();
     #endregion
@@ -420,6 +425,7 @@ public unsafe class GFX
     /// Default Viewport that is the size of the screen
     /// </summary>
     public static void Viewport() => Viewport(CommandBuffer, 0, 0, (uint)Width, (uint)Height);
+    public static void Viewport((int x, int y, uint width, uint height) viewport) => Viewport(CommandBuffer, viewport.x, viewport.y, (uint)viewport.width, (uint)viewport.height);
     public static void Viewport(int x, int y, int width, int height) => Viewport(CommandBuffer, x, y, (uint)width, (uint)height);
     public static void Viewport(int x, int y, uint width, uint height) => Viewport(CommandBuffer, x, y, width, height);
     public static void Viewport(CommandBuffer commandBuffer, int x, int y, uint width, uint height)

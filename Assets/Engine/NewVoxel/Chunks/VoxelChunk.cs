@@ -84,7 +84,7 @@ public unsafe class VoxelChunk : IDisposable
 
     public void AddStatusChange((double, string) v)
     {
-        StatusChanges.Add(v); 
+        //StatusChanges.Add(v); 
     }
 
     public bool HasBlocks = false;
@@ -359,9 +359,6 @@ public unsafe class VoxelChunk : IDisposable
 
         return hasAllNeighbours;
     }
-
-    public List<RenderingInfo> RenderingHistory = [];
-
     private object _chunkLock = new();
     private uint _generatedFlag = 0;
 
@@ -425,15 +422,6 @@ public unsafe class VoxelChunk : IDisposable
             EnqueueRendering();
         }
 
-    }
-
-    public struct RenderingInfo
-    {
-        public string Text = "";
-        public double Time = sw.Elapsed.TotalMicroseconds;
-        public Vector3i WorldPosition;
-        public ChunkStatus Status;
-        public RenderingInfo() {}
     }
 
 
@@ -579,7 +567,7 @@ public unsafe class VoxelChunk : IDisposable
             BackOcclusion = null;
         }
 
-        GC.SuppressFinalize(this);
+        //GC.SuppressFinalize(this);
     }
 
 

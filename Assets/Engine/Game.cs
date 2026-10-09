@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using PBG.Core;
 using PBG.Files;
 using PBG.Graphics;
@@ -11,8 +12,6 @@ namespace PBG;
 
 public class Game : GameWindow
 {
-    public static Game Instance { get; private set; } = null!;
-
     public static PString MainPath => FileManager.MainPath;
     public static PString AssetsPath => FileManager.AssetsPath;
     public static PString ShaderPath => FileManager.ShaderPath;
@@ -29,32 +28,7 @@ public class Game : GameWindow
     public static PString CustomPath => FileManager.CustomPath;
     public static PString CustomTempPath => FileManager.CustomTempPath;
 
-
     double accumulator = 0.0;
-
-    private static double MaxFPS = 99999.0;
-    private readonly double TargetFrameTime = 1.0 / MaxFPS;
-    private readonly Stopwatch stopwatch = Stopwatch.StartNew();
-
-    private static double MaxRenderingFPS = 99999.0;
-    private readonly double TargetRenderingFrameTime = 1.0 / MaxRenderingFPS;
-    private readonly Stopwatch frameTimer = Stopwatch.StartNew();
-    private double _renderingDeltaTime = 0;
-    private double lastUpdateTime = 0.0;
-    private double lastAccumulator2Update = 0;
-
-
-    public static int Counter = 0;
-
-    
-
-    public Game(int width, int height) : base(width, height)
-    {
-        Instance = this;
-        Width = width;
-        Height = height;
-        //GraphicsContext.graphicsContext.window.FramesPerSecond = 20;
-    }
 
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
@@ -94,6 +68,9 @@ public class Game : GameWindow
 
     public override void OnLoad()
     {
+        var initAttributes = AttributeManager.GetOrderedAttribute<InternalSystemInitAttribute, int>(a => (int)a.Attribute.Priority);
+        AttributeManager.InvokeAttributeMethod(initAttributes, "Init", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        
         ItemDataManager.Init();
 
         Voxel.VoxelChunkGenerator.InitCache();
@@ -202,8 +179,12 @@ public class Game : GameWindow
     public override void OnUnload()
     {
         Scene.CurrentScene?.Exit();
+        Scene.DisposeAll();
 
         PBGConsole.Save();
+
+        var cleanupAttributes = AttributeManager.GetAttribute<InternalSystemCleanupAttribute>();
+        AttributeManager.InvokeAttributeMethod(cleanupAttributes, "Cleanup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
     }
 
     public static void SetCursorState(PBG.Data.CursorMode cursorMode)

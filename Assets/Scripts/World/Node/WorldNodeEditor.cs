@@ -392,6 +392,9 @@ public class WorldNodeEditor : ScriptingNode
                         return $"Thread {i+1} {percent.Fti()}%";
                     });
                 })
+            ],
+            new UICol(grow_children, blank_sharp, gray_[50]).OnClick(_ => GFX.HotReload())[
+                new UIText("Reload", fs_[1.2f])
             ]
         ],
         new UIGraph(bottom_right, w_full, h_[400], graph_points_[200], bg_red).Out(out _frameTimeGraph)

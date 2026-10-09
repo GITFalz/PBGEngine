@@ -229,7 +229,7 @@ public unsafe abstract class BufferBase : IDisposable
         _externalBuffersChanged = true;
     }
 
-    public static void DisposeAll()
+    public static void DisposeAllBuffers()
     {
         foreach (var buffer in _highPriorityDisposeBuffer)
         {
@@ -245,12 +245,22 @@ public unsafe abstract class BufferBase : IDisposable
             buffer.Destroy();
         }
 
-        _shaderBuffer.Dispose();
-        _shaderCompiler.Dispose();
+        Buffers = [];
+        ExternalBuffers = [];
+
+        _resizeBufferQueue = [];
 
         _highPriorityResizeList = [];
         _lowPriorityResizeList = [];
         _highPriorityDisposeBuffer = [];
         _lowPriorityDisposeBuffer = [];
+    }
+
+    public static void DisposeAll()
+    {
+        DisposeAllBuffers();
+
+        _shaderBuffer.Dispose();
+        _shaderCompiler.Dispose();
     }
 }

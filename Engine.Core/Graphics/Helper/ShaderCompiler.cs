@@ -779,17 +779,31 @@ public unsafe class ShaderCompiler
             throw new FileNotFoundException("Shader at path '" + path + "' not found");
 
         var sourceCode = File.ReadAllText(path);
+
+        Console.WriteLine("[INFO] : Compiling shader " + Path.GetFileName(path));
         
         var result = _shaderc.CompileIntoSpv(_compiler, sourceCode, (nuint)sourceCode.Length, kind, Path.GetFileName(path), "main", _options);
 
+        Console.WriteLine("[INFO] : Finished compiling shader " + Path.GetFileName(path));
+
         if (_shaderc.ResultGetCompilationStatus(result) != CompilationStatus.Success)
-            throw new Exception(_shaderc.ResultGetErrorMessageS(result));
+        {
+            string errorMessage = _shaderc.ResultGetErrorMessageS(result);
+            Console.WriteLine("[ERROR] : Failed to compile shader " + Path.GetFileName(path) + " with error: " + errorMessage);
+            throw new Exception(errorMessage);
+        }
+
+        Console.WriteLine("[INFO] : Compiled shader " + Path.GetFileName(path) + " successfully");
 
         var length = (int)_shaderc.ResultGetLength(result);
         var bytePtr = _shaderc.ResultGetBytes(result);
         var array = new Span<byte>(bytePtr, length).ToArray();
 
+        Console.WriteLine("[INFO] : Shader " + Path.GetFileName(path) + " compiled to SPIR-V successfully");
+
         _shaderc.ResultRelease(result);
+
+        Console.WriteLine("[INFO] : Shader " + Path.GetFileName(path) + " released successfully");
 
         return array;
     }

@@ -12,6 +12,7 @@ using PBG.Noise;
 namespace PBG.NewVoxel;
 
 [InternalSystemInit(InitPriority.ScriptSystem)]
+[InternalSystemCleanup]
 public unsafe static class ChunkGeneration
 {
     private static Stopwatch _sw = Stopwatch.StartNew();
@@ -85,6 +86,22 @@ public unsafe static class ChunkGeneration
             _vector256WorkerStates[i] = new(4, 32);
             _vector256BlockCache[i] = new V256i[4 * 32];
         }
+    }
+
+    public static void Cleanup()
+    {
+        foreach (var state in _scalarCacheHandler.Values)
+        {
+            state.Dispose();
+        }
+
+        foreach (var state in _v256fCacheHandler.Values)
+        {
+            state.Dispose();
+        }
+
+        _scalarCacheHandler.Clear();
+        _v256fCacheHandler.Clear();
     }
 
 

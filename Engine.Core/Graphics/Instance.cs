@@ -11,6 +11,8 @@ using Silk.NET.Windowing;
 
 namespace PBG.Graphics;
 
+using Input = PBG.Data.Input;
+
 public unsafe class VulkanInstance
 {
     public static VulkanInstance Instance = null!;
@@ -65,7 +67,9 @@ public unsafe class VulkanInstance
     public Framebuffer CurrentFramebuffer;
 
     public bool _isLoading = true;
-    
+    private bool _pauseRendering = false;
+    private bool _hotReloading = false;
+
     public VulkanInstance(GameWindow gameWindow, int width, int height)
     {
         Instance = this;
@@ -79,6 +83,11 @@ public unsafe class VulkanInstance
         Window.PrioritizeGlfw();
         _window = Window.Create(options);
 
+        this.gameWindow = gameWindow;
+    }
+
+    internal void SetGameWindow(GameWindow gameWindow)
+    {
         this.gameWindow = gameWindow;
     }
 
@@ -197,11 +206,22 @@ public unsafe class VulkanInstance
         gameWindow.OnLoad();
     }
 
+    public void HotReload()
+    {
+        _hotReloading = true;
+    }
+
     // inputs
     public void OnKeyDown(IKeyboard keyboard, Key key, int scanCode)
     {
-
-        Data.Input.OnKeyDown((Data.Key)key);
+        Input.OnKeyDown((Data.Key)key);
+        if (Input.IsKeyPressed(Data.Key.R))
+        {
+            if (Input.IsKeyDown(Data.Key.ControlLeft) && Input.IsKeyDown(Data.Key.ShiftLeft))
+            {
+                HotReload();
+            }
+        }
         gameWindow.OnKeyDown(keyboard, key, scanCode);
     }
 
@@ -262,6 +282,21 @@ public unsafe class VulkanInstance
 
     private void OnUpdate(double deltaSeconds)
     {
+        // hot reloading needs to happen when nothing else is running, 
+        // otherwise a buffer could be update after it has been disposed, 
+        // causing a crash. So we pause the game and reload everything.
+        if (_hotReloading)
+        {
+            _hotReloading = false;
+
+            // reload game scripts
+            GameWindow.HotReload();
+
+            _pauseRendering = true;
+
+            _isLoading = true;
+        }
+
         if (_isLoading)
             return;
 
@@ -298,6 +333,9 @@ public unsafe class VulkanInstance
 
     private void OnRender(double deltaSeconds)
     {
+        if (_pauseRendering)
+            return;
+
         VulkanDevice.Vk.WaitForFences(VulkanDevice.Device, 1, ref _vulkanSyncObject.InFlightFences[CurrentFrame], true, ulong.MaxValue);
 
         uint imageIndex;
