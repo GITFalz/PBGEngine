@@ -31,9 +31,11 @@ public class NodeTestScene : Scene
 
         var worldNode = mainNode.AddChild("World");
 
-        var skybox = new Skybox();
-        skybox.Day = new Vector3(0.41f, 0.62f, 0.78f);
-        skybox.Night = new Vector3(0.02f, 0.03f, 0.1f);
+        var skybox = new Skybox
+        {
+            Day = new Vector3(0.41f, 0.62f, 0.78f),
+            Night = new Vector3(0.02f, 0.03f, 0.1f)
+        };
         var renderer = new VoxelRenderer();
         var uicontroller = new UIController();
 

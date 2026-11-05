@@ -100,8 +100,8 @@ public unsafe static class ChunkGeneration
             state.Dispose();
         }
 
-        _scalarCacheHandler.Clear();
-        _v256fCacheHandler.Clear();
+        _scalarCacheHandler = [];
+        _v256fCacheHandler = [];
     }
 
 

@@ -70,10 +70,15 @@ public class Skybox : ScriptingNode
         _descriptor.UniformMatrix4(sml, model);
         _descriptor.UniformMatrix4(svl, view);
         _descriptor.UniformMatrix4(spl, projection);
+
+        //Descriptor.Debug = true;
+
         _descriptor.Uniform3(sd, Day);
         _descriptor.Uniform3(sn, Night);
         _descriptor.Uniform3(ld, LightDirection);
         _descriptor.Uniform1(tl, Time);
+
+        //Descriptor.Debug = false;
 
         _skyboxMesh.Render();
     }

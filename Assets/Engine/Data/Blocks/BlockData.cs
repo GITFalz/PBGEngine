@@ -5,6 +5,7 @@ using PBG.Data;
 using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using Silk.NET.OpenGL;
 using Silk.NET.Vulkan;
 using StbImageResizeSharp;
 using StbImageSharp;
@@ -12,6 +13,7 @@ using StbImageSharp;
 namespace PBG.NewVoxel
 {
     [InternalSystemInit(InitPriority.Data)]
+    [InternalSystemCleanup]
     public static class BlockData
     {
         public static string CoreBlockDataPath = FileManager.CreatePath(Files.FileManager.MainPath, "data", "core", "blocks");
@@ -46,6 +48,12 @@ namespace PBG.NewVoxel
             LoadBlocks();
             LoadTextures();
             LoadModels();
+        }
+
+        public static void Cleanup()
+        {
+            CollectionCleaner.ClearCollections(typeof(BlockData));
+            Palette = new();
         }
 
         public static void LoadBlocks()

@@ -14,7 +14,7 @@ namespace PBG.NewVoxel;
 [InternalSystemInit(InitPriority.Shader)]
 public unsafe partial class VoxelRenderer : ScriptingNode
 {
-    public static uint TotalVertexCount = 0;
+    public static volatile uint TotalVertexCount = 0;
 
     public static int GenerationThreads = 5;
     public static int RenderingThreads = 3;

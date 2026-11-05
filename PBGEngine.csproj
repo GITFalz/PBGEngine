@@ -7,19 +7,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Assets/**/bin/**;Assets/**/obj/**</DefaultItemExcludes>
   </PropertyGroup>
 
-  
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <ProjectReference Include="Engine.Core\Engine.Core.csproj" />
-    <ProjectReference Include="Assets\Assets.csproj" ReferenceOutputAssembly="false"/>
+    <ProjectReference Include="..\EngineCore\Engine.csproj" />
   </ItemGroup>
-
-  <Target Name="CopyAssetsAssembly" AfterTargets="Build">
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)Assets\bin\$(Configuration)\$(TargetFramework)\Assets.dll"
-          DestinationFolder="$(TargetDir)" />
-  </Target>
 
 </Project>

@@ -580,6 +580,8 @@ public unsafe class VoxelChunk : IDisposable
             MemoryHelper.Free(EmptyMap[i]);
         }
         MemoryHelper.Free(EmptyMap);
+
+        AliveChunks = [];
     }
 }
 

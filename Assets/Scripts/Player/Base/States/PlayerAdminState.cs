@@ -17,6 +17,8 @@ public class PlayerAdminState : PlayerBaseState
     {
         if (Input.IsKeyPressed(Key.E))
         {
+            Console.WriteLine("I PRESSED E");
+
             if (Game.GetCursorState() == CursorMode.Disabled)
             {
                 Game.SetCursorState(CursorMode.Normal);

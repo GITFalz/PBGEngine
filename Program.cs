@@ -5,6 +5,6 @@ class Program
 {
     static void Main(string[] args)
     {
-        GameWindow.New(1500, 1000);
+        GameWindow.New(new Game(), 600, 400);
     }
 }

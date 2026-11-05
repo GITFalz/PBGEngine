@@ -1,10 +1,13 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Reflection;
 using PBG.Core;
+using PBG.Data;
 using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Threads;
+using PBG.Pipes;
+using PBG.Threads;  
 using PBG.UI;
 using Silk.NET.Input;
 
@@ -29,6 +32,8 @@ public class Game : GameWindow
     public static PString CustomTempPath => FileManager.CustomTempPath;
 
     double accumulator = 0.0;
+
+    public static SharedAtomicInt FrameIndex;
 
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
@@ -64,10 +69,11 @@ public class Game : GameWindow
     {
         
     }
-    
 
     public override void OnLoad()
     {
+        FrameIndex = new SharedAtomicInt("engine_frame");
+
         var initAttributes = AttributeManager.GetOrderedAttribute<InternalSystemInitAttribute, int>(a => (int)a.Attribute.Priority);
         AttributeManager.InvokeAttributeMethod(initAttributes, "Init", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         
@@ -138,6 +144,8 @@ public class Game : GameWindow
 
     public override void OnUpdate(double delta)
     {
+        HandleMessages();
+
         Scene.LoadSceneFinal();
 
         // -- Physics update --
@@ -155,9 +163,66 @@ public class Game : GameWindow
         Scene.CurrentScene?.LateUpdate();
 
         TaskPool.Update();
+    }
 
-        //if (GameTime.FpsUpdated)
-            //Console.WriteLine(GameTime.Fps);
+    public void HandleMessages()
+    {
+        if (Engine.pipeEndpoint == null)
+            return;
+
+        var messages = Engine.pipeEndpoint.Read();
+        for (int i = 0; i < messages.Count; i++)
+        {
+            HandleMessage(messages[i]);
+        }
+    }
+
+    public void HandleMessage(string message)
+    {
+        CommandType type = (CommandType)message.GetInt(0);
+
+        //Console.WriteLine("HANDLING MESSAGE OF TYPE: " + type);
+
+        // key input
+        if (type == CommandType.KeyDown)
+        {
+            int key = message.GetInt(1);
+            Input.OnKeyDown((Data.Key)key);
+        }
+        else if (type == CommandType.KeyUp)
+        {
+            int key = message.GetInt(1);
+            Input.OnKeyUp((Data.Key)key);
+        }
+        else if (type == CommandType.MouseDown)
+        {
+            int key = message.GetInt(1);
+            Input.OnMouseDown((Data.MouseButton)key);
+        }
+        else if (type == CommandType.MouseUp)
+        {
+            int key = message.GetInt(1);
+            Input.OnMouseUp((Data.MouseButton)key);
+        }
+        else if (type == CommandType.MouseMove)
+        {
+            int x = message.GetInt(1);
+            int y = message.GetInt(2);
+            Input.OnMouseMove((x, y));
+        }
+        else if (type == CommandType.MouseWheel)
+        {
+            int x = message.GetInt(1);
+            int y = message.GetInt(2);
+            Input.OnMouseWheel((x, y));
+        }
+        else if (type == CommandType.Resize)
+        {
+            int width = message.GetInt(1);
+            int height = message.GetInt(2);
+
+            Engine.OnResize(new(width, height));
+        }
     }
 
     public override void OnCompute()
@@ -167,6 +232,8 @@ public class Game : GameWindow
 
     public override void OnRender()
     {
+        FrameIndex.Value = (int)GFX.CurrentFrame;
+
         Data.GameTime.Render();
 
         UIController.CumulativeDepth = 0f;
@@ -178,6 +245,8 @@ public class Game : GameWindow
 
     public override void OnUnload()
     {
+        Engine.pipeEndpoint.Dispose();
+        
         Scene.CurrentScene?.Exit();
         Scene.DisposeAll();
 

@@ -776,6 +776,8 @@ public unsafe class GPUChunkData : IDisposable
         var indrectBuffer = _indirectSSBOs[GFX.CurrentFrame][passIndex].Buffer;
         var countBuffer = _indirectCountSSBOs[GFX.CurrentFrame][passIndex].Buffer;
         GFX.Vk.CmdDrawIndirectCount(GFX.CommandBuffer, indrectBuffer, 0, countBuffer, 0, NewChunkDataPool.CHUNK_COUNT_PER_POOL, (uint)Marshal.SizeOf<DrawCommand>());
+
+
     }
 
     public void RenderWireframe(VoxelRenderer renderer, int passIndex = 0)

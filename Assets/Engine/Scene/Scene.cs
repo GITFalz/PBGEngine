@@ -206,7 +206,22 @@ namespace PBG.Core
             foreach (var (_, scene) in Scenes)
             {
                 scene.Dispose();
+                
+                Array.Clear(scene.OnStart);
+                Array.Clear(scene.OnAwake);
+                Array.Clear(scene.OnResize);
+                Array.Clear(scene.OnFixedUpdate);
+                Array.Clear(scene.OnUpdate);
+                Array.Clear(scene.OnLateUpdate);
+                Array.Clear(scene.OnCompute);
+                Array.Clear(scene.OnRender);
+                Array.Clear(scene.OnExit);
+                Array.Clear(scene.OnDispose);
+
+                scene.RootNode.Clear();
             }
+
+            Scenes.Clear();      
         }
         
         public static Type[] GetSubclasses(Assembly assembly)

@@ -174,6 +174,14 @@ namespace PBG.Core
         {
             ParentNode?.RemoveChild(this);
         }
+
+        public override void Clear()
+        {
+            Components.Clear();
+            _scriptHash.Clear();
+            _addedNodes.Clear();
+            base.Clear();
+        }
     }
 }
 

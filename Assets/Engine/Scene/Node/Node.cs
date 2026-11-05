@@ -135,4 +135,12 @@ public abstract class Node
     {
         Children.Clear();
     }
+
+    public virtual void Clear()
+    {
+        foreach (var child in Children)
+        {
+            child.Clear();
+        }
+    }
 }

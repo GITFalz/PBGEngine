@@ -27,7 +27,7 @@ public class WorldNodeEditor : ScriptingNode
 
     private BoundingBoxRenderer _boxRenderer;
 
-    private static UIGraph _frameTimeGraph = null!;
+    private UIGraph _frameTimeGraph = null!;
 
     private Stopwatch _sw = Stopwatch.StartNew();
     private double _time = 0;
@@ -136,6 +136,14 @@ public class WorldNodeEditor : ScriptingNode
     
         var json = JsonConvert.SerializeObject(_settings, jsonSettings);
         File.WriteAllText(settingsPath, json);
+
+        _frameUpdates.Clear();
+        _200msUpdates.Clear();
+        _1000msUpdates.Clear();
+        _positionUpdates.Clear();
+        _chunkUpdates.Clear();
+        _chunkSuccessUpdates.Clear();
+        _chunkFailUpdates.Clear();
     }
 
     private Vector3 _position = Vector3.Zero;
@@ -392,9 +400,6 @@ public class WorldNodeEditor : ScriptingNode
                         return $"Thread {i+1} {percent.Fti()}%";
                     });
                 })
-            ],
-            new UICol(grow_children, blank_sharp, gray_[50]).OnClick(_ => GFX.HotReload())[
-                new UIText("Reload", fs_[1.2f])
             ]
         ],
         new UIGraph(bottom_right, w_full, h_[400], graph_points_[200], bg_red).Out(out _frameTimeGraph)

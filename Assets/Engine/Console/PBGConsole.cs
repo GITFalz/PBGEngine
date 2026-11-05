@@ -9,6 +9,7 @@ using static PBG.UI.Styles;
 namespace PBG;
 
 [InternalSystemInit(InitPriority.Data)]
+[InternalSystemCleanup]
 public class PBGConsole : ScriptingNode
 {
     private static List<string> CommandHistory = [];
@@ -49,6 +50,11 @@ public class PBGConsole : ScriptingNode
             ])
         }
     };
+
+    public static void Cleanup()
+    {
+        Commands.Clear();
+    }
 
     private static CommandResult TimeSetAction(CommandContext context)
     {
