@@ -37,10 +37,7 @@ namespace PBG.UI
 
         public override void UpdateItem(string name)
         {
-            if (!ItemDataManager.AllItems.TryGetValue(name, out var item))
-                return;
-
-            TextureID = item.Index | 0x40000000;
+            TextureID = 0;
             UIController?.UIMesh.UpdateTextureIndex(this);
         }
 

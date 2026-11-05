@@ -13,7 +13,7 @@
   
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <ProjectReference Include="Engine.Core\Engine.Core.csproj" />
+    <ProjectReference Include="..\EngineCore\Engine.csproj" />
     <ProjectReference Include="Assets\Assets.csproj" ReferenceOutputAssembly="false"/>
   </ItemGroup>
 

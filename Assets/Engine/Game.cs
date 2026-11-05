@@ -1,9 +1,14 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Threading.Tasks;
+using PBG.Compilation;
 using PBG.Core;
+using PBG.Editor;
 using PBG.Files;
 using PBG.Graphics;
 using PBG.MathLibrary;
+using PBG.Pipes;
 using PBG.Threads;
 using PBG.UI;
 using Silk.NET.Input;
@@ -30,14 +35,19 @@ public class Game : GameWindow
 
     double accumulator = 0.0;
 
+    public static PipeServer server;
+    public static SharedAtomicInt FrameIndex;
+
+
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
         UIController.InputField((Data.Key)key);
+        server.Send(Mathf.IntsToString((int)CommandType.KeyDown, (int)key));
     }
 
     public override void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        
+        server.Send(Mathf.IntsToString((int)CommandType.KeyUp, (int)key));
     }
     
     public override void OnKeyChar(IKeyboard keyboard, char c)
@@ -47,48 +57,33 @@ public class Game : GameWindow
     
     public override void OnMouseMove(IMouse mouse, Vector2 position)
     {
-        
+        server.Send(Mathf.IntsToString((int)CommandType.MouseMove, (int)position.X - 240, (int)position.Y - 50));
     }
     
     public override void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        
+        server.Send(Mathf.IntsToString((int)CommandType.MouseDown, (int)button));
     }
     
     public override void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        
+        server.Send(Mathf.IntsToString((int)CommandType.MouseUp, (int)button));
     }
     
     public override void OnScroll(IMouse mouse, ScrollWheel scroll)
     {
-        
+        server.Send(Mathf.IntsToString((int)CommandType.MouseWheel, (int)scroll.X, (int)scroll.Y));
     }
     
 
     public override void OnLoad()
     {
+        FrameIndex = new SharedAtomicInt("engine_frame", true);
+
         var initAttributes = AttributeManager.GetOrderedAttribute<InternalSystemInitAttribute, int>(a => (int)a.Attribute.Priority);
         AttributeManager.InvokeAttributeMethod(initAttributes, "Init", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-        
-        ItemDataManager.Init();
-
-        Voxel.VoxelChunkGenerator.InitCache();
-
+    
         Type[] subClasses;
-        /*
-        var subClasses = ASettings.GetSubclasses();
-        Console.WriteLine("There are " + subClasses.Length + " settings");
-        for (int i = 0; i < subClasses.Length; i++)
-        {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " settings");
-            var instance = Activator.CreateInstance(subClass);
-            if (instance != null)
-                SettingsManager.Register((ASettings)instance);
-        }
-        SettingsManager.InitializeUI();
-        */
 
         subClasses = Scene.GetSubclasses();
                     
@@ -116,12 +111,25 @@ public class Game : GameWindow
         // Load mods
         
 
-        Scene.LoadScene("NodeTest");
+        Scene.LoadScene("Editor");
+
+        ProcessManager.Run();
+
+        CreateServer();
+    }
+
+    private async void SendCommand(string command)
+    {
+        if (server.IsConnected)
+            await server.SendAsync(command);
+    }
+
+    private async void CreateServer()    {
+        server = new("pbg_commands");
     }
 
     public override void OnRenderLoad()
     {
-        ItemDataManager.GenerateIcons();
         UIData.Init();
     }
 
@@ -131,6 +139,9 @@ public class Game : GameWindow
         Height = height;
 
         Scene.CurrentScene?.Resize();
+
+        if (server != null && server.IsConnected)
+            server.Send(Mathf.IntsToString((int)CommandType.Resize, EditorMenu.GameWidth, EditorMenu.GameHeight));
     }
 
     private static readonly System.Diagnostics.Stopwatch debugTimer = new();
@@ -158,6 +169,55 @@ public class Game : GameWindow
 
         //if (GameTime.FpsUpdated)
             //Console.WriteLine(GameTime.Fps);
+
+        HandleMessages();
+    }
+
+    public void HandleMessages()
+    {
+        var messages = server.Read();
+        for (int i = 0; i < messages.Count; i++)
+        {
+            HandleMessage(messages[i]);
+        }
+    }
+
+    public void HandleMessage(string message)
+    {
+        CommandType type = (CommandType)message.GetInt(0);
+
+        Console.WriteLine("HANDLING MESSAGE OF TYPE: " + type);
+
+        if (type == CommandType.SetCursor)
+        {
+            int key = message.GetInt(1);
+            CursorMode = (Data.CursorMode)key;
+        }
+        else if (type == CommandType.Resize)
+        {
+            int width = message.GetInt(1);
+            int height = message.GetInt(2);
+
+            using var fdReceiver = new FdReceiver("/tmp/vk_share.sock");
+            var fds = fdReceiver.Receive();
+
+            Console.WriteLine("resizing: " + width + " " + height);
+
+            Texture[] textures = new Texture[GFX.MAX_FRAMES_IN_FLIGHT];
+
+            for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
+            {
+                int fd = fds[i];
+
+                Console.WriteLine("fd: " + fd);
+
+                Texture texture = new(new() { Width = width, Height = height, IsExternalImage = true, Fd = fd, Format = Silk.NET.Vulkan.Format.B8G8R8A8Srgb });
+
+                textures[i] = texture;
+            }
+
+            EditorMenu.Instance.SetEditorTextures(width, height, textures);
+        }
     }
 
     public override void OnCompute()
@@ -181,10 +241,10 @@ public class Game : GameWindow
         Scene.CurrentScene?.Exit();
         Scene.DisposeAll();
 
-        PBGConsole.Save();
-
         var cleanupAttributes = AttributeManager.GetAttribute<InternalSystemCleanupAttribute>();
         AttributeManager.InvokeAttributeMethod(cleanupAttributes, "Cleanup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+    
+        ProcessManager.Close();
     }
 
     public static void SetCursorState(PBG.Data.CursorMode cursorMode)

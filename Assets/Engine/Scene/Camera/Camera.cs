@@ -172,8 +172,8 @@ namespace PBG.Rendering
 
         void Resize()
         {
-            SCREEN_WIDTH = (GFX.Width - (_left + _right)).Max(1);
-            SCREEN_HEIGHT = (GFX.Height - (_top + _bottom)).Max(1);
+            SCREEN_WIDTH = (GameWindow.Width - (_left + _right)).Max(1);
+            SCREEN_HEIGHT = (GameWindow.Height - (_top + _bottom)).Max(1);
             UpdateProjectionMatrix();
         }
 

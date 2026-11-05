@@ -57,7 +57,7 @@ namespace PBG.UI
 
             UiTexture = new TextureArray(new("UITextures.png", 64, 64) { Filter = Filter.Nearest, UseMipMaps = false });
             IconTexture = new TextureArray(new("Icons.png", 64, 64) { Filter = Filter.Nearest, UseMipMaps = false });
-            ItemTexture = ItemDataManager.Image;
+            ItemTexture = new TextureArray();
 
             ShaderInfo textShaderInfo = new() 
             { 

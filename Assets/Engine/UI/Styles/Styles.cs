@@ -261,37 +261,64 @@ namespace PBG.UI
             (value, e) => { if (e is UIPanel p) { p.SetBorderColor(new(new(value), 1f)); } },
             (value, e) => { if (e is UIPanel p) { p.SetBorderColor(new(new(((float)value) / 100f), 1f)); } });
 
+
         
-        public readonly static BinaryType<float, int> light_round_g_ = new(
+        public readonly static BinaryType<float, int> blank_full_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 0; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 0; p.Slice = SLICE_100;} });
-        public readonly static BinaryType<float, int> dark_round_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 0; p.Slice = SLICE_100; } });
+        
+        public readonly static BinaryType<float, int> blank_sharp_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 1; p.Slice = SLICE_100; } },
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 1; p.Slice = SLICE_100; } });
+
         public readonly static BinaryType<float, int> blank_round_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 2; p.Slice = SLICE_100; } },
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 2; p.Slice = SLICE_100; } });
 
+        public readonly static BinaryType<float, int> blank_round_3_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 3; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 3; p.Slice = SLICE_100; } });
 
-        public readonly static BinaryType<float, int> light_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } });
-        public readonly static BinaryType<float, int> dark_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } });
-        public readonly static BinaryType<float, int> blank_sharp_g_ = new(
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 12; p.Slice = SLICE_100; } },
-            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 12; p.Slice = SLICE_100; } });
+        public readonly static BinaryType<float, int> blank_round_2_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 4; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 4; p.Slice = SLICE_100; } });
+
+        public readonly static BinaryType<float, int> blank_round_2_diagonal_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 5; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 5; p.Slice = SLICE_100; } });
+
+        public readonly static BinaryType<float, int> blank_round_1_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 6; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 6; p.Slice = SLICE_100; } });
+
+
 
         public readonly static BinaryType<float, int> light_full_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 10; p.Slice = SLICE_100; } });
+        
+        public readonly static BinaryType<float, int> light_sharp_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 11; p.Slice = SLICE_100; } });
+
+        public readonly static BinaryType<float, int> light_round_g_ = new(
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 12; p.Slice = SLICE_100; } },
+            (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 12; p.Slice = SLICE_100;} });
+        
+        
+        public readonly static BinaryType<float, int> dark_full_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 20; p.Slice = SLICE_100; } },
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 20; p.Slice = SLICE_100; } });
-        public readonly static BinaryType<float, int> dark_full_g_ = new(
+
+        public readonly static BinaryType<float, int> dark_sharp_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 21; p.Slice = SLICE_100; } },
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 21; p.Slice = SLICE_100; } });
-        public readonly static BinaryType<float, int> blank_full_g_ = new(
+
+        public readonly static BinaryType<float, int> dark_round_g_ = new(
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(value), 1f)); p.TextureID = 22; p.Slice = SLICE_100; } },
             (value, e) => { if (e is UIPanel p) { p.SetColor(new(new(((float)value) / 100f), 1f)); p.TextureID = 22; p.Slice = SLICE_100; } });
+
+
 
         public readonly static ValueStyle slice_null = new(e => { if (e is UIPanel p) { p.Slice = (-1, -1); } });
         public readonly static ValueStyle slice_75 = new(e => { if (e is UIPanel p) { p.Slice = SLICE_75; } });
