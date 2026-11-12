@@ -16,8 +16,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 {
     public static volatile uint TotalVertexCount = 0;
 
-    public static int GenerationThreads = 5;
-    public static int RenderingThreads = 3;
+    public static int GenerationThreads { get; private set; } = 5;
+    public static int RenderingThreads { get; private set; } = 3;
 
     public static long[] GenerationThreadTimes = [];
     public static long[] RenderingThreadTimes = [];

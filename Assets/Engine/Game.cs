@@ -31,229 +31,103 @@ public class Game : GameWindow
     public static PString CustomPath => FileManager.CustomPath;
     public static PString CustomTempPath => FileManager.CustomTempPath;
 
-    double accumulator = 0.0;
-
-    public static SharedAtomicInt FrameIndex;
-
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
         UIController.InputField((Data.Key)key);
     }
 
-    public override void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
-    {
-        
-    }
-    
-    public override void OnKeyChar(IKeyboard keyboard, char c)
-    {
-        
-    }
-    
-    public override void OnMouseMove(IMouse mouse, Vector2 position)
-    {
-        
-    }
-    
-    public override void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
-    {
-        
-    }
-    
-    public override void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button)
-    {
-        
-    }
-    
-    public override void OnScroll(IMouse mouse, ScrollWheel scroll)
-    {
-        
-    }
-
     public override void OnLoad()
     {
-        FrameIndex = new SharedAtomicInt("engine_frame");
-
-        var initAttributes = AttributeManager.GetOrderedAttribute<InternalSystemInitAttribute, int>(a => (int)a.Attribute.Priority);
-        AttributeManager.InvokeAttributeMethod(initAttributes, "Init", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-        
         ItemDataManager.Init();
 
         Voxel.VoxelChunkGenerator.InitCache();
 
-        Type[] subClasses;
-        /*
-        var subClasses = ASettings.GetSubclasses();
-        Console.WriteLine("There are " + subClasses.Length + " settings");
-        for (int i = 0; i < subClasses.Length; i++)
+        Scene.OnLoaded += scene =>
         {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " settings");
-            var instance = Activator.CreateInstance(subClass);
-            if (instance != null)
-                SettingsManager.Register((ASettings)instance);
-        }
-        SettingsManager.InitializeUI();
-        */
-
-        subClasses = Scene.GetSubclasses();
-                    
-        Console.WriteLine("There are " + subClasses.Length + " scenes");
-        for (int i = 0; i < subClasses.Length; i++)
-        {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " scene");
-            Activator.CreateInstance(subClass);
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Preload();
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Load();
-            scene.InitScripts();
-        }
-        Scene.CurrentlyLoadingScene = null;
-        // Load mods
+            var json = Editor.EditorHelper.GetSceneJson();
+            Console.WriteLine("Getting scene json: " + json);
+            Send(CommandHelper.Create(CommandType.SceneHierarchy, json));
+            Console.WriteLine("sent");
+        };
         
-
         Scene.LoadScene("NodeTest");
+
+        Engine.CommandHelper.Add(CommandType.KeyDown, msg => 
+        {
+            int key = msg.GetInt(0);
+            Input.OnKeyDown((Data.Key)key);
+        });
+
+        Engine.CommandHelper.Add(CommandType.KeyUp, msg => 
+        {
+            int key = msg.GetInt(0);
+            Input.OnKeyUp((Data.Key)key);
+        });
+
+        Engine.CommandHelper.Add(CommandType.MouseDown, msg => 
+        {
+            int key = msg.GetInt(0);
+            Input.OnMouseDown((Data.MouseButton)key);
+        });
+
+        Engine.CommandHelper.Add(CommandType.MouseUp, msg => 
+        {
+            int key = msg.GetInt(0);
+            Input.OnMouseUp((Data.MouseButton)key);
+        });
+
+        Engine.CommandHelper.Add(CommandType.MouseMove, msg => 
+        {
+            int x = msg.GetInt(0);
+            int y = msg.GetInt(1);
+            Input.OnMouseMove((x, y));
+        });
+
+        Engine.CommandHelper.Add(CommandType.MouseWheel, msg => 
+        {
+            int x = msg.GetInt(0);
+            int y = msg.GetInt(1);
+            Input.OnMouseWheel((x, y));
+        });
+
+        Engine.CommandHelper.Add(CommandType.Resize, msg => 
+        {
+            int width = msg.GetInt(0);
+            int height = msg.GetInt(1);
+
+            Engine.OnResize(new(width, height));
+        });
+
+        Engine.CommandHelper.Add(CommandType.NodeComponents, msg => 
+        {
+            var json = Editor.EditorHelper.GetNodeComponentsJson(msg.Content);
+            Console.WriteLine("Getting scene json: " + json);
+            Send(CommandHelper.Create(CommandType.NodeComponents, json));
+        });
     }
 
     public override void OnRenderLoad()
     {
         ItemDataManager.GenerateIcons();
-        UIData.Init();
+        UIData.ItemTexture = ItemDataManager.Image;
     }
-
-    public override void OnResize(int width, int height)
-    {
-        Width = width;
-        Height = height;
-
-        Scene.CurrentScene?.Resize();
-    }
-
-    private static readonly System.Diagnostics.Stopwatch debugTimer = new();
-    private static long frameStartTicks; // marks the beginning of OnUpdate for this frame
 
     public override void OnUpdate(double delta)
     {
-        HandleMessages();
 
-        Scene.LoadSceneFinal();
-
-        // -- Physics update --
-        accumulator += delta;
-        while (accumulator >= Data.GameTime.FixedDeltaTime)
-        {
-            Data.GameTime.FixedUpdate(Data.GameTime.FixedDeltaTime);
-            Scene.CurrentScene?.FixedUpdate();
-            accumulator -= Data.GameTime.FixedDeltaTime;
-        }
-        Data.GameTime.PhysicsInterpolationT = accumulator / Data.GameTime.FixedDeltaTime;
-        Data.GameTime.Update((float)delta);
-
-        Scene.CurrentScene?.Update();
-        Scene.CurrentScene?.LateUpdate();
-
-        TaskPool.Update();
-    }
-
-    public void HandleMessages()
-    {
-        if (Engine.pipeEndpoint == null)
-            return;
-
-        var messages = Engine.pipeEndpoint.Read();
-        for (int i = 0; i < messages.Count; i++)
-        {
-            HandleMessage(messages[i]);
-        }
-    }
-
-    public void HandleMessage(string message)
-    {
-        CommandType type = (CommandType)message.GetInt(0);
-
-        //Console.WriteLine("HANDLING MESSAGE OF TYPE: " + type);
-
-        // key input
-        if (type == CommandType.KeyDown)
-        {
-            int key = message.GetInt(1);
-            Input.OnKeyDown((Data.Key)key);
-        }
-        else if (type == CommandType.KeyUp)
-        {
-            int key = message.GetInt(1);
-            Input.OnKeyUp((Data.Key)key);
-        }
-        else if (type == CommandType.MouseDown)
-        {
-            int key = message.GetInt(1);
-            Input.OnMouseDown((Data.MouseButton)key);
-        }
-        else if (type == CommandType.MouseUp)
-        {
-            int key = message.GetInt(1);
-            Input.OnMouseUp((Data.MouseButton)key);
-        }
-        else if (type == CommandType.MouseMove)
-        {
-            int x = message.GetInt(1);
-            int y = message.GetInt(2);
-            Input.OnMouseMove((x, y));
-        }
-        else if (type == CommandType.MouseWheel)
-        {
-            int x = message.GetInt(1);
-            int y = message.GetInt(2);
-            Input.OnMouseWheel((x, y));
-        }
-        else if (type == CommandType.Resize)
-        {
-            int width = message.GetInt(1);
-            int height = message.GetInt(2);
-
-            Engine.OnResize(new(width, height));
-        }
-    }
-
-    public override void OnCompute()
-    {
-        Scene.CurrentScene?.Compute();
     }
 
     public override void OnRender()
     {
-        FrameIndex.Value = (int)GFX.CurrentFrame;
-
-        Data.GameTime.Render();
-
-        UIController.CumulativeDepth = 0f;
-        
-        Scene.CurrentScene?.Render();
-
-        UIController.GlobalRender();
+        FrameIndex?.Increment();
     }
 
     public override void OnUnload()
     {
-        Engine.pipeEndpoint.Dispose();
-        
-        Scene.CurrentScene?.Exit();
-        Scene.DisposeAll();
+        Engine.pipeEndpoint?.Dispose();
+        FrameIndex?.Dispose();
 
         PBGConsole.Save();
-
-        var cleanupAttributes = AttributeManager.GetAttribute<InternalSystemCleanupAttribute>();
-        AttributeManager.InvokeAttributeMethod(cleanupAttributes, "Cleanup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
     }
 
     public static void SetCursorState(PBG.Data.CursorMode cursorMode)
