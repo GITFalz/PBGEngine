@@ -17,195 +17,74 @@ namespace PBG;
 
 public class Game : GameWindow
 {
-    public static PString MainPath => FileManager.MainPath;
-    public static PString AssetsPath => FileManager.AssetsPath;
-    public static PString ShaderPath => FileManager.ShaderPath;
-    public static PString FixedShaderPath => FileManager.FixedShaderPath;
-    public static PString TexturePath => FileManager.TexturePath;
-    public static PString SettingsPath => FileManager.SettingsPath;
-
-    public static PString DataPath => FileManager.DataPath;
-    public static PString ModelPath => FileManager.ModelPath;
-    public static PString UndoModelPath => FileManager.UndoModelPath;
-    public static PString EditorRegistryPath => FileManager.EditorRegistryPath;
-    public static PString EditorPalettePath => FileManager.EditorPalettePath;
-
-    public static PString CustomPath => FileManager.CustomPath;
-    public static PString CustomTempPath => FileManager.CustomTempPath;
-
-    double accumulator = 0.0;
-
-    public static PipeServer server;
-    public static SharedAtomicInt FrameIndex;
-
+    public static SharedAtomicFloat? EngineLoadingProgress;
 
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
         UIController.InputField((Data.Key)key);
-        server.Send(Mathf.IntsToString((int)CommandType.KeyDown, (int)key));
+        TrySend(Mathf.IntsToString((int)CommandType.KeyDown, (int)key));
     }
 
     public override void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
-        server.Send(Mathf.IntsToString((int)CommandType.KeyUp, (int)key));
-    }
-    
-    public override void OnKeyChar(IKeyboard keyboard, char c)
-    {
-        
+        TrySend(Mathf.IntsToString((int)CommandType.KeyUp, (int)key));
     }
     
     public override void OnMouseMove(IMouse mouse, Vector2 position)
     {
-        server.Send(Mathf.IntsToString((int)CommandType.MouseMove, (int)position.X - 240, (int)position.Y - 50));
+        TrySend(Mathf.IntsToString((int)CommandType.MouseMove, (int)position.X - EditorMenu.GameOffsetX, (int)position.Y - EditorMenu.GameOffsetY));
     }
     
     public override void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        server.Send(Mathf.IntsToString((int)CommandType.MouseDown, (int)button));
+        TrySend(Mathf.IntsToString((int)CommandType.MouseDown, (int)button));
     }
     
     public override void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
-        server.Send(Mathf.IntsToString((int)CommandType.MouseUp, (int)button));
+        TrySend(Mathf.IntsToString((int)CommandType.MouseUp, (int)button));
     }
     
     public override void OnScroll(IMouse mouse, ScrollWheel scroll)
     {
-        server.Send(Mathf.IntsToString((int)CommandType.MouseWheel, (int)scroll.X, (int)scroll.Y));
+        TrySend(Mathf.IntsToString((int)CommandType.MouseWheel, (int)scroll.X, (int)scroll.Y));
     }
     
 
     public override void OnLoad()
     {
         FrameIndex = new SharedAtomicInt("engine_frame", true);
-
-        var initAttributes = AttributeManager.GetOrderedAttribute<InternalSystemInitAttribute, int>(a => (int)a.Attribute.Priority);
-        AttributeManager.InvokeAttributeMethod(initAttributes, "Init", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-    
-        Type[] subClasses;
-
-        subClasses = Scene.GetSubclasses();
-                    
-        Console.WriteLine("There are " + subClasses.Length + " scenes");
-        for (int i = 0; i < subClasses.Length; i++)
-        {
-            var subClass = subClasses[i];
-            Console.WriteLine("Instanced " + subClass.GetType().Name + " scene");
-            Activator.CreateInstance(subClass);
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Preload();
-        }
-
-        foreach (var (name, scene) in Scene.Scenes)
-        {
-            Scene.CurrentlyLoadingScene = scene;
-            scene.Load();
-            scene.InitScripts();
-        }
-        Scene.CurrentlyLoadingScene = null;
-        // Load mods
-        
+        EngineLoadingProgress = new SharedAtomicFloat("engine_loading", true);
 
         Scene.LoadScene("Editor");
 
         ProcessManager.Run();
-
-        CreateServer();
-    }
-
-    private async void SendCommand(string command)
-    {
-        if (server.IsConnected)
-            await server.SendAsync(command);
-    }
-
-    private async void CreateServer()    {
-        server = new("pbg_commands");
-    }
-
-    public override void OnRenderLoad()
-    {
-        UIData.Init();
-    }
-
-    public override void OnResize(int width, int height)
-    {
-        Width = width;
-        Height = height;
-
-        Scene.CurrentScene?.Resize();
-
-        if (server != null && server.IsConnected)
-            server.Send(Mathf.IntsToString((int)CommandType.Resize, EditorMenu.GameWidth, EditorMenu.GameHeight));
-    }
-
-    private static readonly System.Diagnostics.Stopwatch debugTimer = new();
-    private static long frameStartTicks; // marks the beginning of OnUpdate for this frame
-
-    public override void OnUpdate(double delta)
-    {
-        Scene.LoadSceneFinal();
-
-        // -- Physics update --
-        accumulator += delta;
-        while (accumulator >= Data.GameTime.FixedDeltaTime)
+        
+        Engine.CommandHelper.Add(CommandType.SetCursor, msg =>
         {
-            Data.GameTime.FixedUpdate(Data.GameTime.FixedDeltaTime);
-            Scene.CurrentScene?.FixedUpdate();
-            accumulator -= Data.GameTime.FixedDeltaTime;
-        }
-        Data.GameTime.PhysicsInterpolationT = accumulator / Data.GameTime.FixedDeltaTime;
-        Data.GameTime.Update((float)delta);
-
-        Scene.CurrentScene?.Update();
-        Scene.CurrentScene?.LateUpdate();
-
-        TaskPool.Update();
-
-        //if (GameTime.FpsUpdated)
-            //Console.WriteLine(GameTime.Fps);
-
-        HandleMessages();
-    }
-
-    public void HandleMessages()
-    {
-        var messages = server.Read();
-        for (int i = 0; i < messages.Count; i++)
-        {
-            HandleMessage(messages[i]);
-        }
-    }
-
-    public void HandleMessage(string message)
-    {
-        CommandType type = (CommandType)message.GetInt(0);
-
-        Console.WriteLine("HANDLING MESSAGE OF TYPE: " + type);
-
-        if (type == CommandType.SetCursor)
-        {
-            int key = message.GetInt(1);
+            int key = msg.GetInt(0);
             CursorMode = (Data.CursorMode)key;
-        }
-        else if (type == CommandType.Resize)
+        });
+
+        Engine.CommandHelper.Add(CommandType.Resize, msg =>
         {
-            int width = message.GetInt(1);
-            int height = message.GetInt(2);
+            int width = msg.GetInt(0);
+            int height = msg.GetInt(1);
 
             using var fdReceiver = new FdReceiver("/tmp/vk_share.sock");
             var fds = fdReceiver.Receive();
+            int imageCount = GFX.MAX_FRAMES_IN_FLIGHT;
+            if (fds.Count != imageCount && fds.Count != imageCount * 3)
+                throw new InvalidDataException($"Expected {imageCount} image FDs and optionally {imageCount * 2} semaphore FDs, got {fds.Count}.");
+
+            if (fds.Count == imageCount * 3)
+                GFX.ImportSharedImageSemaphores(fds.Skip(imageCount).ToArray(), imageCount);
 
             Console.WriteLine("resizing: " + width + " " + height);
 
-            Texture[] textures = new Texture[GFX.MAX_FRAMES_IN_FLIGHT];
+            Texture[] textures = new Texture[imageCount];
 
-            for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
+            for (int i = 0; i < imageCount; i++)
             {
                 int fd = fds[i];
 
@@ -217,53 +96,31 @@ public class Game : GameWindow
             }
 
             EditorMenu.Instance.SetEditorTextures(width, height, textures);
-        }
+        });
+
+        Engine.CommandHelper.Add(CommandType.Loaded, msg =>
+        {
+            Send(CommandHelper.Create(CommandType.Resize, EditorMenu.GameWidth, EditorMenu.GameHeight));
+        });
+
+        Engine.CommandHelper.Add(CommandType.SceneHierarchy, msg =>
+        {
+            EditorMenu.Instance.GenerateHierarchy(msg.Content);
+        });
     }
 
-    public override void OnCompute()
+    public override void OnResize(int width, int height)
     {
-        Scene.CurrentScene?.Compute();
+        TrySend(Mathf.IntsToString((int)CommandType.Resize, EditorMenu.GameWidth, EditorMenu.GameHeight));
     }
 
-    public override void OnRender()
+    public override void OnUpdate(double delta)
     {
-        Data.GameTime.Render();
-
-        UIController.CumulativeDepth = 0f;
         
-        Scene.CurrentScene?.Render();
-
-        UIController.GlobalRender();
     }
 
     public override void OnUnload()
     {
-        Scene.CurrentScene?.Exit();
-        Scene.DisposeAll();
-
-        var cleanupAttributes = AttributeManager.GetAttribute<InternalSystemCleanupAttribute>();
-        AttributeManager.InvokeAttributeMethod(cleanupAttributes, "Cleanup", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-    
         ProcessManager.Close();
-    }
-
-    public static void SetCursorState(PBG.Data.CursorMode cursorMode)
-    {
-        CursorMode = cursorMode;
-    }
-
-    public static PBG.Data.CursorMode GetCursorState()
-    {
-        return CursorMode;
-    }
-
-    public static bool IsCursorState(PBG.Data.CursorMode cursorMode)
-    {
-        return CursorMode == cursorMode;
-    }
-
-    internal static void SetCursorState(object disabled)
-    {
-        throw new NotImplementedException();
     }
 }

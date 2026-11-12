@@ -7,19 +7,20 @@ namespace PBG.Compilation;
 public static class ProcessManager
 {
     public static Process? _gameProcess;
+    public static bool PrintEngineConsole = true;
 
     private static readonly object _processLock = new();
+
     private static int _operationInProgress;
 
     private static PString _projectFolder = "/home".P() / "bjorn" / "Documents" / "Projects";
     private static PString _projectPath = _projectFolder / "PBGEngine" / "PBGEngine.csproj";
     private static PString _projectDir = _projectFolder / "PBGEngine";
     private static PString _projectExePath = _projectFolder / "PBGEngine" / "bin" / "Debug" / "net9.0" / "PBGEngine";
-    private static PString _lastBuildStampFile = _projectFolder / "PBGEngineEditor" / "lastBuildStampFile.txt";
 
     public static void Build()
     {
-        RunInBackground("Build", () => BuildProject(_projectPath, _projectDir, _lastBuildStampFile));
+        RunInBackground("Build", () => BuildProject(_projectPath, _projectDir));
     }
 
     public static void Run()
@@ -74,8 +75,7 @@ public static class ProcessManager
             }
         }
 
-        if (NeedsCompile(_projectDir, _lastBuildStampFile) &&
-            !BuildProject(_projectPath, _projectDir, _lastBuildStampFile))
+        if (!BuildProject(_projectPath, _projectDir))
             return;
 
         RunProject(_projectPath, _projectDir, _projectExePath);
@@ -106,19 +106,7 @@ public static class ProcessManager
         });
     }
 
-    static bool NeedsCompile(string projectDir, string lastBuildStampFile)
-    {
-        var sources = Directory.GetFiles(projectDir, "*.cs", SearchOption.AllDirectories);
-        DateTime newestSource = sources.Max(f => File.GetLastWriteTimeUtc(f));
-
-        if (!File.Exists(lastBuildStampFile))
-            return true;
-
-        DateTime lastBuild = File.GetLastWriteTimeUtc(lastBuildStampFile);
-        return newestSource > lastBuild;
-    }
-
-    public static bool BuildProject(string projectPath, string projectDir, string lastBuildStampFile)
+    public static bool BuildProject(string projectPath, string projectDir)
     {
         var psi = new ProcessStartInfo
         {
@@ -151,7 +139,6 @@ public static class ProcessManager
             return false;
         }
 
-        File.WriteAllText(lastBuildStampFile, DateTime.UtcNow.ToString("O"));
         return true;
     }
 
@@ -186,8 +173,8 @@ public static class ProcessManager
             if (process == null)
                 return;
 
-            process.OutputDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine("[ENGINE] : " + e.Data); };
-            process.ErrorDataReceived += (s, e) => { if (e.Data != null) Console.WriteLine("[ENGINE] : " + e.Data); };
+            process.OutputDataReceived += (s, e) => { if (e.Data != null && PrintEngineConsole) Console.WriteLine("[ENGINE] : " + e.Data); };
+            process.ErrorDataReceived += (s, e) => { if (e.Data != null && PrintEngineConsole) Console.WriteLine("[ENGINE] : " + e.Data); };
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 

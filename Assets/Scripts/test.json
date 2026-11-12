@@ -1,0 +1,22 @@
+{
+    "nodes": [
+        { 
+            "name": "name",
+            "nodes": [
+                { 
+                    "name": "name",
+                    "nodes": []
+                }
+            ]
+        },
+        { 
+            "name": "name",
+            "nodes": [
+                { 
+                    "name": "name",
+                    "nodes": []
+                }
+            ]
+        }
+    ]
+}
