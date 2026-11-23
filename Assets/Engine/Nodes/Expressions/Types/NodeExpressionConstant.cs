@@ -43,7 +43,7 @@ public class NodeExpressionConstant(object value) : NodeExpression(value.GetType
     {
         if (IsType([typeof(float), typeof(int), typeof(Vector2), typeof(Vector2i), typeof(Vector3), typeof(Vector3i), typeof(Vector4), typeof(Vector4i)]))
         {
-            context.Write(ObjectToGlslString(value));
+            context.Write(context.Formatter.ObjectToString(value));
         }
         else
         {

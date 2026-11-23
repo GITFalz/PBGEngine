@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Parse;
 
 public class UvMesh
 {

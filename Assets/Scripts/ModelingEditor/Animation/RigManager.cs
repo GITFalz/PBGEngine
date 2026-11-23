@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using PBG;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 
 public static class RigManager
 {
@@ -98,9 +99,9 @@ public static class RigManager
             string parentName = bone is ChildBone child ? child.Parent.Name : name;
             lines.Add($"name {name}");
             lines.Add($"parent {parentName}");
-            lines.Add($"p {Float.Str(bone.Position.X)}, {Float.Str(bone.Position.Y)}, {Float.Str(bone.Position.Z)}");
-            lines.Add($"r {Float.Str(bone.Rotation.X)}, {Float.Str(bone.Rotation.Y)}, {Float.Str(bone.Rotation.Z)}, {Float.Str(bone.Rotation.W)}");
-            lines.Add($"s {Float.Str(bone.Scale.X)}, {Float.Str(bone.Scale.Y)}, {Float.Str(bone.Scale.Z)}");
+            lines.Add($"p {Parse.Float.Str(bone.Position.X)}, {Parse.Float.Str(bone.Position.Y)}, {Parse.Float.Str(bone.Position.Z)}");
+            lines.Add($"r {Parse.Float.Str(bone.Rotation.X)}, {Parse.Float.Str(bone.Rotation.Y)}, {Parse.Float.Str(bone.Rotation.Z)}, {Parse.Float.Str(bone.Rotation.W)}");
+            lines.Add($"s {Parse.Float.Str(bone.Scale.X)}, {Parse.Float.Str(bone.Scale.Y)}, {Parse.Float.Str(bone.Scale.Z)}");
         }
 
         File.WriteAllLines(path, lines);
@@ -160,7 +161,7 @@ public static class RigManager
             return false;
         }
 
-        int count = Int.Parse(lines[0]);
+        int count = Parse.Int.Parse(lines[0]);
         if (count == 0)
         {
             Console.WriteLine($"Rig file has no bones at path: '{path}'");
@@ -201,9 +202,9 @@ public static class RigManager
                 return false;
             }
             position = new Vector3(
-                Float.Parse(values[1].Trim(',')),
-                Float.Parse(values[2].Trim(',')),
-                Float.Parse(values[3].Trim(','))
+                Parse.Float.Parse(values[1].Trim(',')),
+                Parse.Float.Parse(values[2].Trim(',')),
+                Parse.Float.Parse(values[3].Trim(','))
             );
 
             values = lines[i + 3].Split(' ');
@@ -213,10 +214,10 @@ public static class RigManager
                 return false;
             }
             rotation = new Quaternion(
-                Float.Parse(values[1].Trim(',')),
-                Float.Parse(values[2].Trim(',')),
-                Float.Parse(values[3].Trim(',')),
-                Float.Parse(values[4].Trim(','))
+                Parse.Float.Parse(values[1].Trim(',')),
+                Parse.Float.Parse(values[2].Trim(',')),
+                Parse.Float.Parse(values[3].Trim(',')),
+                Parse.Float.Parse(values[4].Trim(','))
             );
 
             values = lines[i + 4].Split(' ');
@@ -229,9 +230,9 @@ public static class RigManager
             try
             {
                 scale = new Vector3(
-                    Float.Parse(values[1].Trim(',')),
-                    Float.Parse(values[2].Trim(',')),
-                    Float.Parse(values[3].Trim(','))
+                    Parse.Float.Parse(values[1].Trim(',')),
+                    Parse.Float.Parse(values[2].Trim(',')),
+                    Parse.Float.Parse(values[3].Trim(','))
                 );
             }
             catch (Exception)

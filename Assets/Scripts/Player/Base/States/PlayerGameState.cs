@@ -48,7 +48,6 @@ public class PlayerGameState : PlayerBaseState
     {
         Console.WriteLine("Enter Player Game State");
         CurrentState.Start();
-        Player.PhysicsBody.Gravity = 90;
         _blockPlaceTimer = 0;
     }
 

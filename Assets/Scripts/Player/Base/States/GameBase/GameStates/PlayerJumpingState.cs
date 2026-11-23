@@ -10,7 +10,6 @@ public class PlayerJumpingState(PlayerGameState gameState, PlayerController play
     public override void Start()
     {
         Player.PhysicsBody.AddForce((0, 850, 0));
-        Player.PhysicsBody.Gravity = 40;
         Player.PhysicsBody.DecelerationFactor = 2.5f;
         _timer = 0.1f;
     }
@@ -55,7 +54,6 @@ public class PlayerJumpingState(PlayerGameState gameState, PlayerController play
     
     public override void Exit()
     {
-        Player.PhysicsBody.Gravity = 90;
         Player.PhysicsBody.DecelerationFactor = 1;
     }
 }

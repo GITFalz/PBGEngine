@@ -49,7 +49,7 @@ public unsafe struct MeshMapping
         *(CurrentAllocation.Memory + CurrentAllocation.VertexCount) = faceData;
         CurrentAllocation.VertexCount++;
 
-        VoxelRenderer.TotalVertexCount++;
+        //VoxelRenderer.TotalVertexCount++;
     }
 
     public void Upload()

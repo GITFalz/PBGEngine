@@ -417,7 +417,7 @@ public class GeneralModelingEditor : ScriptingNode
     public void SnappingField()
     {
         //string text = SnappingText.Text;
-        //SnappingFactor = Mathf.Clamp(0, 100, Float.Parse(text, 0.0f));
+        //SnappingFactor = Mathf.Clamp(0, 100, Parse.Float.Parse(text, 0.0f));
         //Snapping = SnappingFactor != 0.0f;
     }
 

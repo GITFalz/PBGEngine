@@ -2,8 +2,10 @@ using PBG;
 using PBG.Graphics;
 using PBG.MathLibrary;
 using PBG.NewVoxel;
+using PBG.UI;
 using Silk.NET.Vulkan;
 
+[InternalSystemInit(InitPriority.Rendering)]
 public static class ItemDataManager
 {
     public static Dictionary<string, ItemData> AllItems = [];
@@ -41,23 +43,7 @@ public static class ItemDataManager
 
     public static void Init()
     {
-        if (_started)
-            return;
-
         FBO = new FBO(128, 128);
-    }
-
-    static ItemDataManager()
-    {
-        
-    }
-
-    public static void GenerateIcons()
-    {
-        if (_started)
-            return;
-    
-        _started = true;
 
         uint imageCount = 0;
         foreach (var (_, item) in AllItems)
@@ -66,15 +52,17 @@ public static class ItemDataManager
                 imageCount++;
         }
 
-        /*
-        foreach (var (_, item) in AllItems)
-        {
-            if (item is WeaponItemData)
-                imageCount++;
-        }
-        */
-
         Image = new(imageCount, new() { Width = 128, Height = 128, UseMipMaps = false });
+
+        UIData.ItemTexture = ItemDataManager.Image;
+    }
+
+    public static void GenerateIcons()
+    {
+        if (_started)
+            return;
+    
+        _started = true;
 
         _textureArrayWrite ??= new ComputeShader(new() { ComputeShaderPath = PBG.Files.FileManager.ShaderPath / "computeShaders/textureArrayWrite.comp"});
         _textureArrayWrite.Compile();

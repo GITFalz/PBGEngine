@@ -134,7 +134,7 @@ public static class VoronoiNoiseScalar
                 g = gs;
             }
         }
-        return d2 - d;
+        return MathF.Sqrt(d2) - MathF.Sqrt(d);
     }
 
     // Color voronoi
@@ -179,7 +179,7 @@ public static class VoronoiNoiseScalar
                 g = gs;
             }
         }
-        return d;
+        return MathF.Sqrt(d);
     }
 
     // Checkerboard voronoi
@@ -246,24 +246,24 @@ public static class VoronoiNoiseScalar
 
     public static Vector2 VoronoiPoint(Vector2 p)
     {
-        Vector2i[] ps = GetP(Mathf.FloorToInt(p));
-        Vector2[] gs = GetG(ps);
-
+        var fP = Mathf.FloorToInt(p);
         p = Mathf.Fraction(p);
 
-        int bestIndex = 0;
-        float minDist = Vector2.DistanceSquared(p, gs[0]);
+        Vector2 bestG = Hash2(fP);
+        float minDist = Vector2.DistanceSquared(p, bestG);
 
-        for (int i = 1; i < 9; i++)
+        for (int i = 0; i < 8; i++)
         {
-            float d = Vector2.DistanceSquared(p, gs[i]);
+            var o = offsets[i];
+            var gs = Hash2(fP + o) + o;
+            float d = Vector2.DistanceSquared(p, gs);
             if (d < minDist)
             {
                 minDist = d;
-                bestIndex = i;
+                bestG = gs;
             }
         }
 
-        return ps[bestIndex] + gs[bestIndex];
+        return fP + bestG;
     }
 }

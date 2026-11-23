@@ -38,16 +38,10 @@ public class Game : GameWindow
 
     public override void OnLoad()
     {
-        ItemDataManager.Init();
-
-        Voxel.VoxelChunkGenerator.InitCache();
-
         Scene.OnLoaded += scene =>
         {
             var json = Editor.EditorHelper.GetSceneJson();
-            Console.WriteLine("Getting scene json: " + json);
             Send(CommandHelper.Create(CommandType.SceneHierarchy, json));
-            Console.WriteLine("sent");
         };
         
         Scene.LoadScene("NodeTest");
@@ -101,15 +95,31 @@ public class Game : GameWindow
         Engine.CommandHelper.Add(CommandType.NodeComponents, msg => 
         {
             var json = Editor.EditorHelper.GetNodeComponentsJson(msg.Content);
-            Console.WriteLine("Getting scene json: " + json);
             Send(CommandHelper.Create(CommandType.NodeComponents, json));
         });
+
+        Engine.CommandHelper.Add(CommandType.SearchClass, msg => 
+        {
+            var json = Editor.EditorHelper.SearchClass(msg.Content);
+            Send(CommandHelper.Create(CommandType.SearchClass, json));
+        });
+
+        Engine.CommandHelper.Add(CommandType.ClassInfo, msg => 
+        {
+            var json = Editor.EditorHelper.ClassInfo(msg.Content);
+            Send(CommandHelper.Create(CommandType.ClassInfo, json));
+        });
+
+        Engine.CommandHelper.Add(CommandType.SetField, msg => 
+        {
+            Editor.EditorHelper.SetValue(msg.Content);
+        });
+
     }
 
     public override void OnRenderLoad()
     {
         ItemDataManager.GenerateIcons();
-        UIData.ItemTexture = ItemDataManager.Image;
     }
 
     public override void OnUpdate(double delta)
@@ -128,25 +138,5 @@ public class Game : GameWindow
         FrameIndex?.Dispose();
 
         PBGConsole.Save();
-    }
-
-    public static void SetCursorState(PBG.Data.CursorMode cursorMode)
-    {
-        CursorMode = cursorMode;
-    }
-
-    public static PBG.Data.CursorMode GetCursorState()
-    {
-        return CursorMode;
-    }
-
-    public static bool IsCursorState(PBG.Data.CursorMode cursorMode)
-    {
-        return CursorMode == cursorMode;
-    }
-
-    internal static void SetCursorState(object disabled)
-    {
-        throw new NotImplementedException();
     }
 }

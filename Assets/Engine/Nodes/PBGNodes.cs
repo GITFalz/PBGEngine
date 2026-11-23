@@ -29,8 +29,8 @@ public class PBGNodes : ScriptingNode
 
     public string GetGLSLCode()
     {
-        NodeCompilation nodeCompilation = new(_nodeModule);
-        nodeCompilation.Sort();
+        NodeCompiler nodeCompilation = new(_nodeModule);
+        nodeCompilation.Compile();
         nodeCompilation.Compile();
         return nodeCompilation.GetCode();
     }

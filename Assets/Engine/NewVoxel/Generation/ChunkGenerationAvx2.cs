@@ -82,7 +82,7 @@ public unsafe static class ChunkGenerationAvx2
 
     static V256f Fbm2DSimd(V256f x, V256f y, int octaves)
     {
-        V256f f = V256f.Zero;
+        V256f f = V256F.Zero;
         V256f w = V256F.Half;
 
         for (int i = 0; i < octaves; i++)
@@ -557,7 +557,7 @@ public unsafe static class ChunkGenerationAvx2
                 displacementy *= V256F.New(0.25f);
 
                 //var terrainHeight = MountainNoise(worldX, worldZ);
-                var terrainNoise = VoronoiNoiseAvx2.DistanceVoronoi(wx * V256F.New(0.02f) + displacementx, wz * V256F.New(0.02f) + displacementy);
+                var terrainNoise = VoronoiNoiseAvx2.DistanceVoronoi(new(wx * V256F.New(0.02f) + displacementx, wz * V256F.New(0.02f) + displacementy));
                 //terrainNoise *= V256F.One - VoronoiNoiseAvx2.EdgeVoronoi(worldX * V256F.New(0.02f), worldZ * V256F.New(0.02f));
                 terrainNoise *= V256F.New(0.25f);
 

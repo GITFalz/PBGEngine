@@ -5,22 +5,131 @@ using PBG.MathLibrary;
 
 namespace PBG.Nodes;
 
-public class NodeCompilation
+public class NodeCompiler
 {
     private NodeModule _nodeModule;
-    private NodeExpressionCompileContext _nodeCompileContext = new();
+    private NodeExpressionCompileContext _nodeCompileContext = new(NodeExpressionCompileType.Avx2);
     private NodeExpressionBlock _blockExpression = NodeExpression.Block();
 
-    public NodeCompilation(NodeModule module)
+    private List<NodeBase> outputNodes = [];
+    private List<NodeBase> dependencyNodes = [];
+
+    private Dictionary<NodeBase, int> queueCountMap = [];   
+    private Queue<NodeBase> waiting = [];
+
+    private LinkedList<NodeBase> linkedSorted = [];
+    private Dictionary<NodeBase, LinkedListNode<NodeBase>> sortedMap = [];
+    private Dictionary<NodeBase, int> sortedIndices = [];
+
+    private Dictionary<NodePointer<TNodeInput>, NodePointer<TNodeOutput>> inputToOutputConnections = [];
+    private HashSet<NodePointer<TNodeOutput>> connectedOutputs = [];
+
+    private List<NodeBase> sorted = [];
+
+    public NodeCompiler(NodeModule module)
     {
         _nodeModule = module;
     }
 
-    public void Sort()
+
+    private void Enqueue(NodeBase node)
     {
-        #region ORGANIZING
-        List<NodeBase> outputNodes = [];
-        List<NodeBase> dependencyNodes = [];
+        queueCountMap.TryAdd(node, 0);
+        queueCountMap[node]++;
+        waiting.Enqueue(node);
+    }
+
+    private bool TryDequeue([NotNullWhen(true)] out NodeBase? node)
+    {
+        node = null;
+        var n = waiting.Dequeue();
+        queueCountMap[n]--;
+        if (queueCountMap[n] > 0)
+            return false;
+
+        node = n;
+        return true;
+    }
+
+    // Allows for fast queue like sorting
+    private void MoveSorted(NodeBase node)
+    {
+        if (sortedMap.TryGetValue(node, out var existing))
+        {
+            linkedSorted.Remove(existing);
+            linkedSorted.AddLast(existing);
+        }
+        else
+        {
+            var newNode = linkedSorted.AddLast(node);
+            sortedMap[node] = newNode;
+        }
+    }
+
+    // if a node input is connected to an output, just send it back to the waiting queue
+    private void CheckInputPointerConnection(NodePointer<TNodeInput> inputPointer)
+    {
+        if (inputToOutputConnections.TryGetValue(inputPointer, out var outputPointer))
+        {
+            Enqueue(outputPointer.Node); Console.WriteLine("found connection: " + outputPointer);
+        }
+    }
+
+    // if a node input is connected to an output, check if the order is correct
+    private void CheckInputPointerOrder(NodePointer<TNodeInput> inputPointer, NodeBase parent, int depth)
+    {
+        if (inputToOutputConnections.TryGetValue(inputPointer, out var outputPointer))
+        {
+            // if the input is connected check if the output is outside the scope of the parent
+            if (outputPointer.Node.GetBlockDepth() >= depth)
+                return;
+
+            var parentIndex = sortedIndices[parent];
+            var outputIndex = sortedIndices[outputPointer.Node]; Console.WriteLine(outputPointer + " " + parentIndex + " " + outputIndex);
+            
+            if (outputIndex == -1 || parentIndex == -1)
+                return;
+
+            // if the connected output node is executed after the parent scope, it needs to be reevaluated so it executes before
+            if (outputIndex < parentIndex)
+            {
+                Enqueue(outputPointer.Node); Console.WriteLine("happens too early");
+            }
+
+            
+        }
+    }
+
+    private void SortNodes()
+    {
+        while (waiting.Count > 0)
+        {
+            if (!TryDequeue(out var current))
+                continue;
+
+            MoveSorted(current); Console.WriteLine(current.ID + " " + current.Name);
+
+            if (current.ParentBlockNode != null)
+            {
+                Enqueue(current.ParentBlockNode); Console.WriteLine("found parent: " + current.ParentBlockNode.ID + " " + current.ParentBlockNode.Name);
+            }
+
+            var inputPointer = TNodeInput.New(current, -1); // index is not used to index array, -1 represent the flow connection point
+            CheckInputPointerConnection(inputPointer);
+
+            foreach (var input in current.Inputs)
+            {
+                inputPointer = TNodeInput.New(current, input.Index);
+                CheckInputPointerConnection(inputPointer);    
+            }
+        }     
+    }
+
+
+    private void Organize()
+    {
+        outputNodes = [];
+        dependencyNodes = [];
 
         foreach(var node in _nodeModule.Nodes)
         {
@@ -35,8 +144,8 @@ public class NodeCompilation
         }
 
         // Create a connection map for both input => output
-        Dictionary<NodePointer<TNodeInput>, NodePointer<TNodeOutput>> inputToOutputConnections = [];
-        HashSet<NodePointer<TNodeOutput>> connectedOutputs = [];
+        inputToOutputConnections = [];
+        connectedOutputs = [];
 
         foreach (var connection in _nodeModule.Connections)
         {
@@ -46,117 +155,30 @@ public class NodeCompilation
             inputToOutputConnections.Add(inputPointer, outputPointer);
             connectedOutputs.Add(outputPointer);
         }
-        #endregion
+    }
 
-        #region SORTING
-        Dictionary<NodeBase, int> queueCountMap = [];
-        Queue<NodeBase> waiting = [];
+    
 
-        LinkedList<NodeBase> linkedSorted = [];
-        Dictionary<NodeBase, LinkedListNode<NodeBase>> sortedMap = [];
-        Dictionary<NodeBase, int> sortedIndices = [];
+    private void Sort()
+    {
+        queueCountMap = [];     
+        waiting = [];
+
+        linkedSorted = [];
+        sortedMap = [];
+        sortedIndices = [];
 
         Console.WriteLine("---- SORTING NODES ----");
 
         // enqueue output node before any other so they are sorted first
-        foreach (var node in outputNodes) { Enqueue(node); }
+        foreach (var node in outputNodes) 
+            Enqueue(node); 
 
-        foreach (var node in dependencyNodes) { Enqueue(node); }
+        foreach (var node in dependencyNodes) 
+            Enqueue(node); 
 
-        void Enqueue(NodeBase node)
-        {
-            queueCountMap.TryAdd(node, 0);
-            queueCountMap[node]++;
-            waiting.Enqueue(node);
-        }
-
-        bool TryDequeue([NotNullWhen(true)] out NodeBase? node)
-        {
-            node = null;
-            var n = waiting.Dequeue();
-            queueCountMap[n]--;
-            if (queueCountMap[n] > 0)
-                return false;
-
-            node = n;
-            return true;
-        }
-
-        // Allows for fast queue like sorting
-        void MoveSorted(NodeBase node)
-        {
-            if (sortedMap.TryGetValue(node, out var existing))
-            {
-                linkedSorted.Remove(existing);
-                linkedSorted.AddLast(existing);
-            }
-            else
-            {
-                var newNode = linkedSorted.AddLast(node);
-                sortedMap[node] = newNode;
-            }
-        }
-
-        // if a node input is connected to an output, just send it back to the waiting queue
-        void CheckInputPointerConnection(NodePointer<TNodeInput> inputPointer)
-        {
-            if (inputToOutputConnections.TryGetValue(inputPointer, out var outputPointer))
-            {
-                Enqueue(outputPointer.Node); Console.WriteLine("found connection: " + outputPointer);
-            }
-        }
-
-        // if a node input is connected to an output, check if the order is correct
-        void CheckInputPointerOrder(NodePointer<TNodeInput> inputPointer, NodeBase parent, int depth)
-        {
-            if (inputToOutputConnections.TryGetValue(inputPointer, out var outputPointer))
-            {
-                // if the input is connected check if the output is outside the scope of the parent
-                if (outputPointer.Node.GetBlockDepth() >= depth)
-                    return;
-
-                var parentIndex = sortedIndices[parent];
-                var outputIndex = sortedIndices[outputPointer.Node]; Console.WriteLine(outputPointer + " " + parentIndex + " " + outputIndex);
-                
-                if (outputIndex == -1 || parentIndex == -1)
-                    return;
-
-                // if the connected output node is executed after the parent scope, it needs to be reevaluated so it executes before
-                if (outputIndex < parentIndex)
-                {
-                    Enqueue(outputPointer.Node); Console.WriteLine("happens too early");
-                }
-
-                
-            }
-        }
-
-        void SortNodes()
-        {
-            while (waiting.Count > 0)
-            {
-                if (!TryDequeue(out var current))
-                    continue;
-
-                MoveSorted(current); Console.WriteLine(current.ID + " " + current.Name);
-
-                if (current.ParentBlockNode != null)
-                {
-                    Enqueue(current.ParentBlockNode); Console.WriteLine("found parent: " + current.ParentBlockNode.ID + " " + current.ParentBlockNode.Name);
-                }
-
-                var inputPointer = TNodeInput.New(current, -1); // index is not used to index array, -1 represent the flow connection point
-                CheckInputPointerConnection(inputPointer);
-
-                foreach (var input in current.Inputs)
-                {
-                    inputPointer = TNodeInput.New(current, input.Index);
-                    CheckInputPointerConnection(inputPointer);    
-                }
-            }     
-        }
-
-        SortNodes(); Console.WriteLine("---- SEPARATION ----");
+        SortNodes(); 
+        Console.WriteLine("---- SEPARATION ----");
 
         int sortedIndex = 0;
         foreach (var node in linkedSorted)
@@ -179,15 +201,19 @@ public class NodeCompilation
                 var inputPointer = TNodeInput.New(node, input.Index); Console.WriteLine(inputPointer);
                 CheckInputPointerOrder(inputPointer, node.ParentBlockNode, depth);
             }
-        } Console.WriteLine("---- SEPARATION ----");
+        } 
+        Console.WriteLine("---- SEPARATION ----");
 
         // rerun the algorithm if the scope ordering found a node that happens before a parent scope
-        SortNodes(); Console.WriteLine("---- END ----"); Console.WriteLine("---- SORTED NODES ----");
+        SortNodes(); 
+        Console.WriteLine("---- END ----"); 
+        Console.WriteLine("---- SORTED NODES ----");
 
-        List<NodeBase> sorted = [.. linkedSorted.Reverse()]; // reverse the so the node at index 0 is the first to execute
-        #endregion
+        sorted = [.. linkedSorted.Reverse()]; // reverse the so the node at index 0 is the first to execute
+    }
 
-        #region EXECUTION BUILDER
+    private void Build()
+    {
         Dictionary<NodePointer<TNodeOutput>, int> expressions = [];
 
         // lists to keep track
@@ -252,7 +278,8 @@ public class NodeCompilation
                 }
 
                 continue;
-            } Console.WriteLine("node: " + node.ID + " " + node.Name);
+            } 
+            Console.WriteLine("node: " + node.ID + " " + node.Name);
 
             NodeExpression[] inputExpressions = new NodeExpression[node.Inputs.Length];
             NodeExpression[] outputExpressions = new NodeExpression[node.Outputs.Length];
@@ -302,7 +329,7 @@ public class NodeCompilation
             for (int i = 0; i < node.Outputs.Length; i++)
             {
                 var output = node.Outputs[i];
-                var outputExpression = outputExpressions[i]; Console.WriteLine($"Output expression is: " + outputExpression.GetType().Name);
+                var outputExpression = outputExpressions[i]; Console.WriteLine($"Output expression is: " + outputExpression.GetType().Name + " with type " + outputExpression);
 
                 var outputPointer = TNodeOutput.New(node, output.Index);
 
@@ -392,17 +419,24 @@ public class NodeCompilation
         }
 
         _blockExpression = NodeExpression.Block([..baseVariables], [..baseActions]);
-        #endregion
-
-        
     }
 
     public void Compile()
     {
-        #region COMPILING
+        Organize(); 
+        Sort();  
+        Build();
+
         _nodeCompileContext.Clear();
-        _blockExpression.Compile(_nodeCompileContext);
-        #endregion
+        
+        try
+        {
+            _blockExpression.Compile(_nodeCompileContext);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed compilation with exception: " + ex);
+        }
     }
 
     public void Print()

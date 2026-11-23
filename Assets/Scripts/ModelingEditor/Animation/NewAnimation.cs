@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using PBG;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 
 public class NewAnimation
 {
@@ -432,12 +433,12 @@ public class NewBoneAnimation
 
     public static string Values(Vector3 vector)
     {
-        return $"{Float.Str(vector.X)} {Float.Str(vector.Y)} {Float.Str(vector.Z)}";
+        return $"{Parse.Float.Str(vector.X)} {Parse.Float.Str(vector.Y)} {Parse.Float.Str(vector.Z)}";
     }
 
     public static string Values(Quaternion quaternion)
     {
-        return $"{Float.Str(quaternion.X)} {Float.Str(quaternion.Y)} {Float.Str(quaternion.Z)} {Float.Str(quaternion.W)}";
+        return $"{Parse.Float.Str(quaternion.X)} {Parse.Float.Str(quaternion.Y)} {Parse.Float.Str(quaternion.Z)} {Parse.Float.Str(quaternion.W)}";
     }
 
     public static bool HasIndex(List<GlobalKeyframe> keyframes, int index)

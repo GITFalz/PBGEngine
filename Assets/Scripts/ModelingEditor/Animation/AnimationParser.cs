@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 
 public static class AnimationParser
 {
@@ -108,7 +108,7 @@ public static class AnimationParser
                 if (values.Length != 4)
                     return false;
 
-                data.Position = new Vector3(Float.Parse(values[1]), Float.Parse(values[2]), Float.Parse(values[3]));
+                data.Position = new Vector3(PBG.Parse.Float.Parse(values[1]), PBG.Parse.Float.Parse(values[2]), PBG.Parse.Float.Parse(values[3]));
                 index++;
                 return true;
             }
@@ -119,7 +119,7 @@ public static class AnimationParser
                 if (values.Length != 2)
                     return false;
 
-                int ease = Int.Parse(values[1], 0);
+                int ease = PBG.Parse.Int.Parse(values[1], 0);
                 data.PositionEasing = Ease.GetEasingType(ease);
                 index++;
                 return true;
@@ -133,11 +133,11 @@ public static class AnimationParser
 
                 if (values.Length != 5)
                 {
-                    data.Rotation = Quaternion.FromEuler( Float.Parse(values[1]), Float.Parse(values[2]), Float.Parse(values[3]));
+                    data.Rotation = Quaternion.FromEuler( PBG.Parse.Float.Parse(values[1]), PBG.Parse.Float.Parse(values[2]), PBG.Parse.Float.Parse(values[3]));
                 }
                 else
                 {
-                    data.Rotation = new Quaternion(Float.Parse(values[1]), Float.Parse(values[2]), Float.Parse(values[3]), Float.Parse(values[4]));
+                    data.Rotation = new Quaternion(PBG.Parse.Float.Parse(values[1]), PBG.Parse.Float.Parse(values[2]), PBG.Parse.Float.Parse(values[3]), PBG.Parse.Float.Parse(values[4]));
                 }
                 index++;
                 return true;
@@ -149,7 +149,7 @@ public static class AnimationParser
                 if (values.Length != 2)
                     return false;
 
-                int ease = Int.Parse(values[1], 0);
+                int ease = PBG.Parse.Int.Parse(values[1], 0);
                 data.RotationEasing = Ease.GetEasingType(ease);
                 index++;
                 return true;
@@ -161,7 +161,7 @@ public static class AnimationParser
                 if (values.Length != 2)
                     return false;
 
-                data.Scale = new Vector3(Float.Parse(values[1]), Float.Parse(values[2]), Float.Parse(values[3]));
+                data.Scale = new Vector3(PBG.Parse.Float.Parse(values[1]), PBG.Parse.Float.Parse(values[2]), PBG.Parse.Float.Parse(values[3]));
                 index++;
                 return true;
             }
@@ -172,7 +172,7 @@ public static class AnimationParser
                 if (values.Length != 2)
                     return false;
 
-                int ease = Int.Parse(values[1], 0);
+                int ease = PBG.Parse.Int.Parse(values[1], 0);
                 data.ScaleEasing = Ease.GetEasingType(ease);
                 index++;
                 return true;
@@ -184,7 +184,7 @@ public static class AnimationParser
                 if (values.Length != 2)
                     return false;
 
-                data.Index = Int.Parse(values[1], 0);
+                data.Index = PBG.Parse.Int.Parse(values[1], 0);
                 index++;
                 return true;
             }

@@ -112,6 +112,7 @@ public static class CustomNodeBuilder
         .SetExecute(context => context.SetOutput(0, NodeExpression.LessThanOrEqual(context.GetInput(0), context.GetInput(1))));
 
 
+
         NodeTemplate.New("Float")
         .SetColor(NodeTypeColors.Input).AddSelection("Value")
         .Input("", NodeDataType.Float | NodeDataType.FieldOnly, 0f)
@@ -168,10 +169,10 @@ public static class CustomNodeBuilder
         NodeTemplate.New("Split")
         .SetColor(NodeTypeColors.Vector)
         .Input("Value", NodeDataType.Numeric)
-        .Output("X", NodeDataType.Float | NodeDataType.Int)
-        .Output("Y", NodeDataType.Float | NodeDataType.Int)
-        .Output("Z", NodeDataType.Float | NodeDataType.Int)
-        .Output("W", NodeDataType.Float | NodeDataType.Int)
+        .Output("X", NodeDataType.Float)
+        .Output("Y", NodeDataType.Float)
+        .Output("Z", NodeDataType.Float)
+        .Output("W", NodeDataType.Float)
         .SetGPUExecute(context => {
             var input = context.GetInput(0);
             var subType = input.GetSubType();

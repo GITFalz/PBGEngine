@@ -82,15 +82,15 @@ public class NodeSelection(NodeModule nodeModule) : ScriptingNode
 
     void Start()
     {
-        _leftScroll = new UIVScroll(w_full, h_full, mask_children, spacing_[5], border_[5, 5, 5, 5], border_ui_[0, 0, 2, 0], border_color_[NodeBase.Border]);
-        _rightCollection = new UICol(w_[65f], h_full_minus_[2], mask_children, bottom_left);
+        _leftScroll = new UIVScroll(w_full, h_full, mask_children, spacing_[2], border_[5, 5, 5, 5], border_ui_[0, 0, 1, 0], border_color_[NodeBase.Border]);
+        _rightCollection = new UICol(w_[65f], h_full, mask_children, bottom_left);
 
-        _ui = new UICol(w_[300], h_[300], middle_center, blank_round, rgba_v4_[NodeBase.NodeBody], border_ui_[2, 2, 2, 2], border_color_[NodeBase.Border])[
-            new UICol(w_full, h_[30], rgba_v4_[NodeBase.NodeHeader], blank_round_2)[
+        _ui = new UICol(w_[300], h_[300], middle_center, blank_full, rgba_v4_[NodeBase.NodeBody], border_ui_[1, 1, 1, 1], border_color_[NodeBase.Border])[
+            new UICol(w_full, h_[30], rgba_v4_[NodeBase.NodeHeader], blank_full)[
                 new UIText("Selection", left_[10], middle_left, fs_[1.2f]) 
             ],
-            new UIHCol(w_full, h_full_minus_[30], bottom_left, border_ui_[0, 2, 0, 0], border_color_[NodeBase.Border])[
-                new UICol(w_[35f], h_full_minus_[2], bottom_left)[
+            new UIHCol(w_full, h_full_minus_[30], bottom_left, border_ui_[0, 1, 0, 0], border_color_[NodeBase.Border])[
+                new UICol(w_[35f], h_full, bottom_left)[
                     _leftScroll
                 ],
                 _rightCollection
@@ -99,8 +99,8 @@ public class NodeSelection(NodeModule nodeModule) : ScriptingNode
 
         foreach (var (name, selection) in _selections)
         {
-            var leftCol = new UICol(w_full_minus_[12], h_[25], blank_sharp, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
-                new UIText(name, left_[10], middle_left, fs_[1.2f])
+            var leftCol = new UICol(w_full_minus_[10], h_[20], blank_full, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
+                new UIText(name, left_[10], middle_left, fs_[1f])
             ];
 
             leftCol.OnClick(_ => {
@@ -113,14 +113,14 @@ public class NodeSelection(NodeModule nodeModule) : ScriptingNode
 
         void GenerateRightPanel(NodeSelectionData data, UICol collection)
         {
-            var scroll = new UIVScroll(w_full, h_full, mask_children, spacing_[5], border_[5, 5, 5, 5]);
+            var scroll = new UIVScroll(w_full, h_full, mask_children, spacing_[2], border_[5, 5, 5, 5]);
 
             foreach (var (name, selection) in data.Selections)
             {
                 if (selection.Template != null)
                 {
-                    var template = new UICol(w_full_minus_[12], h_[25], blank_sharp, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
-                        new UIText(selection.Template.Name, left_[10], middle_left, fs_[1.2f])
+                    var template = new UICol(w_full_minus_[10], h_[20], blank_full, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
+                        new UIText(selection.Template.Name, left_[5], middle_left, fs_[1f])
                     ];
 
                     template.OnClick(_ => AddTemplate(selection.Template));
@@ -129,8 +129,8 @@ public class NodeSelection(NodeModule nodeModule) : ScriptingNode
                     continue;
                 }
 
-                var rightCol = new UICol(w_full_minus_[12], h_[25], blank_sharp, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
-                    new UIText(name, left_[10], middle_left, fs_[1.2f])
+                var rightCol = new UICol(w_full_minus_[10], h_[20], blank_full, hover_color_[Vector4.Zero, NodeBase.Border], hover_color_easeinout, hover_color_duration_[0.1f])[
+                    new UIText(name, left_[5], middle_left, fs_[1f])
                 ];
 
                 rightCol.OnClick(_ => {
@@ -148,7 +148,7 @@ public class NodeSelection(NodeModule nodeModule) : ScriptingNode
 
         _selectionController = Transform.GetComponent<UIController>();
         _selectionController.AddElement(_ui);
-        _selectionController.Show = false;
+        //_selectionController.Show = false;
     }
 
     private void AddTemplate(NodeTemplate template)

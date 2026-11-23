@@ -29,7 +29,6 @@ public class PlayerRunningState(PlayerGameState gameState, PlayerController play
 
         if (!Player.PhysicsBody.IsGrounded)
         {
-            Player.PhysicsBody.Gravity = 40;
             Player.PhysicsBody.DecelerationFactor = 2.5f;
             GameState.SwitchState(GameState.FallingState);
             return;

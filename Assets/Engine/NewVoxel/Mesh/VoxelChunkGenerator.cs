@@ -141,6 +141,16 @@ public unsafe static partial class VoxelChunkGenerator
         mapping.Upload();
         return true;
     }
+
+    public static bool GenerateGreedyMesh9YByte(VoxelChunk chunk, int workerId)
+    {
+        var gen = chunk.NewGen();
+        GlobalCount++;
+        MeshMapping mapping = new(chunk, gen);
+        GreedyMesher9YByte.GenerateMesh(chunk, ref mapping);
+        mapping.Upload();
+        return true;
+    }
 }
 
 public unsafe struct NeighbourChunks

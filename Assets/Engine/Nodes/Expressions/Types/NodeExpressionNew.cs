@@ -16,17 +16,18 @@ public class NodeExpressionNew(ConstructorInfo constructor, params NodeExpressio
 
     public override void Compile(NodeExpressionCompileContext context)
     {
-        context.Write(TypeToGlslString());
-        context.Write("(");
+        if (arguments.Length > 1)
+            context.Write(context.Formatter.GetConstructor(ValueType));
 
         for (int i = 0; i < arguments.Length; i++)
         {
             if (i > 0)
                 context.Write(", ");
 
-            arguments[i].Compile(context);
+            Convert(arguments[i], GetSubType()).Compile(context);
         }
 
-        context.Write(")");
+        if (arguments.Length > 1)
+            context.Write(")");
     }
 }

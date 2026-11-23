@@ -231,7 +231,7 @@ public unsafe static class ChunkGeneration
     //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     static V256f Fbm2DSimd(V256f x, V256f y, int octaves)
     {
-        V256f f = V256f.Zero;
+        V256f f = V256F.Zero;
         V256f w = V256F.Half;
 
         for (int i = 0; i < octaves; i++)

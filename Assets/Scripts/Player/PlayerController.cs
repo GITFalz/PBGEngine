@@ -3,7 +3,6 @@ using PBG.Core;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Parse;
 using PBG.Physics;
 using PBG.Rendering;
 using PBG.UI;
@@ -133,9 +132,9 @@ public class PlayerController : ScriptingNode
                 if (!c.HasTokens(2))
                     return new(false, "Expected 3 numbers after !self");
 
-                float x = Float.Parse(c.Next());
-                float y = Float.Parse(c.Next());
-                float z = Float.Parse(c.Next());
+                float x = Parse.Float.Parse(c.Next());
+                float y = Parse.Float.Parse(c.Next());
+                float z = Parse.Float.Parse(c.Next());
 
                 Transform.Position = (x, y, z);
                 Camera.Position = (x, y, z);

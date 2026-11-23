@@ -35,7 +35,7 @@ public unsafe struct Allocation(VoxelChunk chunk)
 
         VoxelRenderer.TotalVertexCount -= VertexCount;
 
-        DataPool.RemoveAllocation(this);
+        DataPool?.RemoveAllocation(this);
         Memory = null;
         Size = 0;
         Offset = 0;
@@ -50,7 +50,7 @@ public unsafe struct Allocation(VoxelChunk chunk)
 
         VoxelRenderer.TotalVertexCount -= VertexCount;
         
-        DataPool.RemoveAllocation(this);
+        DataPool?.RemoveAllocation(this);
         DataPool?.Free(ref this);
         Memory = null;
         Size = 0;

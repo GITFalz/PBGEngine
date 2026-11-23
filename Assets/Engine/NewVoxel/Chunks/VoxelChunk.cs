@@ -22,6 +22,7 @@ public unsafe class VoxelChunk : IDisposable
 
     public static VoxelChunk Empty = null!;
     public VoxelRenderer Renderer;
+    public VoxelChunk[] ChunkLookup = new VoxelChunk[26];
 
     public Allocation Allocation;
     public List<Allocation> Allocations = [];
@@ -89,7 +90,7 @@ public unsafe class VoxelChunk : IDisposable
 
     public bool HasBlocks = false;
 
-    private VoxelChunk()
+    public VoxelChunk()
     {
         AllocateMemory();
         ClearMemory();
@@ -109,6 +110,9 @@ public unsafe class VoxelChunk : IDisposable
         ClearCountMap();
 
         AliveChunks.Add(this);
+
+        for (int i = 0; i < 26; i++)
+            ChunkLookup[i] = Empty;
     }
 
 
@@ -120,6 +124,8 @@ public unsafe class VoxelChunk : IDisposable
             EmptyMap[i] = MemoryHelper.Alloc<Block>(32);
             MemoryHelper.Clear(EmptyMap[i], 32);
         }   
+
+        Console.WriteLine("KUSEFGIKSEGFIASGFIYSTGEF Created empty chunk");
 
         Empty = new();
     }
@@ -317,41 +323,49 @@ public unsafe class VoxelChunk : IDisposable
         int i = 0;
 
         Vector3i relative = RelativePosition;
-        
-        for (int x = -LodMult; x <= LodMult; x+=LodMult)
+
+        for (int y = -LodMult; y <= LodMult; y+=LodMult)
         {
-            for (int y = yStart; y <= yEnd; y+=LodMult)
+            for (int z = -LodMult; z <= LodMult; z+=LodMult)
             {
-                for (int z = -LodMult; z <= LodMult; z+=LodMult)
-                {
+                for (int x = -LodMult; x <= LodMult; x+=LodMult)
+                {   
                     if (x == 0 && y == 0 && z == 0)
                         continue;
 
-                    relative.X = RelativePosition.X + x;
-                    relative.Y = RelativePosition.Y + y;
-                    relative.Z = RelativePosition.Z + z;
+                    ChunkLookup[i] = Empty;
 
-                    if (Renderer.GetChunk(relative, out var neighborChunk))
+                    if (y >= yStart && y <= yEnd)
                     {
-                        hasAllNeighbours &= CheckRenderStatus(neighborChunk);
+                        relative.X = RelativePosition.X + x;
+                        relative.Y = RelativePosition.Y + y;
+                        relative.Z = RelativePosition.Z + z;
 
-                        if (neighborChunk.LodLevel < LodLevel)
+                        if (Renderer.GetChunk(relative, out var neighborChunk))
                         {
-                            int m = neighborChunk.LodMult;
-                            CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, 0)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (0, 0, m)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, m)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (0, m, 0)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (m, m, 0)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (0, m, m)));
-                            CheckRenderStatus(Renderer.GetChunk(relative + (m, m, m)));
+                            ChunkLookup[i] = neighborChunk;
+
+                            hasAllNeighbours &= CheckRenderStatus(neighborChunk);
+
+                            if (neighborChunk.LodLevel < LodLevel)
+                            {
+                                int m = neighborChunk.LodMult;
+                                CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, 0)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (0, 0, m)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (m, 0, m)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (0, m, 0)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (m, m, 0)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (0, m, m)));
+                                CheckRenderStatus(Renderer.GetChunk(relative + (m, m, m)));
+                            }
+                        }
+                        else
+                        {
+                            Status = ChunkStatus.FailedToMesh;
+                            hasAllNeighbours = false;
                         }
                     }
-                    else
-                    {
-                        Status = ChunkStatus.FailedToMesh;
-                        hasAllNeighbours = false;
-                    }
+
                     i++;
                 }
             }

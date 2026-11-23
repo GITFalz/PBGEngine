@@ -97,7 +97,7 @@ public class CurveWindow
         xPositionFieldBackground.SetScale(XPositionField.Scale + (16, 16));
         XPositionField.SetOnTextChange(() =>
         {
-            float newXPosition = Float.Parse(XPositionField.Text);
+            float newXPosition = Parse.Float.Parse(XPositionField.Text);
             if (newXPosition != _oldXPosition && DataSelectedButton != null)
             {
                 if (DataSelectedButton.Name == "X0Button" || DataSelectedButton.Name == "X1Button")
@@ -126,7 +126,7 @@ public class CurveWindow
         yPositionFieldBackground.SetScale(YPositionField.Scale + (16, 16));
         YPositionField.SetOnTextChange(() =>
         {
-            float newYPosition = Float.Parse(YPositionField.Text);
+            float newYPosition = Parse.Float.Parse(YPositionField.Text);
             if (newYPosition != _oldYPosition && DataSelectedButton != null)
             {
                 float deltaY = newYPosition - _oldYPosition;
@@ -214,14 +214,14 @@ public class CurveWindow
         //float xPosition = (button.Offset.X + 10) / Size.X;
         //float yPosition = 1f - ((button.Offset.Y + 10) / Size.Y);
 
-        //XPositionField.SetText(Float.Str(xPosition)).UpdateCharacters();
-        //YPositionField.SetText(Float.Str(yPosition)).UpdateCharacters();
+        //XPositionField.SetText(Parse.Float.Str(xPosition)).UpdateCharacters();
+        //YPositionField.SetText(Parse.Float.Str(yPosition)).UpdateCharacters();
     }
 
     public void SetDataSelectedButton(UIButton button)
     {
-        //XPositionField.SetText(Float.Str((button.Offset.X + 10) / Size.X)).UpdateCharacters();
-        //YPositionField.SetText(Float.Str(1f - ((button.Offset.Y + 10) / Size.Y))).UpdateCharacters();
+        //XPositionField.SetText(Parse.Float.Str((button.Offset.X + 10) / Size.X)).UpdateCharacters();
+        //YPositionField.SetText(Parse.Float.Str(1f - ((button.Offset.Y + 10) / Size.Y))).UpdateCharacters();
         DataSelectedButton = button;
     }
 

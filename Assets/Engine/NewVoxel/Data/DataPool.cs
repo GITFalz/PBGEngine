@@ -295,7 +295,12 @@ public unsafe class GPUChunkData : IDisposable
 
     private NewChunkDataPool _chunkDataPool;
 
+    // Buffers
     public SSBO<Vector2u> MeshSSBO;
+    private SSBO<Matrix4> _matrixSSBO;
+    private SSBO<ChunkInfo> _chunkInfoSSBO;
+
+
     public ulong SizeInBytes;
     private uint _chunkSize;
 
@@ -310,12 +315,6 @@ public unsafe class GPUChunkData : IDisposable
     private IDBO<DrawCommand>[][] _indirectSSBOs;
     private IDBO<uint>[][] _indirectCountSSBOs;
     private DrawCommand[][][] _drawCommands;
-
-    private SSBO<Matrix4> _matrixSSBO;
-    private Matrix4[] _matrices;
-
-    private SSBO<ChunkInfo> _chunkInfoSSBO;
-    public ChunkInfo[] ChunkInfo = [];
 
     private int[][] _chunkCounts;
 
@@ -344,6 +343,8 @@ public unsafe class GPUChunkData : IDisposable
         SizeInBytes = count * size * (uint)Marshal.SizeOf<Vector2u>();
 
         MeshSSBO = new(count * size, hostVisible: false, useStaging: true);
+        _matrixSSBO     = new(count, hostVisible: false, useStaging: true);
+        _chunkInfoSSBO  = new(count, hostVisible: false, useStaging: true);
 
         _descriptors            = new Descriptor[PASS_COUNT];
         _wireframeDescriptors   = new Descriptor[PASS_COUNT];
@@ -351,17 +352,10 @@ public unsafe class GPUChunkData : IDisposable
         _prePassDescriptors     = new Descriptor[PASS_COUNT];
         _cullingDescriptors     = new Descriptor[GFX.MAX_FRAMES_IN_FLIGHT][];
 
-        _chunkInfoSSBO = new SSBO<ChunkInfo>(count, true);
-
         _indirectSSBOs      = new IDBO<DrawCommand>[GFX.MAX_FRAMES_IN_FLIGHT][];
         _indirectCountSSBOs = new IDBO<uint>[GFX.MAX_FRAMES_IN_FLIGHT][];
         _drawCommands       = new DrawCommand[GFX.MAX_FRAMES_IN_FLIGHT][][];
         _chunkCounts        = new int[GFX.MAX_FRAMES_IN_FLIGHT][];
-
-        _matrixSSBO = new(count);
-
-        _matrices  = new Matrix4[count];
-        ChunkInfo = new ChunkInfo[count];
 
         for (int i = 0; i < GFX.MAX_FRAMES_IN_FLIGHT; i++)
         {
@@ -522,6 +516,7 @@ public unsafe class GPUChunkData : IDisposable
             uint thisPageVerts = Math.Min(remaining, _chunkSize);
             long index = chunk.Allocation.Offset + i;
 
+            /*
             _matrices[index] = chunk.ModelMatrix;
             ChunkInfo[index] = new() {
                 Center      = chunk.Center,
@@ -530,6 +525,7 @@ public unsafe class GPUChunkData : IDisposable
                 SlotIndex   = (int)index,
                 Active      = thisPageVerts > 0 ? 1u : 0u
             };
+            */
 
             remaining -= thisPageVerts;
         }
@@ -563,27 +559,22 @@ public unsafe class GPUChunkData : IDisposable
 
             if (gen != chunk.Gen)
             {
-                //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "upload free index: " + index + " value: " + AllocationArray.GetInt((int)index)));
                 RemoveAllocation(index);
                 continue;
             }
 
-            MeshSSBO.MarkDirty(offsetInBytes, sizeInBytes);
-
-            //chunk.AddStatusChange((VoxelChunk.sw.Elapsed.TotalMilliseconds, "uploaded"));
-
-            var oldInfo = ChunkInfo[index];
-            if (oldInfo.Active == 1)
-                DebugLog.Warning($"Chunk: {(oldInfo.Center - 16)} was already there");
-
-            _matrices[index] = chunk.ModelMatrix;
-            ChunkInfo[index] = new() {
+            var chunkInfo = new ChunkInfo() 
+            {
                 Center      = chunk.Center,
                 Radius      = 28.0f * chunk.LodMult,
                 VertexCount = vertexCount,
                 SlotIndex   = (int)index,
                 Active      = vertexCount > 0 ? 1u : 0u
             };
+
+            MeshSSBO.MarkDirty(offsetInBytes, sizeInBytes);
+            _matrixSSBO.Update(chunk.ModelMatrix, index * Matrix4.ByteSize);
+            _chunkInfoSSBO.Update(chunkInfo, (ulong)index * ChunkInfo.ByteSize);
 
             _updateChunkData = true;
             _updateStart = Math.Min(_updateStart, index);
@@ -637,7 +628,7 @@ public unsafe class GPUChunkData : IDisposable
             for (int i = 0; i < allocation.Size; i++)
             {
                 long index = allocation.Offset + i;
-                ChunkInfo[index].Active = 0;
+                _chunkInfoSSBO.Update(new ChunkInfo() { Active = 0 }, (ulong)index * ChunkInfo.ByteSize);
             }
 
             Empty = AllocationArray.IsEmpty;
@@ -680,15 +671,15 @@ public unsafe class GPUChunkData : IDisposable
             for (int j = 0; j < chunk.Allocation.Size; j++)
             {
                 long index = chunk.Allocation.Offset + j;
-                newChunkInfo[newIndex] = ChunkInfo[index];
-                _matrices[newIndex] = Matrix4.CreateTranslation(chunk.WorldPosition);
+                //newChunkInfo[newIndex] = ChunkInfo[index];
+                //_matrices[newIndex] = Matrix4.CreateTranslation(chunk.WorldPosition);
                 newIndex++;
             }
 
             chunk.Allocation.Offset = newOffset;
         }
 
-        ChunkInfo = newChunkInfo;
+        //ChunkInfo = newChunkInfo;
 
         _updateChunkData = true;
         _updateStart = 0;
@@ -741,10 +732,9 @@ public unsafe class GPUChunkData : IDisposable
         if (_updateChunkData && _updateEnd > _updateStart)
         {
             MeshSSBO.FlushStaging();
-
-            _matrixSSBO.UpdateSlice(_matrices, _updateStart * Matrix4.ByteSize, (_updateEnd - _updateStart) * Matrix4.ByteSize);
-            _chunkInfoSSBO.UpdateSlice(ChunkInfo, _updateStart * NewVoxel.ChunkInfo.ByteSize, (_updateEnd - _updateStart) * NewVoxel.ChunkInfo.ByteSize);
-
+            _matrixSSBO.FlushStaging();
+            _chunkInfoSSBO.FlushStaging();
+            
             _updateChunkData = false;
             _updateStart = NewChunkDataPool.CHUNK_COUNT_PER_POOL;
             _updateEnd = 0;

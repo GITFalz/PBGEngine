@@ -22,4 +22,8 @@ public struct NodeOutput
         Type = type;
         ConnectionType = connectionType;
     }
+
+    public readonly bool HasConnection(NodeDataType type) => Type.HasFlag(type);
+    public readonly bool HasNumericType() => (Type & NodeDataType.Numeric) != 0;
+    public readonly bool IsBool() => HasConnection(NodeDataType.Bool);
 }

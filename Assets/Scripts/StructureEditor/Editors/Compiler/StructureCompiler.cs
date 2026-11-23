@@ -1,10 +1,4 @@
-using System.Data;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using System.Text.RegularExpressions;
-using PBG.MathLibrary;
 using PBG.Compiler.Lines;
-using PBG.Parse;
 using PBG.Compiler;
 
 namespace Compiler;

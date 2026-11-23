@@ -32,7 +32,7 @@ public class NodeExpressionBlock(NodeExpressionVariable[]? variables, params Nod
             foreach (var variable in variables)
             {
                 context.NewLine();
-                context.Declare(variable);
+                context.Declare(context, variable);
             }
         }
 

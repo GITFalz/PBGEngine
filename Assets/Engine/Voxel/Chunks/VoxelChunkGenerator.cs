@@ -7,11 +7,12 @@ using PBG.Threads;
 
 namespace PBG.Voxel
 {
+    [InternalSystemInit(InitPriority.Data)]
     public static partial class VoxelChunkGenerator
     {
         private static int[] _xCounter = null!;
 
-        public static void InitCache()
+        public static void Init()
         {
             _xCounter = new int[(TaskPool.ThreadCount + 1) * BlockData.BLOCK_COUNT];
         }

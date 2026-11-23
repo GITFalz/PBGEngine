@@ -4,7 +4,7 @@ using PBG.Compiler.Lines;
 using PBG.Data;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 using PBG.Rendering;
 using PBG.UI;
 
@@ -692,7 +692,7 @@ public class AnimationEditor : BaseEditor
         if (SelectedBone == null)
             return;
 
-        float value = Float.Parse(text);
+        float value = Parse.Float.Parse(text);
         Vector3 position = SelectedBone.Position;
         position[i] = value;
         SelectedBone.Position = position;
@@ -711,7 +711,7 @@ public class AnimationEditor : BaseEditor
         if (SelectedBone == null)
             return;
 
-        float value = Mathf.DegreesToRadians(Float.Parse(text));
+        float value = Mathf.DegreesToRadians(Parse.Float.Parse(text));
         Vector3 rotation = SelectedBone.EulerRotation;
         rotation[i] = value;
         SelectedBone.EulerRotation = rotation;

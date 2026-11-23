@@ -42,8 +42,8 @@ public class NodeManager : ScriptingNode
     {
         if (Input.IsKeyPressed(Key.F))
         {
-            NodeCompilation compilation = new(_nodeModule);
-            compilation.Sort();
+            NodeCompiler compilation = new(_nodeModule);
+            compilation.Compile();
         }
 
         if (_nodeModule.DoRemakeConnections())

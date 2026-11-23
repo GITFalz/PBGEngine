@@ -26,7 +26,6 @@ public class PlayerFallingState(PlayerGameState gameState, PlayerController play
     
     public override void FixedUpdate()
     {
-        Player.PhysicsBody.Gravity = Mathf.Lerp(Player.PhysicsBody.Gravity, 120, 2f * (float)GameTime.FixedDeltaTime);
         Player.PhysicsBody.DecelerationFactor = Mathf.Lerp(Player.PhysicsBody.DecelerationFactor, 1, 2f * (float)GameTime.FixedDeltaTime);
 
         if (_input != Vector2.Zero)
@@ -40,7 +39,6 @@ public class PlayerFallingState(PlayerGameState gameState, PlayerController play
     
     public override void Exit()
     {
-        Player.PhysicsBody.Gravity = 120;
         Player.PhysicsBody.DecelerationFactor = 1;
     }
 }

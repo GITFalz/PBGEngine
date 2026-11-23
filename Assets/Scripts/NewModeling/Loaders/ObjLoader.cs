@@ -2,7 +2,6 @@ using PBG.Compiler.Lines;
 using PBG.Core;
 using PBG.Graphics;
 using PBG.MathLibrary;
-using PBG.Parse;
 using PBG.Threads;
 
 namespace PBG.Modeling;
@@ -46,7 +45,7 @@ public static class ObjLoader
 
                 for (int j = 1; j < 4.Min(data.Length); j++)
                 {
-                    position[j-1] = Float.Parse(data[j]);
+                    position[j-1] = Parse.Float.Parse(data[j]);
                 }
 
                 min.MinSet(position);
@@ -62,7 +61,7 @@ public static class ObjLoader
 
                 for (int j = 1; j < 3.Min(data.Length); j++)
                 {
-                    uv[j-1] = Float.Parse(data[j]);
+                    uv[j-1] = Parse.Float.Parse(data[j]);
                 }
 
                 uvs.Add(uv);
@@ -75,7 +74,7 @@ public static class ObjLoader
 
                 for (int j = 1; j < 4.Min(data.Length); j++)
                 {
-                    normal[j-1] = Float.Parse(data[j]);
+                    normal[j-1] = Parse.Float.Parse(data[j]);
                 }
 
                 normals.Add(normal);
@@ -155,7 +154,7 @@ public static class ObjLoader
                     index = -1;
                     if (data.Length > 0)
                     {
-                        var vIndex = Int.Parse(data[0], 0) - 1;
+                        var vIndex = Parse.Int.Parse(data[0], 0) - 1;
                         if (vIndex >= 0 && vIndex < vertices.Count)
                         {
                             if (!viewedVertices.TryGetValue(vIndex, out index))
@@ -175,7 +174,7 @@ public static class ObjLoader
                     uv = Vector2.Zero;
                     if (data.Length > 1)
                     {
-                        var index = Int.Parse(data[1], 0) - 1;
+                        var index = Parse.Int.Parse(data[1], 0) - 1;
                         if (index >= 0 && index < uvs.Count)
                         {
                             uv = uvs[index];
@@ -190,7 +189,7 @@ public static class ObjLoader
                     normal = (0, 1, 0);
                     if (data.Length > 2)
                     {
-                        var index = Int.Parse(data[2], 0) - 1;
+                        var index = Parse.Int.Parse(data[2], 0) - 1;
                         if (index >= 0 && index < normals.Count)
                         {
                             normal = normals[index];

@@ -99,7 +99,7 @@ public class WorldNodeEditor : ScriptingNode
         _editorUI.AddElement(_statUI);
         //_editorUI.AddElement(_testUI);
         
-        _nodes.Disable();
+        //_nodes.Disable();
     }  
 
     void Exit()
@@ -207,13 +207,13 @@ public class WorldNodeEditor : ScriptingNode
             foreach (var allocation in _currentChunk.Allocations)
             {
                 var datapool = allocation.DataPool;
-                var chunkInfo = datapool.ChunkInfo[allocation.Offset];
-                boundingBoxDatas.Add(new()
-                {
-                    Position = chunkInfo.Center - 16,
-                    Size = (32, 32, 32),
-                    Color = (1, 0, 0, 0.7f)
-                });
+                //var chunkInfo = datapool.ChunkInfo[allocation.Offset];
+                //boundingBoxDatas.Add(new()
+                //{
+                //    Position = chunkInfo.Center - 16,
+                //    Size = (32, 32, 32),
+                //    Color = (1, 0, 0, 0.7f)
+                //});
             }
             _boxRenderer.UpdateBoundingBoxes([..boundingBoxDatas]);
         }
@@ -222,7 +222,9 @@ public class WorldNodeEditor : ScriptingNode
 
         if (Input.IsKeyPressed(Key.B))
         {
-            WriteFinalShader();
+            Console.WriteLine(_nodes.GetGLSLCode());
+
+            //WriteFinalShader();
         }
     }
 
@@ -303,7 +305,7 @@ public class WorldNodeEditor : ScriptingNode
                 Update1000Ms(new UIText("FPS: ", mc_[10], top_left, bg_white, fs_[1.2f]), () => "FPS: " + GameTime.Fps),
                 UpdatePosition(new UIText("X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => $"X Y Z: {_position.X} {_position.Y} {_position.Z}"),
                 UpdateFrame(new UIText("Vertex Count: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => "Vertex Count: " + (VoxelRenderer.TotalVertexCount * 6))
-            ],
+            ],/*
             new UIVCol(grow_children, spacing_[5])[
                 UpdateChunk(new UIText("Chunk X Y Z: ", mc_[50], top_left, bg_white, fs_[1.2f]), () => $"Chunk X Y Z: {_chunkPosition.X*32} {_chunkPosition.Y*32} {_chunkPosition.Z*32}"),
                 UpdateChunk(new UIText("Status: ", mc_[30], top_left, bg_white, fs_[1.2f]), chunk => $"Status: {chunk.Status}", () => $"Status: None"),
@@ -329,12 +331,12 @@ public class WorldNodeEditor : ScriptingNode
                 }),
                 UpdateFrame(new UIText("Dictionnary: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Dictionnary: " + _renderer.ChunkDictionnary.Count),
                 UpdateFrame(new UIText("Cache: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Cache: " + ChunkGeneration.V256FCacheCount)
-            ],
+            ],*/
             new UIVCol(grow_children, spacing_[5])[
                 Update200Ms(new UIText("Generate: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Generate: " + VoxelRenderer.ChunkGenerationTimer.GetAverage().ToString("F4") + " ms"),
                 Update200Ms(new UIText("Render: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Render: " + VoxelRenderer.ChunkRenderingTimer.GetAverage().ToString("F4") + " ms"),
                 Update200Ms(new UIText("Upload: ", mc_[25], top_left, bg_white, fs_[1.2f]), () => "Upload: " + GPUChunkData.TotalUploadTimer.GetAverage().ToString("F4") + " ms")
-            ],
+            ]/*,
             new UIVCol(grow_children, spacing_[5])[
                 Update200Ms(new UIText("Alive Chunks: ", mc_[20], top_left, bg_white, fs_[1.2f]), () => "Alive Chunks: " + VoxelChunk.AliveChunks.Count),
                 Update1000Ms(new UIText("Managed Ram: ", mc_[25], top_left, bg_white, fs_[1.2f]),   () => "Managed Ram: " + GC.GetTotalMemory(false) / (1024 * 1024) + " Mb"),
@@ -400,7 +402,7 @@ public class WorldNodeEditor : ScriptingNode
                         return $"Thread {i+1} {percent.Fti()}%";
                     });
                 })
-            ]
+            ]*/
         ],
         new UIGraph(bottom_right, w_full, h_[400], graph_points_[200], bg_red).Out(out _frameTimeGraph)
     ];

@@ -153,6 +153,9 @@ public class NodeModule : ScriptingNode
 
     public bool TryAddConnection(NodeBase outputNode, NodeOutput output, NodeBase inputNode, NodeInput input)
     {
+        if ((!output.IsBool() && input.IsBool()) || (!input.IsBool() && output.IsBool()))
+            return false;
+
         if (HasCircularConnection(outputNode, inputNode))
             return false;
 

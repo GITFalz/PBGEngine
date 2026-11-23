@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 
 namespace PBG.Nodes;
 
@@ -23,15 +24,11 @@ public abstract partial class NodeExpression
 
     public abstract Expression GetExpression();
     public abstract void Compile(NodeExpressionCompileContext context);
-
-    // If code needs to be isolated for ordering reasons
-    // example: a * (b + c)
     internal void CompileIsolated(NodeExpressionCompileContext context)
     {
-        bool needsIsolation = IsType(NodeExpressionType.Isolated);
-        if (needsIsolation) context.Write("(");
+        context.Write("(");
         Compile(context);
-        if (needsIsolation) context.Write(")");
+        context.Write(")");
     }
 
     public bool IsType(NodeExpressionType NodeExpressionType)
@@ -115,6 +112,19 @@ public abstract partial class NodeExpression
         return false;
     }
 
+
+
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string Str(float value) => Parse.Float.Str(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string Str(int value) => value.ToString();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string Avx2New<T>(T value) => $"Vector256.Create({value})";
+
     public Type GetSubType()
     {
         return ValueType switch
@@ -137,45 +147,13 @@ public abstract partial class NodeExpression
         {
             _ when ValueType == typeof(float)   => 1,
             _ when ValueType == typeof(int)     => 1,
-            _ when ValueType == typeof(Vector2) => 2,
+            _ when ValueType == typeof(IVector) => 2,
             _ when ValueType == typeof(Vector2i)=> 2,
             _ when ValueType == typeof(Vector3) => 3,
             _ when ValueType == typeof(Vector3i)=> 3,
             _ when ValueType == typeof(Vector4) => 4,
             _ when ValueType == typeof(Vector4i)=> 4,
             _ => 1
-        };
-    }
-
-    public string TypeToGlslString()
-    {
-        return ValueType switch
-        {
-            _ when ValueType == typeof(float)   => "float",
-            _ when ValueType == typeof(int)     => "int",
-            _ when ValueType == typeof(Vector2) => "vec2",
-            _ when ValueType == typeof(Vector2i)=> "ivec2",
-            _ when ValueType == typeof(Vector3) => "vec3",
-            _ when ValueType == typeof(Vector3i)=> "ivec3",
-            _ when ValueType == typeof(Vector4) => "vec4",
-            _ when ValueType == typeof(Vector4i)=> "ivec4",
-            _ => throw new Exception($"Cannot convert type '{ValueType}' to GLSL type"),
-        };
-    }
-
-    public static string ObjectToGlslString(object value)
-    {
-        return value switch
-        {
-            float v    => Float.Str(v),
-            int v      => v.ToString(),
-            Vector2 v  => $"vec2({Float.Str(v.X)}, {Float.Str(v.Y)})",
-            Vector2i v => $"ivec2({v.X}, {v.Y})",
-            Vector3 v  => $"vec3({Float.Str(v.X)}, {Float.Str(v.Y)}, {Float.Str(v.Z)})",
-            Vector3i v => $"ivec3({v.X}, {v.Y}, {v.Z})",
-            Vector4 v  => $"vec4({Float.Str(v.X)}, {Float.Str(v.Y)}, {Float.Str(v.Z)}, {Float.Str(v.W)})",
-            Vector4i v => $"ivec4({v.X}, {v.Y}, {v.Z}, {v.W})",
-            _          => throw new Exception($"Unsupported type: {value.GetType()}")
         };
     }
 }

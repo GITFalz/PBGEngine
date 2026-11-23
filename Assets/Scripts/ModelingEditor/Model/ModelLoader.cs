@@ -1,5 +1,6 @@
+using PBG;
 using PBG.MathLibrary;
-using PBG.Parse;
+
 
 public static class ModelLoader
 {
@@ -168,9 +169,9 @@ public static class ModelLoader
                     {
                         var pos = sections[1].Split('/');
                         Vector3 position = (
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         string? boneName = sections.Length > 2 ? sections[2] : null;
                         vertexData.Add((position, boneName));
@@ -181,8 +182,8 @@ public static class ModelLoader
                     {
                         var ind = sections[1].Split('/');
                         Vector2i indices = (
-                            ind.Length >= 1 ? Int.Parse(ind[0]) : 0,
-                            ind.Length >= 2 ? Int.Parse(ind[1]) : 0
+                            ind.Length >= 1 ? Parse.Int.Parse(ind[0]) : 0,
+                            ind.Length >= 2 ? Parse.Int.Parse(ind[1]) : 0
                         );
                         edgeData.Add(indices);
                     }
@@ -192,8 +193,8 @@ public static class ModelLoader
                     {
                         var pos = sections[1].Split('/');
                         Vector2 uv = (
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0
                         );
                         uvData.Add(uv);
                     }
@@ -203,18 +204,18 @@ public static class ModelLoader
                     {
                         var vert = sections[1].Split('/');
                         Vector3i vertices = (
-                            vert.Length >= 1 ? Int.Parse(vert[0]) : 0,
-                            vert.Length >= 2 ? Int.Parse(vert[1]) : 0,
-                            vert.Length >= 3 ? Int.Parse(vert[2]) : 0
+                            vert.Length >= 1 ? Parse.Int.Parse(vert[0]) : 0,
+                            vert.Length >= 2 ? Parse.Int.Parse(vert[1]) : 0,
+                            vert.Length >= 3 ? Parse.Int.Parse(vert[2]) : 0
                         );
                         Vector3i? uvs = null;
                         if (sections.Length > 2)
                         {
                             var uv = sections[2].Split('/');
                             uvs = (
-                                uv.Length >= 1 ? Int.Parse(uv[0]) : 0,
-                                uv.Length >= 2 ? Int.Parse(uv[1]) : 0,
-                                uv.Length >= 3 ? Int.Parse(uv[2]) : 0
+                                uv.Length >= 1 ? Parse.Int.Parse(uv[0]) : 0,
+                                uv.Length >= 2 ? Parse.Int.Parse(uv[1]) : 0,
+                                uv.Length >= 3 ? Parse.Int.Parse(uv[2]) : 0
                             );
                         }
                         Vector3i? edges = null;
@@ -222,9 +223,9 @@ public static class ModelLoader
                         {
                             var edge = sections[3].Split('/');
                             edges = (
-                                edge.Length >= 1 ? Int.Parse(edge[0]) : 0,
-                                edge.Length >= 2 ? Int.Parse(edge[1]) : 0,
-                                edge.Length >= 3 ? Int.Parse(edge[2]) : 0
+                                edge.Length >= 1 ? Parse.Int.Parse(edge[0]) : 0,
+                                edge.Length >= 2 ? Parse.Int.Parse(edge[1]) : 0,
+                                edge.Length >= 3 ? Parse.Int.Parse(edge[2]) : 0
                             );
                         }
                         faceData.Add((vertices, uvs, edges));
@@ -237,22 +238,22 @@ public static class ModelLoader
                         string parent = sections[2].Trim();
                         var pos = sections[3].Split('/');
                         Vector3 position = new(
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         var rot = sections[4].Split('/');
                         Quaternion rotation = new(
-                            rot.Length >= 1 ? Float.Parse(rot[0]) : 0,
-                            rot.Length >= 2 ? Float.Parse(rot[1]) : 0,
-                            rot.Length >= 3 ? Float.Parse(rot[2]) : 0,
-                            rot.Length >= 4 ? Float.Parse(rot[3]) : 1
+                            rot.Length >= 1 ? Parse.Float.Parse(rot[0]) : 0,
+                            rot.Length >= 2 ? Parse.Float.Parse(rot[1]) : 0,
+                            rot.Length >= 3 ? Parse.Float.Parse(rot[2]) : 0,
+                            rot.Length >= 4 ? Parse.Float.Parse(rot[3]) : 1
                         );
                         var sc = sections[5].Split('/');
                         Vector3 scale = new(
-                            sc.Length >= 1 ? Float.Parse(sc[0]) : 1,
-                            sc.Length >= 2 ? Float.Parse(sc[1]) : 1,
-                            sc.Length >= 3 ? Float.Parse(sc[2]) : 1
+                            sc.Length >= 1 ? Parse.Float.Parse(sc[0]) : 1,
+                            sc.Length >= 2 ? Parse.Float.Parse(sc[1]) : 1,
+                            sc.Length >= 3 ? Parse.Float.Parse(sc[2]) : 1
                         );
                         boneData.Add((name, parent, position, rotation, scale));
                     }
@@ -274,12 +275,12 @@ public static class ModelLoader
                 case "akp":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var pos = sections[2].Split('/');
                         Vector3 position = new(
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         animationData[currentAnimation][currentBoneAnimation].positions.Add((index, position));
                     }
@@ -287,13 +288,13 @@ public static class ModelLoader
                 case "akr":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var rot = sections[2].Split('/');
                         Quaternion rotation = new(
-                            rot.Length >= 1 ? Float.Parse(rot[0]) : 0,
-                            rot.Length >= 2 ? Float.Parse(rot[1]) : 0,
-                            rot.Length >= 3 ? Float.Parse(rot[2]) : 0,
-                            rot.Length >= 4 ? Float.Parse(rot[3]) : 1
+                            rot.Length >= 1 ? Parse.Float.Parse(rot[0]) : 0,
+                            rot.Length >= 2 ? Parse.Float.Parse(rot[1]) : 0,
+                            rot.Length >= 3 ? Parse.Float.Parse(rot[2]) : 0,
+                            rot.Length >= 4 ? Parse.Float.Parse(rot[3]) : 1
                         );
                         animationData[currentAnimation][currentBoneAnimation].rotations.Add((index, rotation));
                     }
@@ -301,12 +302,12 @@ public static class ModelLoader
                 case "aks":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var sc = sections[2].Split('/');
                         Vector3 scale = new(
-                            sc.Length >= 1 ? Float.Parse(sc[0]) : 1,
-                            sc.Length >= 2 ? Float.Parse(sc[1]) : 1,
-                            sc.Length >= 3 ? Float.Parse(sc[2]) : 1
+                            sc.Length >= 1 ? Parse.Float.Parse(sc[0]) : 1,
+                            sc.Length >= 2 ? Parse.Float.Parse(sc[1]) : 1,
+                            sc.Length >= 3 ? Parse.Float.Parse(sc[2]) : 1
                         );
                         animationData[currentAnimation][currentBoneAnimation].scales.Add((index, scale));
                     }
@@ -475,9 +476,9 @@ public static class ModelLoader
                     {
                         var pos = sections[1].Split('/');
                         Vector3 position = (
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         string? boneName = sections.Length > 2 ? sections[2] : null;
                         vertexData.Add((position, boneName));
@@ -488,8 +489,8 @@ public static class ModelLoader
                     {
                         var pos = sections[1].Split('/');
                         Vector2 uv = (
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0
                         );
                         uvData.Add(uv);
                     }
@@ -499,18 +500,18 @@ public static class ModelLoader
                     {
                         var vert = sections[1].Split('/');
                         Vector3i vertices = (
-                            vert.Length >= 1 ? Int.Parse(vert[0]) : 0,
-                            vert.Length >= 2 ? Int.Parse(vert[1]) : 0,
-                            vert.Length >= 3 ? Int.Parse(vert[2]) : 0
+                            vert.Length >= 1 ? Parse.Int.Parse(vert[0]) : 0,
+                            vert.Length >= 2 ? Parse.Int.Parse(vert[1]) : 0,
+                            vert.Length >= 3 ? Parse.Int.Parse(vert[2]) : 0
                         );
                         Vector3i? uvs = null;
                         if (sections.Length > 2)
                         {
                             var uv = sections[2].Split('/');
                             uvs = (
-                                uv.Length >= 1 ? Int.Parse(uv[0]) : 0,
-                                uv.Length >= 2 ? Int.Parse(uv[1]) : 0,
-                                uv.Length >= 3 ? Int.Parse(uv[2]) : 0
+                                uv.Length >= 1 ? Parse.Int.Parse(uv[0]) : 0,
+                                uv.Length >= 2 ? Parse.Int.Parse(uv[1]) : 0,
+                                uv.Length >= 3 ? Parse.Int.Parse(uv[2]) : 0
                             );
                         }
                         faceData.Add((vertices, uvs));
@@ -523,22 +524,22 @@ public static class ModelLoader
                         string parent = sections[2].Trim();
                         var pos = sections[3].Split('/');
                         Vector3 position = new(
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         var rot = sections[4].Split('/');
                         Quaternion rotation = new(
-                            rot.Length >= 1 ? Float.Parse(rot[0]) : 0,
-                            rot.Length >= 2 ? Float.Parse(rot[1]) : 0,
-                            rot.Length >= 3 ? Float.Parse(rot[2]) : 0,
-                            rot.Length >= 4 ? Float.Parse(rot[3]) : 0
+                            rot.Length >= 1 ? Parse.Float.Parse(rot[0]) : 0,
+                            rot.Length >= 2 ? Parse.Float.Parse(rot[1]) : 0,
+                            rot.Length >= 3 ? Parse.Float.Parse(rot[2]) : 0,
+                            rot.Length >= 4 ? Parse.Float.Parse(rot[3]) : 0
                         );
                         var sc = sections[5].Split('/');
                         Vector3 scale = new(
-                            sc.Length >= 1 ? Float.Parse(sc[0]) : 0,
-                            sc.Length >= 2 ? Float.Parse(sc[1]) : 0,
-                            sc.Length >= 3 ? Float.Parse(sc[2]) : 0
+                            sc.Length >= 1 ? Parse.Float.Parse(sc[0]) : 0,
+                            sc.Length >= 2 ? Parse.Float.Parse(sc[1]) : 0,
+                            sc.Length >= 3 ? Parse.Float.Parse(sc[2]) : 0
                         );
                         boneData.Add((name, parent, position, rotation, scale));
                     }
@@ -560,12 +561,12 @@ public static class ModelLoader
                 case "akp":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var pos = sections[2].Split('/');
                         Vector3 position = new(
-                            pos.Length >= 1 ? Float.Parse(pos[0]) : 0,
-                            pos.Length >= 2 ? Float.Parse(pos[1]) : 0,
-                            pos.Length >= 3 ? Float.Parse(pos[2]) : 0
+                            pos.Length >= 1 ? Parse.Float.Parse(pos[0]) : 0,
+                            pos.Length >= 2 ? Parse.Float.Parse(pos[1]) : 0,
+                            pos.Length >= 3 ? Parse.Float.Parse(pos[2]) : 0
                         );
                         animationData[currentAnimation][currentBoneAnimation].positions.Add((index, position));
                     }
@@ -573,13 +574,13 @@ public static class ModelLoader
                 case "akr":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var rot = sections[2].Split('/');
                         Quaternion rotation = new(
-                            rot.Length >= 1 ? Float.Parse(rot[0]) : 0,
-                            rot.Length >= 2 ? Float.Parse(rot[1]) : 0,
-                            rot.Length >= 3 ? Float.Parse(rot[2]) : 0,
-                            rot.Length >= 4 ? Float.Parse(rot[3]) : 1
+                            rot.Length >= 1 ? Parse.Float.Parse(rot[0]) : 0,
+                            rot.Length >= 2 ? Parse.Float.Parse(rot[1]) : 0,
+                            rot.Length >= 3 ? Parse.Float.Parse(rot[2]) : 0,
+                            rot.Length >= 4 ? Parse.Float.Parse(rot[3]) : 1
                         );
                         animationData[currentAnimation][currentBoneAnimation].rotations.Add((index, rotation));
                     }
@@ -587,12 +588,12 @@ public static class ModelLoader
                 case "aks":
                     if (sections.Length > 2)
                     {
-                        int index = Int.Parse(sections[1].Trim());
+                        int index = Parse.Int.Parse(sections[1].Trim());
                         var sc = sections[2].Split('/');
                         Vector3 scale = new(
-                            sc.Length >= 1 ? Float.Parse(sc[0]) : 1,
-                            sc.Length >= 2 ? Float.Parse(sc[1]) : 1,
-                            sc.Length >= 3 ? Float.Parse(sc[2]) : 1
+                            sc.Length >= 1 ? Parse.Float.Parse(sc[0]) : 1,
+                            sc.Length >= 2 ? Parse.Float.Parse(sc[1]) : 1,
+                            sc.Length >= 3 ? Parse.Float.Parse(sc[2]) : 1
                         );
                         animationData[currentAnimation][currentBoneAnimation].scales.Add((index, scale));
                     }
@@ -767,17 +768,17 @@ public static class ModelLoader
         List<string> oldLines = [.. File.ReadAllLines(path)];
         List<string> newLines = new List<string>();
 
-        int oldVertexCount = Int.Parse(oldLines[0]);
-        int oldEdgeCount = Int.Parse(oldLines[oldVertexCount + 1]);
-        int oldUvCount = Int.Parse(oldLines[oldVertexCount + oldEdgeCount + 2]);
-        int oldTriangleCount = Int.Parse(oldLines[oldVertexCount + oldEdgeCount + oldUvCount + 3]);
-        int oldNormalCount = Int.Parse(oldLines[oldVertexCount + oldEdgeCount + oldUvCount + oldTriangleCount + 4]);
+        int oldVertexCount = Parse.Int.Parse(oldLines[0]);
+        int oldEdgeCount = Parse.Int.Parse(oldLines[oldVertexCount + 1]);
+        int oldUvCount = Parse.Int.Parse(oldLines[oldVertexCount + oldEdgeCount + 2]);
+        int oldTriangleCount = Parse.Int.Parse(oldLines[oldVertexCount + oldEdgeCount + oldUvCount + 3]);
+        int oldNormalCount = Parse.Int.Parse(oldLines[oldVertexCount + oldEdgeCount + oldUvCount + oldTriangleCount + 4]);
         int rigStart = oldVertexCount + oldEdgeCount + oldUvCount + oldTriangleCount + oldNormalCount + 5;
 
         newLines.Add(mesh.VertexList.Count.ToString());
         foreach (var vertex in mesh.VertexList)
         {
-            newLines.Add($"v {Float.Str(vertex.X)} {Float.Str(vertex.Y)} {Float.Str(vertex.Z)} {vertex.Index} {vertex.BoneName}");
+            newLines.Add($"v {Parse.Float.Str(vertex.X)} {Parse.Float.Str(vertex.Y)} {Parse.Float.Str(vertex.Z)} {vertex.Index} {vertex.BoneName}");
         }
 
         newLines.Add(mesh.EdgeList.Count.ToString());
@@ -789,9 +790,9 @@ public static class ModelLoader
         newLines.Add((mesh.TriangleList.Count * 3).ToString());
         foreach (var triangle in mesh.TriangleList)
         {
-            newLines.Add($"uv {Float.Str(triangle.UvA.X)} {Float.Str(triangle.UvA.Y)}");
-            newLines.Add($"uv {Float.Str(triangle.UvB.X)} {Float.Str(triangle.UvB.Y)}");
-            newLines.Add($"uv {Float.Str(triangle.UvC.X)} {Float.Str(triangle.UvC.Y)}");
+            newLines.Add($"uv {Parse.Float.Str(triangle.UvA.X)} {Parse.Float.Str(triangle.UvA.Y)}");
+            newLines.Add($"uv {Parse.Float.Str(triangle.UvB.X)} {Parse.Float.Str(triangle.UvB.Y)}");
+            newLines.Add($"uv {Parse.Float.Str(triangle.UvC.X)} {Parse.Float.Str(triangle.UvC.Y)}");
         }
 
         newLines.Add(mesh.TriangleList.Count.ToString());
@@ -803,7 +804,7 @@ public static class ModelLoader
         newLines.Add(mesh.Normals.Count.ToString());
         foreach (var normal in mesh.Normals)
         {
-            newLines.Add($"n {Float.Str(normal.X)} {Float.Str(normal.Y)} {Float.Str(normal.Z)}");
+            newLines.Add($"n {Parse.Float.Str(normal.X)} {Parse.Float.Str(normal.Y)} {Parse.Float.Str(normal.Z)}");
         }
 
         for (int i = rigStart; i < oldLines.Count; i++)
@@ -819,24 +820,24 @@ public static class ModelLoader
         ModelMesh mesh = model.Mesh;
         mesh.Unload();
 
-        int vertexCount = Int.Parse(lines[0]);
+        int vertexCount = Parse.Int.Parse(lines[0]);
 
         int edgeIndex = vertexCount + 1;
-        int edgeCount = Int.Parse(lines[edgeIndex]);
+        int edgeCount = Parse.Int.Parse(lines[edgeIndex]);
 
         int uvIndex = vertexCount + edgeCount + 2;
-        int uvCount = Int.Parse(lines[uvIndex]);
+        int uvCount = Parse.Int.Parse(lines[uvIndex]);
 
         int triangleIndex = vertexCount + edgeCount + uvCount + 3;
-        int triangleCount = Int.Parse(lines[triangleIndex]);
+        int triangleCount = Parse.Int.Parse(lines[triangleIndex]);
 
         for (int i = 1; i <= vertexCount; i++)
         {
             string[] values = lines[i].Trim().Trim().Split(' ');
-            Vertex vertex = new Vertex(new Vector3(Float.Parse(values[1]), Float.Parse(values[2]), Float.Parse(values[3])));
+            Vertex vertex = new Vertex(new Vector3(Parse.Float.Parse(values[1]), Parse.Float.Parse(values[2]), Parse.Float.Parse(values[3])));
             vertex.Name = "Vertex " + i;
             if (values.Length > 4)
-                vertex.Index = Int.Parse(values[4]);
+                vertex.Index = Parse.Int.Parse(values[4]);
 
             if (values.Length > 5)
                 vertex.BoneName = values[5].Trim();
@@ -847,13 +848,13 @@ public static class ModelLoader
         for (int i = vertexCount + 2; i <= vertexCount + edgeCount + 1; i++)
         {
             string[] values = lines[i].Trim().Split(' ');
-            mesh.EdgeList.Add(new Edge(mesh.VertexList[Int.Parse(values[1])], mesh.VertexList[Int.Parse(values[2])]));
+            mesh.EdgeList.Add(new Edge(mesh.VertexList[Parse.Int.Parse(values[1])], mesh.VertexList[Parse.Int.Parse(values[2])]));
         }
 
         for (int i = vertexCount + edgeCount + 3; i <= vertexCount + edgeCount + uvCount + 2; i++)
         {
             string[] values = lines[i].Trim().Split(' ');
-            mesh.Uvs.Add(new Vector2(Float.Parse(values[1]), Float.Parse(values[2])));
+            mesh.Uvs.Add(new Vector2(Parse.Float.Parse(values[1]), Parse.Float.Parse(values[2])));
         }
 
         int index = 0;
@@ -865,9 +866,9 @@ public static class ModelLoader
 
             try
             {
-                a = mesh.VertexList[Int.Parse(values[1])];
-                b = mesh.VertexList[Int.Parse(values[2])];
-                c = mesh.VertexList[Int.Parse(values[3])];
+                a = mesh.VertexList[Parse.Int.Parse(values[1])];
+                b = mesh.VertexList[Parse.Int.Parse(values[2])];
+                c = mesh.VertexList[Parse.Int.Parse(values[3])];
             }
             catch (Exception)
             {
@@ -884,9 +885,9 @@ public static class ModelLoader
 
             try
             {
-                ab = mesh.EdgeList[Int.Parse(values[4])];
-                bc = mesh.EdgeList[Int.Parse(values[5])];
-                ca = mesh.EdgeList[Int.Parse(values[6])];
+                ab = mesh.EdgeList[Parse.Int.Parse(values[4])];
+                bc = mesh.EdgeList[Parse.Int.Parse(values[5])];
+                ca = mesh.EdgeList[Parse.Int.Parse(values[6])];
             }
             catch (Exception)
             {
@@ -909,10 +910,10 @@ public static class ModelLoader
         return true;
     }
 
-    private static string Str(Vector2 v) => $"{Float.Str(v.X)}/{Float.Str(v.Y)}";
-    private static string Str(Vector3 v) => $"{Float.Str(v.X)}/{Float.Str(v.Y)}/{Float.Str(v.Z)}";
-    private static string Str(Vector4 v) => $"{Float.Str(v.X)}/{Float.Str(v.Y)}/{Float.Str(v.Z)}/{Float.Str(v.W)}";
-    private static string Str(Quaternion q) => $"{Float.Str(q.X)}/{Float.Str(q.Y)}/{Float.Str(q.Z)}/{Float.Str(q.W)}";
+    private static string Str(Vector2 v) => $"{Parse.Float.Str(v.X)}/{Parse.Float.Str(v.Y)}";
+    private static string Str(Vector3 v) => $"{Parse.Float.Str(v.X)}/{Parse.Float.Str(v.Y)}/{Parse.Float.Str(v.Z)}";
+    private static string Str(Vector4 v) => $"{Parse.Float.Str(v.X)}/{Parse.Float.Str(v.Y)}/{Parse.Float.Str(v.Z)}/{Parse.Float.Str(v.W)}";
+    private static string Str(Quaternion q) => $"{Parse.Float.Str(q.X)}/{Parse.Float.Str(q.Y)}/{Parse.Float.Str(q.Z)}/{Parse.Float.Str(q.W)}";
 
     public struct LoadInfo
     {

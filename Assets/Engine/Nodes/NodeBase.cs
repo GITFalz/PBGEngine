@@ -70,40 +70,41 @@ public class NodeBase
 
         InputDependencies = [..template.InputDependencies];
 
-        Ui = UI(ID + " " + Name, template);
+        Ui = UI(/*ID + " " + */Name, template);
     }
 
     public int HoveringBlockIndex = -1;
     public static NodeBase? HoveringBlockNode = null;
+    private static IStyleData _hover_scale => empty;
 
 
     private UIElementBase UI(string name, NodeTemplate template) =>
-    new UICol(grow_children, blank_round, rgba_v4_[NodeBody], border_ui_[2, 2, 2, 2], border_[2, 2, 2, 2], border_color_[Border], min_w_[50 + (int)(name.Length * (7 * FONT_SIZE))])[
-        new UICol(grow_children, rgba_v4_[NodeHeader], blank_round_2, w_full, border_ui_[0, 0, 0, 2], border_color_[Border])[
+    new UICol("base " + name, grow_children, blank_full, rgba_v4_[NodeBody], border_ui_[1, 1, 1, 1], border_[1, 1, 1, 1], border_color_[Border], min_w_[50 + (int)(name.Length * (7 * FONT_SIZE))])[
+        new UICol(grow_children, rgba_v4_[NodeHeader], blank_full, w_full, border_ui_[0, 0, 0, 1], border_color_[Border])[
             new UIButton(h_full, w_full_minus_[30])
                 .OnClick(Click)
                 .OnHold(Move)
                 .OnRelease(OnReleaseNode),
             new UICol(h_[32], w_[7], mask_children)[
-                new UIImg(h_[26], w_[20], top_[2], left_[2], blank_round_1, rot_270, rgba_v4_[Color])
+                new UIImg(h_[26], w_[20], top_[2], left_[2], blank_full, rgba_v4_[Color])
             ],
-            new UIText(name, fs_[1.2f], middle_left, left_[17], bottom_[1]),
-            new UICol(w_[20], h_[20], blank_sharp, rgba_v4_[PBG.MathLibrary.Color.Invisible], middle_right, right_[5], bottom_[1])[
+            new UIText(name, fs_[1f], middle_left, left_[17], bottom_[1]),
+            new UICol(w_[20], h_[20], blank_full, rgba_v4_[PBG.MathLibrary.Color.Invisible], middle_right, right_[5], bottom_[1])[
                 new UIImg(w_[20], h_[20], icon_[15], rgba_v4_[NodeDelete], middle_center)
                     .OnClick(_ => Delete())
                     .OnHover(delete => { delete.ParentElement?.UpdateColor(NodeDeleteDark); })
                     .OnHoverExit(delete => { delete.ParentElement?.UpdateColor(PBG.MathLibrary.Color.Invisible); })
             ]
         ],
-        new UIVCol(grow_children, top_[32], min_w_full)[
-            new UIHCol(grow_children, min_w_full, spacing_[15], border_[0, 0, 0, 0])[
+        new UIVCol(grow_children, top_[32], HasBlocks ? empty : min_w_full)[
+            new UIHCol(grow_children, spacing_[15], border_[0, 0, 0, 0], HasBlocks ? empty : min_w_full)[
                 new UIVCol(grow_children, border_[0, 10, 0, 10], spacing_[10])[
                     new Run(() =>
                     {
-                        var icon = new UIImg(w_[10], h_[10], blank_sharp, middle_left, right_[5], rgba_v4_[PortHover]);
+                        var icon = new UIImg(w_[10], h_[10], blank_full, middle_left, rgba_v4_[PortHover]).OnHover(_ => {});
                         FlowInput = new NodeInput("Flow", -1, icon, NodeDataType.Execute, NodeConnectionType.FlowInput);
                         return new UICol(grow_children)[
-                            new UICol(w_[10], h_[10], right_[2], mask_children)
+                            new UICol(w_[10], h_[10], right_[3], hover_scale_[1.5f], hover_scale_duration_[0.1f], hover_scale_easeinout)
                                 .OnClick(_ => OnClickConnection(NodeConnectionType.FlowInput, 0))
                                 .OnHold(_ => OnHoldConnection(NodeConnectionType.FlowInput, 0))
                                 .OnRelease(_ => OnReleaseConnection())
@@ -123,10 +124,10 @@ public class NodeBase
                             NodeInput nodeInput;
                             if (input.ValueType == null)
                             {
-                                var icon = new UIImg(w_[10], h_[10], blank_sharp, middle_left, right_[5], rgba_v4_[InputPort]);
+                                var icon = new UIImg(w_[10], h_[10], blank_full, middle_left, rgba_v4_[AnyType]);
                                 nodeInput = new NodeInput(input.Name, index, icon, input.Type, NodeConnectionType.Input);
                                 element = new UICol(grow_children)[
-                                    new UICol(w_[10], h_[10], right_[2], mask_children)
+                                    new UICol(w_[10], h_[10], right_[3], hover_scale_[1.5f], hover_scale_duration_[0.1f], hover_scale_easeinout)
                                         .OnClick(_ => OnClickConnection(NodeConnectionType.Input, index))
                                         .OnHold(_ => OnHoldConnection(NodeConnectionType.Input, index))
                                         .OnRelease(_ => OnReleaseConnection())
@@ -146,8 +147,8 @@ public class NodeBase
                                 UICol? iconButton = null;
                                 if (input.HasInput)
                                 {
-                                    icon = new UIImg(w_[10], h_[10], blank_sharp, middle_left, right_[5], rgba_v4_[InputPort]);
-                                    iconButton = new UICol(w_[10], h_[10], right_[2], mask_children)
+                                    icon = new UIImg(w_[10], h_[10], blank_full, middle_left, rgba_v4_[PortColors[input.ValueType]]);
+                                    iconButton = new UICol(w_[10], h_[10], right_[3], hover_scale_[1.5f], hover_scale_duration_[0.1f], hover_scale_easeinout)
                                         .OnClick(_ => OnClickConnection(NodeConnectionType.Input, index))
                                         .OnHold(_ => OnHoldConnection(NodeConnectionType.Input, index))
                                         .OnRelease(_ => OnReleaseConnection())
@@ -167,7 +168,7 @@ public class NodeBase
                                 element = new UICol(grow_children)[
                                     iconButton,
                                     new UIText(input.Name, left_[17], fs_[1.2f]),
-                                    NodePinTemplate.GenerateTypeFields(this, index, input)
+                                    NodePinTemplate.GenerateTypeFields(this, index, input)?.Style(top_[15])
                                 ];
                             }
 
@@ -185,7 +186,7 @@ public class NodeBase
                             Blocks[index] = nodeBlock;
                             return new UIVCol(grow_children, spacing_[10])[
                                 new UIText(block, fs_[1.2f]),
-                                    col.OnHover(e => OnHoverBlock(e, index)).OnHoverExit(e => OnHoverExitBlock(e, index))
+                                col.OnHover(e => OnHoverBlock(e, index)).OnHoverExit(e => OnHoverExitBlock(e, index))
                             ];
                         })
                     ]
@@ -193,10 +194,10 @@ public class NodeBase
                 new UIVCol(grow_children, border_[0, 10, 0, 10], spacing_[10], top_right)[
                     new Run(() =>
                     {
-                        var icon = new UIImg(w_[10], h_[10], blank_sharp, middle_right, left_[5], rgba_v4_[PortHover]);
+                        var icon = new UIImg(w_[10], h_[10], blank_full, middle_right, rgba_v4_[PortHover]);
                         FlowOutput = new NodeOutput("Flow", -1, icon, NodeDataType.Execute, NodeConnectionType.FlowOutput);
                         return new UICol(grow_children, min_w_full)[
-                            new UICol(top_right, w_[10], h_[10], left_[2], mask_children)
+                            new UICol(top_right, w_[10], h_[10], left_[3], hover_scale_[1.5f], hover_scale_duration_[0.1f], hover_scale_easeinout)
                                 .OnClick(_ => OnClickConnection(NodeConnectionType.FlowOutput, 0))
                                 .OnHold(_ => OnHoldConnection(NodeConnectionType.FlowOutput, 0))
                                 .OnRelease(_ => OnReleaseConnection())
@@ -211,11 +212,12 @@ public class NodeBase
                     new If(HasOutputs, () => 
                         new Foreach<NodePinTemplate>(template.Outputs, (index, output) =>
                         {
-                            var icon = new UIImg(w_[10], h_[10], blank_sharp, middle_right, left_[5], rgba_v4_[OutputPort]);
+                            Color outputColor = output.ValueType == null ? AnyType : PortColors[output.ValueType];
+                            var icon = new UIImg(w_[10], h_[10], blank_full, middle_right, rgba_v4_[outputColor]);
                             var nodeOutput = new NodeOutput(output.Name, index, icon, output.Type, NodeConnectionType.Output);
                             Outputs[index] = nodeOutput;
                             return new UICol(grow_children)[
-                                new UICol(top_right, w_[10], h_[10], left_[2], mask_children)
+                                new UICol(top_right, w_[10], h_[10], left_[3], hover_scale_[1.5f], hover_scale_duration_[0.1f], hover_scale_easeinout)
                                     .OnClick(_ => OnClickConnection(NodeConnectionType.Output, index))
                                     .OnHold(_ => OnHoldConnection(NodeConnectionType.Output, index))
                                     .OnRelease(_ => OnReleaseConnection())
@@ -234,13 +236,26 @@ public class NodeBase
             new If(DefinitionType.HasFlag(NodeDefinitionType.Priority), () => 
                 new UICol(w_full, h_[32], border_[0, 2, 0, 0], border_ui_[0, 2, 0, 0], border_color_[Border])[
                     new UIText("Prio", fs_[1f], middle_left, left_[10], rgba_v4_[TextSecondary]),
-                    new UICol(h_[20], middle_right, right_[5], w_[30], blank_sharp, rgba_v4_[Background])[
+                    new UICol(h_[20], middle_right, right_[5], w_[30], blank_full, rgba_v4_[Background])[
                         new UIField("0", fs_[1f], mc_[3], middle_center, text_type_numeric)
                     ]
                 ]
             )
         ]
     ];
+
+    public static readonly Dictionary<Type, Color> PortColors = new()
+    {
+        [typeof(bool)]       = new Color("#E8D44D"),
+        [typeof(float)]      = new Color("#8FD16A"),
+        [typeof(int)]        = new Color("#3E9B4F"),
+        [typeof(Vector2)]    = new Color("#6EC6FF"),
+        [typeof(Vector2i)]   = new Color("#2F7FD0"),
+        [typeof(Vector3)]    = new Color("#C792FF"),
+        [typeof(Vector3i)]   = new Color("#8A4FDB"),
+        [typeof(Vector4)]    = new Color("#FFAE63"),
+        [typeof(Vector4i)]   = new Color("#D9701F"),
+    };
 
     public int GetBlockDepth(int depth = 0) => ParentBlockNode == null ? depth : ParentBlockNode.GetBlockDepth(depth + 1);
     public bool HasParentBlock(NodeBase node, int index)
@@ -296,10 +311,25 @@ public class NodeBase
     {
         if (HoveringBlockNode != null)
         {
+            if (HoveringBlockNode == this)
+                return;
+
             if (ParentBlockNode == null)
             {
-                if (HoveringBlockNode == this)
-                    return;
+                var block = HoveringBlockNode.Blocks[HoveringBlockNode.HoveringBlockIndex];
+
+                Ui.RemoveFromParent();
+                block.Collection.AddElement(Ui);
+
+                ParentBlockNode = HoveringBlockNode;
+                ParentBlockIndex = HoveringBlockNode.HoveringBlockIndex;
+            }
+            else if (HoveringBlockNode != ParentBlockNode)
+            {
+                Ui.RemoveFromParent();
+
+                ParentBlockNode.Ui.GetBaseParent().ApplyChanges(UIChange.Scale);
+                ParentBlockNode = null;  
 
                 var block = HoveringBlockNode.Blocks[HoveringBlockNode.HoveringBlockIndex];
 
@@ -532,6 +562,7 @@ public class NodeBase
     public static readonly Color Accent         = new Color("#3b82f6");
     public static readonly Color InputPort      = new Color("#22c55e");
     public static readonly Color OutputPort     = new Color("#f59e0b");
+    public static readonly Color AnyType        = new Color("#9AA0AB");
     public static readonly Color Mouse          = new Color("#38bdf8");
     public static readonly Color NodeDelete     = new Color("#ef4444");
     public static readonly Color NodeDeleteDark = new Color("#9128284f");
