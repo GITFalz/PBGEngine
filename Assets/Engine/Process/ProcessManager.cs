@@ -37,6 +37,14 @@ public static class ProcessManager
         });
     }
 
+    public static void Stop()
+    {
+        RunInBackground("Close", () =>
+        {
+            Close();
+        });
+    }
+
     public static void Close()
     {
         Process? process;
@@ -111,13 +119,19 @@ public static class ProcessManager
         var psi = new ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"build \"{projectPath}\" -c Debug -p:ExtraConstants=EXTERNAL --nologo",
             WorkingDirectory = projectDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        psi.ArgumentList.Add("build");
+        psi.ArgumentList.Add(projectPath);
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add("Debug");
+        psi.ArgumentList.Add("-p:ExtraConstants=EXTERNAL%3BPIPES");
+        psi.ArgumentList.Add("--nologo");
 
         using var build = Process.Start(psi);
         if (build == null)

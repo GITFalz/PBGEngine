@@ -22,31 +22,50 @@ public class Game : GameWindow
     public override void OnKeyDown(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
         UIController.InputField((Data.Key)key);
+
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.KeyDown, (int)key));
     }
 
     public override void OnKeyUp(IKeyboard keyboard, Silk.NET.Input.Key key, int scanCode)
     {
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.KeyUp, (int)key));
     }
     
     public override void OnMouseMove(IMouse mouse, Vector2 position)
     {
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.MouseMove, (int)position.X - EditorMenu.GameOffsetX, (int)position.Y - EditorMenu.GameOffsetY));
     }
     
     public override void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.MouseDown, (int)button));
     }
     
     public override void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button)
     {
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.MouseUp, (int)button));
     }
     
     public override void OnScroll(IMouse mouse, ScrollWheel scroll)
     {
+        if (!EditorMenu.Focused)
+            return;
+
         TrySend(Mathf.IntsToString((int)CommandType.MouseWheel, (int)scroll.X, (int)scroll.Y));
     }
     
@@ -57,8 +76,6 @@ public class Game : GameWindow
         EngineLoadingProgress = new SharedAtomicFloat("engine_loading", true);
 
         Scene.LoadScene("Editor");
-
-        ProcessManager.Run();
         
         Engine.CommandHelper.Add(CommandType.SetCursor, msg =>
         {
@@ -88,7 +105,7 @@ public class Game : GameWindow
             {
                 int fd = fds[i];
 
-                Console.WriteLine("fd: " + fd);
+                //Console.WriteLine("fd: " + fd);
 
                 Texture texture = new(new() { Width = width, Height = height, IsExternalImage = true, Fd = fd, Format = Silk.NET.Vulkan.Format.B8G8R8A8Srgb });
 
@@ -106,6 +123,21 @@ public class Game : GameWindow
         Engine.CommandHelper.Add(CommandType.SceneHierarchy, msg =>
         {
             EditorMenu.Instance.GenerateHierarchy(msg.Content);
+        });
+
+        Engine.CommandHelper.Add(CommandType.NodeComponents, msg =>
+        {
+            EditorMenu.Instance.GenerateComponents(msg.Content);
+        });
+
+        Engine.CommandHelper.Add(CommandType.ClassInfo, msg =>
+        {
+            EditorMenu.Instance.GenerateClassInfo(msg.Content);
+        });
+
+        Engine.CommandHelper.Add(CommandType.SearchClass, msg =>
+        {
+            EditorMenu.Instance.GenerateSearch(msg.Content);
         });
     }
 
