@@ -6,7 +6,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        bool debug = false;
+        bool debug = true;
 
         if (debug && args.Length > 0 && args[0] == "--profile-mesh")
         {
@@ -21,6 +21,6 @@ class Program
             return;
         }
 
-        GameWindow.New(new Game(), 600, 400);
+        GameWindow.New(new Game(), 1200, 800);
     }
 }

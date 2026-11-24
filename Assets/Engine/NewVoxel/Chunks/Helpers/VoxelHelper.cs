@@ -188,6 +188,16 @@ public unsafe static class VoxelHelper
     }
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint GetSolidRow(byte* blocks)
+    {
+        V256b row = V256B.Load(blocks);
+        V256b isAir = row.CompareEqual(V256B.Zero);
+        uint rowAir = (uint)Avx2.MoveMask(isAir);
+        return ~rowAir;
+    }
+
+
 
     public static uint GetV256RowBit(uint* ptr, byte shift)
     {

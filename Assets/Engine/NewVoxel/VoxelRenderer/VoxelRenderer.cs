@@ -18,8 +18,8 @@ public unsafe partial class VoxelRenderer : ScriptingNode
 
     public readonly static int MaxThreads = Environment.ProcessorCount;
 
-    public static int GenerationThreads { get; private set; } = 1;
-    public static int RenderingThreads { get; private set; } = 1;
+    public static int GenerationThreads { get; private set; } = 5;
+    public static int RenderingThreads { get; private set; } = 3;
 
     public static long[] GenerationThreadTimes = [];
     public static long[] RenderingThreadTimes = [];

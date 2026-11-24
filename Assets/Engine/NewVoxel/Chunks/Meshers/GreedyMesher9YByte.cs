@@ -52,12 +52,12 @@ public unsafe class GreedyMesher9YByte
 
             int w = 1;
 
-            Block block = chunk.Get(trailingZeros + x * 32 + z * 1024);
+            //Block block = chunk.Get(trailingZeros + x * 32 + z * 1024);
 
             w--;
             h--;
 
-            uint geometryIndex = (uint)block.GetSolidGeometryIndex(3);
+            uint geometryIndex = 0;  //(uint)block.GetSolidGeometryIndex(3);
             uint pos = (uint)(x | (trailingZeros << 5) | (z << 10));
             uint side = 3;
             
@@ -66,7 +66,7 @@ public unsafe class GreedyMesher9YByte
             uint vx = geometryIndex | (pos << 14) | (side << 29);
             uint vy = size;
 
-            mapping.AddFace(new(vx, vy));
+            //mapping.AddFace(new(vx, vy));
         }
     }
 
@@ -86,12 +86,12 @@ public unsafe class GreedyMesher9YByte
 
             int w = 1;
 
-            Block block = chunk.Get(trailingZeros + x * 32 + z * 1024);
+            //Block block = chunk.Get(trailingZeros + x * 32 + z * 1024);
 
             w--;
             h--;
 
-            uint geometryIndex = (uint)block.GetSolidGeometryIndex(1);
+            uint geometryIndex = 0;  //(uint)block.GetSolidGeometryIndex(1);
             uint pos = (uint)(x | (trailingZeros << 5) | (z << 10));
             uint side = 1;
             
@@ -100,7 +100,7 @@ public unsafe class GreedyMesher9YByte
             uint vx = geometryIndex | (pos << 14) | (side << 29);
             uint vy = size;
 
-            mapping.AddFace(new(vx, vy));
+            //mapping.AddFace(new(vx, vy));
         }
     }
 
@@ -110,9 +110,34 @@ public unsafe class GreedyMesher9YByte
     {
         //Stopwatch stopwatch = Stopwatch.StartNew();
 
-        VoxelChunk leftChunk = chunk.ChunkLookup[12]; //empty;
-        VoxelChunk rightChunk = chunk.ChunkLookup[13]; //empty;
-        
+        VoxelChunk leftChunk = chunk.ChunkLookup[12];
+        VoxelChunk rightChunk = chunk.ChunkLookup[13];
+
+        /*
+        VoxelChunk frontChunk = chunk.ChunkLookup[10];
+        VoxelChunk backChunk = chunk.ChunkLookup[15];
+
+        // compute the side regions for the front and back chunks
+        uint[] frontSolid = new uint[32]; // test array, needs to be cached
+        uint[] backSolid = new uint[32]; // test array, needs to be cached
+
+        byte* frontBlocks = frontChunk.ByteBlocks + 992;
+        byte* backBlocks = backChunk.ByteBlocks;
+
+        for (int x = 0; x < 32; x++)
+        {
+            uint rowSolidFront = VH.GetSolidRow(frontBlocks);
+            uint rowSolidBack = VH.GetSolidRow(backBlocks);
+
+            frontSolid[x] = rowSolidFront;
+            backSolid[x] = rowSolidBack;
+
+            frontBlocks += 32;
+            backBlocks += 32;
+        }
+        */
+
+        // main loop over the chunk
         for (int z = 0; z < 32; z++)
         {
             int zIndex = z * 1024;
@@ -138,7 +163,7 @@ public unsafe class GreedyMesher9YByte
             rowSolidA = rowSolidB;
 
             byte* blocks = chunk.ByteBlocks + (zIndex + 32);
-            
+
             for (int x = 1; x < 32; x++)
             {
                 blockRowB = V256B.Load(blocks);
@@ -170,6 +195,86 @@ public unsafe class GreedyMesher9YByte
             rowAirB = (uint)Avx2.MoveMask(isAirB);
 
             rowSolidB = ~rowAirB;
+
+            rowRight = rowSolidA & (~rowSolidB);
+
+            if (rowRight != 0)
+                GenerateRight(chunk, ref meshMapping, rowRight, 31, z);
+        }
+
+        //Console.WriteLine(stopwatch.Elapsed.TotalMilliseconds);
+
+        return true;
+    }
+    
+    public static bool GenerateMesh2(VoxelChunk empty, VoxelChunk chunk, ref MeshMapping meshMapping)
+    {
+        //Stopwatch stopwatch = Stopwatch.StartNew();
+
+        VoxelChunk leftChunk  = chunk.ChunkLookup[12];
+        VoxelChunk rightChunk = chunk.ChunkLookup[13];
+
+        //VoxelChunk frontChunk = chunk.ChunkLookup[10];
+        //VoxelChunk backChunk = chunk.ChunkLookup[15];
+
+        // compute the side regions for the front and back chunks
+        //uint[] frontSolid = new uint[32]; // test array, needs to be cached
+       // uint[] backSolid = new uint[32]; // test array, needs to be cached
+
+        /*
+        byte* frontBlocks = frontChunk.ByteBlocks + 992;
+        byte* backBlocks  = backChunk.ByteBlocks;
+
+        for (int x = 0; x < 32; x++)
+        {
+            uint rowSolidFront = VH.GetSolidRow(frontBlocks);
+            uint rowSolidBack = VH.GetSolidRow(backBlocks);
+
+            //frontSolid[x] = rowSolidFront;
+            //backSolid[x] = rowSolidBack;
+
+            frontBlocks += 32;
+            backBlocks += 32;
+        }
+        */
+        
+        // main loop over the chunk
+        for (int z = 0; z < 32; z++)
+        {
+            int zIndex = z * 1024;
+
+            uint rowSolidA = VH.GetSolidRow(leftChunk.ByteBlocks + zIndex + 992);
+            uint rowSolidB = VH.GetSolidRow(chunk.ByteBlocks + zIndex);
+
+            uint rowLeft = rowSolidB & (~rowSolidA);
+            uint rowRight;
+
+            if (rowLeft != 0)
+                GenerateLeft(chunk, ref meshMapping, rowLeft, 0, z);
+
+            rowSolidA = rowSolidB;
+
+            byte* blocks = chunk.ByteBlocks + (zIndex + 32);
+            
+            for (int x = 1; x < 32; x++)
+            {
+                rowSolidB = VH.GetSolidRow(blocks);
+
+                rowLeft = rowSolidB & (~rowSolidA);
+                rowRight = rowSolidA & (~rowSolidB);
+
+                if (rowLeft != 0)
+                    GenerateLeft(chunk, ref meshMapping, rowLeft, x, z);
+
+                if (rowRight != 0)
+                    GenerateRight(chunk, ref meshMapping, rowRight, x - 1, z);
+
+                rowSolidA = rowSolidB;
+
+                blocks += 32;
+            }
+
+            rowSolidB = VH.GetSolidRow(rightChunk.ByteBlocks + zIndex);
 
             rowRight = rowSolidA & (~rowSolidB);
 

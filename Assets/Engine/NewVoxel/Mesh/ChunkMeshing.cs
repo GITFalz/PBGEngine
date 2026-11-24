@@ -56,7 +56,7 @@ public static class ChunkMesher
             if (chunk.Status != ChunkStatus.Meshing)
                 return ChunkMeshingStatus.Failed;
 
-            bool result = VoxelChunkGenerator.GenerateGreedyMesh9YByte(chunk, workerID);
+            bool result = VoxelChunkGenerator.GenerateGreedyMesh8YByte(chunk, workerID);
             
             if (!result || chunk.Status != ChunkStatus.Meshing)
                 return ChunkMeshingStatus.Failed;
